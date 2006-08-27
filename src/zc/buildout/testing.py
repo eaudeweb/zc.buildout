@@ -224,7 +224,7 @@ extdemo_c = """
 #include <Python.h>
 #include <extdemo.h>
 
-static PyMethodDef methods[] = {NULL};
+static PyMethodDef methods[] = {{NULL}};
 
 PyMODINIT_FUNC
 initextdemo(void)
