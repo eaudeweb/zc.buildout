@@ -110,6 +110,26 @@ class Buildout(dict):
             options[option] = value
                 # The egg dire
 
+
+        # initialize some attrs and buildout directories.
+        options = data['buildout']
+        buildroot = options.get('buildroot')
+        if buildroot:
+            options['virtual-directory'] = options['directory']
+            options['directory'] = buildroot + options['directory']
+            os.makedirs(options['directory'])
+        
+        self._buildout_dir = options['directory']
+        for name in ('bin', 'parts', 'eggs', 'develop-eggs'):
+            d = options[name+'-directory']
+            if buildroot:
+                options['virual-'+name+'-directory'] = os.path.join(
+                    options['virtual-directory'], d)
+            options[name+'-directory'] = os.path.join(options['directory'], d)
+
+        options['installed'] = os.path.join(options['directory'],
+                                            options['installed'])
+
         # do substitutions
         converted = {}
         for section, options in data.iteritems():
@@ -124,19 +144,9 @@ class Buildout(dict):
         for section, options in data.iteritems():
             self[section] = Options(self, section, options)
         
-        # initialize some attrs and buildout directories.
-        options = self['buildout']
 
         links = options.get('find-links', '')
         self._links = links and links.split() or ()
-
-        self._buildout_dir = options['directory']
-        for name in ('bin', 'parts', 'eggs', 'develop-eggs'):
-            d = self._buildout_path(options[name+'-directory'])
-            options[name+'-directory'] = d
-
-        options['installed'] = os.path.join(options['directory'],
-                                            options['installed'])
 
         self._setup_logging()
 

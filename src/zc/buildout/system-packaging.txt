@@ -1,0 +1,71 @@
+Experimental Support for System Packaging
+=========================================
+
+Buildout has an experimental feature to support system packaging.
+Often, after developing an application with buildout, you want to
+deploy it using system packages, such as RPMs or Debian packages.
+To build such packages, especially to build them as an ordinary user,
+it is helpful to be able to install to a temporary location, but write
+files as if they were going to be installed with the base part of the
+temporary location removed.  This is done by providing a buildout
+buildroot option.  When a buildroot is specified, the buildroot is
+added to the buildout directories and a set of extra buildout options
+are defined with the original directories.  To see how this works,
+we'll jusr run the sample empty buildout, specifying some options on
+the command line:
+
+    >>> root = tmpdir('sample_root')
+    >>> print system(join('bin', 'buildout')
+    ...              + ' buildout:directory=/opt/foo'
+    ...              + ' buildout:buildroot='+root
+    ...              + ' -v'
+    ...              ),
+    Configuration data:
+    [buildout]
+    bin-directory = /sample_root/opt/foo/bin
+    buildroot = /sample_root
+    develop-eggs-directory = /sample_root/opt/foo/develop-eggs
+    directory = /sample_root/opt/foo
+    eggs-directory = /sample_root/opt/foo/eggs
+    executable = /usr/local/bin/python2.4
+    installed = /sample_root/opt/foo/.installed.cfg
+    log-format = %%(name)s: %%(message)s
+    log-level = INFO
+    parts = 
+    parts-directory = /sample_root/opt/foo/parts
+    python = buildout
+    verbosity = 10
+    virtual-directory = /opt/foo
+    virual-bin-directory = /opt/foo/bin
+    virual-develop-eggs-directory = /opt/foo/develop-eggs
+    virual-eggs-directory = /opt/foo/eggs
+    virual-parts-directory = /opt/foo/parts
+    <BLANKLINE>
+    buildout: Creating directory /sample_root/opt/foo/bin
+    buildout: Creating directory /sample_root/opt/foo/parts
+    buildout: Creating directory /sample_root/opt/foo/eggs
+    buildout: Creating directory /sample_root/opt/foo/develop-eggs
+    zc.buildout.easy_install: Installing ['zc.buildout', 'setuptools']
+    zc.buildout.easy_install: We have a develop egg for zc.buildout
+    zc.buildout.easy_install: We have the best distribution that satisfies
+    setuptools
+
+Here we see that the buildout directory was prefixed with the
+buildroot. We also see that a set of options, starting with "virual-"
+was generated with the locations without the buildroot.
+
+If we look at the buildroot, we specify, we can see that we generated
+the various directories:
+
+    >>> ls(root)
+    d  opt
+
+    >>> ls(root, 'opt')
+    d  foo
+
+    >>> ls(root, 'opt', 'foo')
+    -  .installed.cfg
+    d  bin
+    d  develop-eggs
+    d  eggs
+    d  parts
