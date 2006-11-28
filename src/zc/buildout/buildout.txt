@@ -418,9 +418,8 @@ characters, hyphens, and periods.
 Variable substitutions
 ----------------------
 
-Buildout configuration files support two kinds of substitutions,
-standard ConfigParser substitutions, and string-template
-substitutions.  To illustrate this, we'll create an debug recipe to
+Buildout configuration files support variable substitution.
+To illustrate this, we'll create an debug recipe to
 allow us to see interactions with the buildout:
 
     >>> write(sample_buildout, 'recipes', 'debug.py', 
@@ -442,10 +441,9 @@ allow us to see interactions with the buildout:
     ...     update = install
     ... """)
 
-In this example, we've used a simple base class that provides a
-boilerplate constructor.  This recipe doesn't actually create
-anything. The install method doesn't return anything, because it
-didn't create any files or directories.
+This recipe doesn't actually create anything. The install method
+doesn't return anything, because it didn't create any files or
+directories.
 
 We also have to update our setup script:
 
@@ -478,16 +476,11 @@ examples:
     ... [debug]
     ... recipe = recipes:debug
     ... File 1 = ${data-dir:path}/file
-    ... File 2 = %(File 1)s.out
-    ... File 3 = %(base)s/file3
-    ... File 4 = ${debug:File 3}/log
+    ... File 2 = ${debug:File 1}/log
     ...
     ... [data-dir]
     ... recipe = recipes:mkdir
     ... path = mydata
-    ...
-    ... [DEFAULT]
-    ... base = var
     ... """)
 
 In this example, we've used ConfigParser substitutions for file2 and
@@ -509,12 +502,12 @@ substituted.
     buildout: Installing data-dir
     data-dir: Creating directory mydata
     buildout: Installing debug
-    File 1 mydata/file
-    File 2 mydata/file.out
-    File 3 var/file3
-    File 4 var/file3/log
-    base var
+    File 1 /sample-buildout/mydata/file
+    File 2 /sample-buildout/mydata/file/log
     recipe recipes:debug
+
+Note that the substitution of the data-dir path option reflects the
+update to the option performed by the mkdir recipe.
 
 It might seem surprising that mydata was created again.  This is
 because we changed our recipes package by adding the debug module.
@@ -526,11 +519,8 @@ the buildout:
     buildout: Develop: /sample-buildout/recipes/setup.py
     buildout: Updating data-dir
     buildout: Updating debug
-    File 1 mydata/file
-    File 2 mydata/file.out
-    File 3 var/file3
-    File 4 var/file3/log
-    base var
+    File 1 /sample-buildout/mydata/file
+    File 2 /sample-buildout/mydata/file/log
     recipe recipes:debug
 
 We can see that mydata was not recreated.
@@ -545,20 +535,12 @@ restriction might be relaxed in future releases.
 Multiple configuration files
 ----------------------------
 
-You can use multiple configuration files.  From your main
-configuration file, you can include other configuration files in 2
-ways:
+A configuration file can "extend" another configuration file.
+Options are read from the other configuration file if they aren't
+already defined by your configuration file.
 
-- Your configuration file can "extend" another configuration file.
-  Option are read from the other configuration file if they aren't
-  already defined by your configuration file.
-
-- Your configuration file can be "extended-by" another configuration
-  file, In this case, the options in the other configuration file
-  override options in your configuration file. 
-
-The configuration files your file extends or is extended by can extend
-or be extended by other configuration files.  The same file may be
+The configuration files your file extends can extend
+other configuration files.  The same file may be
 used more than once although, of course, cycles aren't allowed.
 
 To see how this works, we use an example:
@@ -598,20 +580,16 @@ customization.
 
 Here is a more elaborate example. 
 
-    >>> extensions = tmpdir('extensions')
+    >>> other = tmpdir('other')
 
     >>> write(sample_buildout, 'buildout.cfg',
     ... """
     ... [buildout]
-    ... extends = b1.cfg b2.cfg
-    ... extended-by = e1.cfg %(e2)s
+    ... extends = b1.cfg b2.cfg %(b3)s
     ...
     ... [debug]
-    ... op = %%(name)s
-    ...
-    ... [DEFAULT]
-    ... name = buildout
-    ... """ % dict(e2=os.path.join(extensions, 'e2.cfg')))
+    ... op = buildout
+    ... """ % dict(b3=os.path.join(other, 'b3.cfg')))
 
     >>> write(sample_buildout, 'b1.cfg',
     ... """
@@ -619,12 +597,8 @@ Here is a more elaborate example.
     ... extends = base.cfg
     ...
     ... [debug]
-    ... op1 = %(name)s 1
-    ... op2 = %(name)s 2
-    ... op3 = %(name)s 3
-    ...
-    ... [DEFAULT]
-    ... name = b1
+    ... op1 = b1 1
+    ... op2 = b1 2
     ... """)
 
     >>> write(sample_buildout, 'b2.cfg',
@@ -633,12 +607,23 @@ Here is a more elaborate example.
     ... extends = base.cfg
     ...
     ... [debug]
-    ... op3 = %(name)s 3
-    ... op4 = %(name)s 4
-    ... op5 = %(name)s 5
+    ... op2 = b2 2
+    ... op3 = b2 3
+    ... """)
+
+    >>> write(other, 'b3.cfg',
+    ... """
+    ... [buildout]
+    ... extends = b3base.cfg
     ...
-    ... [DEFAULT]
-    ... name = b2
+    ... [debug]
+    ... op4 = b3 4
+    ... """)
+
+    >>> write(other, 'b3base.cfg',
+    ... """
+    ... [debug]
+    ... op5 = b3base 5
     ... """)
 
     >>> write(sample_buildout, 'base.cfg',
@@ -652,71 +637,27 @@ Here is a more elaborate example.
     ... name = base
     ... """)
 
-    >>> write(sample_buildout, 'e1.cfg',
-    ... """
-    ... [debug]
-    ... op1 = %(name)s 1
-    ...
-    ... [DEFAULT]
-    ... name = e1
-    ... """)
-
-    >>> write(extensions, 'e2.cfg',
-    ... """
-    ... [buildout]
-    ... extends = eb.cfg
-    ... extended-by = ee.cfg
-    ... """)
-
-    >>> write(extensions, 'eb.cfg',
-    ... """
-    ... [debug]
-    ... op5 = %(name)s 5
-    ...
-    ... [DEFAULT]
-    ... name = eb
-    ... """)
-
-    >>> write(extensions, 'ee.cfg',
-    ... """
-    ... [debug]
-    ... op6 = %(name)s 6
-    ...
-    ... [DEFAULT]
-    ... name = ee
-    ... """)
-
     >>> print system(buildout),
     buildout: Develop: /sample-buildout/recipes/setup.py
     buildout: Uninstalling debug
     buildout: Installing debug
-    name ee
+    name base
     op buildout
-    op1 e1 1
-    op2 b1 2
+    op1 b1 1
+    op2 b2 2
     op3 b2 3
-    op4 b2 4
-    op5 eb 5
-    op6 ee 6
+    op4 b3 4
+    op5 b3base 5
     recipe recipes:debug
 
 There are several things to note about this example:
 
-- We can name multiple files in an extends or extended-by option.
+- We can name multiple files in an extends option.
 
 - We can reference files recursively.
 
-- DEFAULT sections only directly affect the configuration file they're
-  used in, but they can have secondary effects.  For example, the name
-  option showed up in the debug section because it was defined in the
-  debug sections in several of the input files by virtue of being in
-  their DEFAULT sections.
-
-- Relative file names in extended and extended-by options are
-  interpreted relative to the directory containing the referencing
-  configuration file.  The files eb.cfg and ee.cfg were found in the
-  extensions directory because they were referenced from a file in
-  that directory.
+- Relative file names in extended options are interpreted relative to
+  the directory containing the referencing configuration file.
 
 User defaults
 -------------
@@ -740,14 +681,13 @@ delimiter.)
     buildout: Develop: /sample-buildout/recipes/setup.py
     buildout: Uninstalling debug
     buildout: Installing debug
-    name ee
+    name base
     op buildout
-    op1 e1 1
-    op2 b1 2
+    op1 b1 1
+    op2 b2 2
     op3 b2 3
-    op4 b2 4
-    op5 eb 5
-    op6 ee 6
+    op4 b3 4
+    op5 b3base 5
     op7 7
     recipe recipes:debug
 
@@ -765,16 +705,13 @@ set the logging level to WARNING
     ... [buildout]
     ... log-level = WARNING
     ... extends = b1.cfg b2.cfg
-    ... extended-by = e1.cfg
     ... """)
 
     >>> print system(buildout),
-    name e1
-    op1 e1 1
-    op2 b1 2
+    name base
+    op1 b1 1
+    op2 b2 2
     op3 b2 3
-    op4 b2 4
-    op5 b2 5
     recipe recipes:debug
 
 Command-line usage
@@ -898,7 +835,6 @@ the buildout in the usual way:
     d  d2
     d  d3
     d  develop-eggs
-    -  e1.cfg
     d  eggs
     d  parts
     d  recipes
@@ -978,7 +914,6 @@ and run the buildout specifying just d3 and d4:
     d  data3
     d  data4
     d  develop-eggs
-    -  e1.cfg
     d  eggs
     d  parts
     d  recipes
@@ -1055,7 +990,6 @@ also see that d1 and d2 have gone away:
     d  data3
     d  data4
     d  develop-eggs
-    -  e1.cfg
     d  eggs
     d  parts
     d  recipes
@@ -1162,12 +1096,11 @@ of changing the format:
     ... parts =
     ... log-level = 25
     ... verbosity = 5
-    ... log-format = %%(levelname)s %%(message)s
+    ... log-format = %(levelname)s %(message)s
     ... """)
  
 Here, we've changed the format to include the log-level name, rather
-than the logger name.  Note that we had to double percent signs,
-because configuration options allow ConfigParser variable substitution.
+than the logger name.
 
 We've also illustrated, with a contrived example, that the log level
 can be a numeric value and that the verbosity can be specified in the
@@ -1193,6 +1126,11 @@ database is shown.
     ... """)
 
     >>> print system(buildout+' -v'),
+    zc.buildout.easy_install: Installing ['zc.buildout', 'setuptools']
+    zc.buildout.easy_install: We have a develop egg for zc.buildout
+    zc.buildout.easy_install: We have the best distribution that satisfies
+    setuptools
+    <BLANKLINE>
     Configuration data:
     [buildout]
     bin-directory = /sample-buildout/bin
@@ -1203,16 +1141,13 @@ database is shown.
     installed = /sample-buildout/.installed.cfg
     log-format = %%(name)s: %%(message)s
     log-level = INFO
+    offline = false
     parts = 
     parts-directory = /sample-buildout/parts
     python = buildout
     verbosity = 10
     <BLANKLINE>
-    zc.buildout.easy_install: Installing ['zc.buildout', 'setuptools']
-    zc.buildout.easy_install: We have a develop egg for zc.buildout
-    zc.buildout.easy_install: We have the best distribution that satisfies
-    setuptools
-
+ 
 All of these options can be overridden by configuration files or by
 command-line assignments.  We've discussed most of these options
 already, but let's review them and touch on some we haven't discussed:

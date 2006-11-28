@@ -71,8 +71,7 @@ We should be able to deal with setup scripts that aren't setuptools based.
     ... ''')
 
     >>> print system(join('bin', 'buildout')+' -v'), # doctest: +ELLIPSIS
-    Configuration data:
-    ...
+    zc.buildout...
     buildout: Develop: /sample-buildout/foo/setup.py
     ...
     Installed /sample-buildout/foo
@@ -86,7 +85,7 @@ We should be able to deal with setup scripts that aren't setuptools based.
 def buildout_error_handling():
     r"""Buildout error handling
 
-Asking for a section that doesn't exist, yields a key error:
+Asking for a section that doesn't exist, yields a missing section error:
 
     >>> import os
     >>> os.chdir(sample_buildout)
@@ -95,7 +94,7 @@ Asking for a section that doesn't exist, yields a key error:
     >>> buildout['eek']
     Traceback (most recent call last):
     ...
-    KeyError: 'eek'
+    MissingSection: The referenced section, 'eek', was not defined.
 
 Asking for an option that doesn't exist, a MissingOption error is raised:
 
@@ -109,8 +108,7 @@ It is an error to create a variable-reference cycle:
     >>> write(sample_buildout, 'buildout.cfg',
     ... '''
     ... [buildout]
-    ... develop = recipes
-    ... parts = data_dir debug
+    ... parts =
     ... x = ${buildout:y}
     ... y = ${buildout:z}
     ... z = ${buildout:x}
@@ -183,7 +181,7 @@ Al parts have to have a section:
     ... ''')
 
     >>> print system(os.path.join(sample_buildout, 'bin', 'buildout')),
-    Error: No section was specified for part x
+    Error: The referenced section, 'x', was not defined.
 
 and all parts have to have a specified recipe:
 
@@ -317,20 +315,21 @@ Then try to install it again:
 
     """
 
-def error_for_indefined_install_parts():
-    """
-Any parts we pass to install on the command line must be
-listed in the configuration.
+# Why?
+## def error_for_undefined_install_parts():
+##     """
+## Any parts we pass to install on the command line must be
+## listed in the configuration.
 
-    >>> print system(join('bin', 'buildout') + ' install foo'),
-    buildout: Invalid install parts: foo.
-    Install parts must be listed in the configuration.
+##     >>> print system(join('bin', 'buildout') + ' install foo'),
+##     buildout: Invalid install parts: foo.
+##     Install parts must be listed in the configuration.
 
-    >>> print system(join('bin', 'buildout') + ' install foo bar'),
-    buildout: Invalid install parts: foo bar.
-    Install parts must be listed in the configuration.
+##     >>> print system(join('bin', 'buildout') + ' install foo bar'),
+##     buildout: Invalid install parts: foo bar.
+##     Install parts must be listed in the configuration.
     
-    """
+##     """
 
 
 bootstrap_py = os.path.join(
