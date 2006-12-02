@@ -1139,7 +1139,7 @@ database is shown.
     eggs-directory = /sample-buildout/eggs
     executable = /usr/local/bin/python2.3
     installed = /sample-buildout/.installed.cfg
-    log-format = %%(name)s: %%(message)s
+    log-format = %(name)s: %(message)s
     log-level = INFO
     offline = false
     parts = 
