@@ -174,4 +174,3 @@ directory:
     buildout: Not upgrading because not running a local buildout command
 
     >>> ls('bin')
-
