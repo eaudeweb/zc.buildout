@@ -22,6 +22,7 @@ import os
 import pprint
 import re
 import shutil
+import cStringIO
 import sys
 import tempfile
 import ConfigParser
@@ -30,6 +31,12 @@ import UserDict
 import pkg_resources
 import zc.buildout
 import zc.buildout.easy_install
+
+try:
+    realpath = os.path.realpath
+except AttributeError:
+    def realpath(path):
+        return path
 
 pkg_resources_loc = pkg_resources.working_set.find(
     pkg_resources.Requirement.parse('setuptools')).location
@@ -428,17 +435,20 @@ class Buildout(UserDict.DictMixin):
     def _read_installed_part_options(self):
         old = self._installed_path()
         if os.path.isfile(old):
-            parser = ConfigParser.RawConfigParser(_spacey_defaults)
+            parser = ConfigParser.RawConfigParser()
             parser.optionxform = lambda s: s
             parser.read(old)
-            return dict([
-                (section,
-                 Options(self, section,
-                         dict([item for item in parser.items(section)
-                               if item[0] not in _spacey_defaults])
-                         )
-                 )
-                for section in parser.sections()])
+            result = {}
+            for section in parser.sections():
+                options = {}
+                for option, value in parser.items(section):
+                    if '%(' in value:
+                        for k, v in _spacey_defaults:
+                            value = value.replace(k, v)
+                    options[option] = value
+                result[section] = Options(self, section, options)
+                        
+            return result
         else:
             return {'buildout': Options(self, 'buildout', {'parts': ''})}
 
@@ -534,10 +544,22 @@ class Buildout(UserDict.DictMixin):
         if not upgraded:
             return
 
-        if (os.path.abspath(sys.argv[0])
-            != os.path.join(os.path.abspath(self['buildout']['bin-directory']),
-                            'buildout')
+        if (realpath(os.path.abspath(sys.argv[0]))
+            !=
+            realpath(
+                os.path.join(os.path.abspath(self['buildout']['bin-directory']),
+                             'buildout')
+                )
             ):
+            self._logger.debug("Running %r", realpath(sys.argv[0]))
+            self._logger.debug(
+                "Local buildout is %r",
+                realpath(
+                    os.path.join(
+                        os.path.abspath(self['buildout']['bin-directory']),
+                        'buildout')
+                    )
+                )
             self._logger.warn("Not upgrading because not running a local "
                               "buildout command")
             return
@@ -810,6 +832,14 @@ _spacey_nl = re.compile('[ \t\r\f\v]*\n[ \t\r\f\v\n]*'
                         '[ \t\r\f\v]+$'
                         )
 
+_spacey_defaults = [
+    ('%(__buildout_space__)s',   ' '),
+    ('%(__buildout_space_n__)s', '\n'),
+    ('%(__buildout_space_r__)s', '\r'),
+    ('%(__buildout_space_f__)s', '\f'),
+    ('%(__buildout_space_v__)s', '\v'),
+    ]
+
 def _quote_spacey_nl(match):
     match = match.group(0).split('\n', 1)
     result = '\n\t'.join(
@@ -824,20 +854,11 @@ def _quote_spacey_nl(match):
         )
     return result
 
-_spacey_defaults = dict(
-    __buildout_space__   = ' ',
-    __buildout_space_r__ = '\r',
-    __buildout_space_f__ = '\f',
-    __buildout_space_v__ = '\v',
-    __buildout_space_n__ = '\n',
-    )
-
 def _save_options(section, options, f):
     print >>f, '[%s]' % section
     items = options.items()
     items.sort()
     for option, value in items:
-        value = value.replace('%', '%%')
         value = _spacey_nl.sub(_quote_spacey_nl, value)
         if value.startswith('\n\t'):
             value = '%(__buildout_space_n__)s' + value[2:]
