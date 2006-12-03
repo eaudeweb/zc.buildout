@@ -286,7 +286,7 @@ buildout:
     >>> os.chdir(sample_buildout)
     >>> buildout = os.path.join(sample_buildout, 'bin', 'buildout')
     >>> print system(buildout),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Installing data-dir
     data-dir: Creating directory mystuff
 
@@ -335,7 +335,7 @@ we'll see that the directory gets removed and recreated:
     ... """)
 
     >>> print system(buildout),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Uninstalling data-dir
     buildout: Installing data-dir
     data-dir: Creating directory mydata
@@ -355,7 +355,7 @@ the part will be reinstalled:
 
     >>> rmdir(sample_buildout, 'mydata')
     >>> print system(buildout),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Uninstalling data-dir
     buildout: Installing data-dir
     data-dir: Creating directory mydata
@@ -386,7 +386,7 @@ the directory in:
 We'll get a user error, not a traceback.
 
     >>> print system(buildout),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     data-dir: Cannot create /xxx/mydata. /xxx is not a directory.
     Error: Invalid Path
 
@@ -497,7 +497,7 @@ Now, if we run the buildout, we'll see the options with the values
 substituted. 
 
     >>> print system(buildout),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Uninstalling data-dir
     buildout: Installing data-dir
     data-dir: Creating directory mydata
@@ -516,7 +516,7 @@ recipe, so it assumed it could and reinstalled mydata.  If we rerun
 the buildout:
 
     >>> print system(buildout),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Updating data-dir
     buildout: Updating debug
     File 1 /sample-buildout/mydata/file
@@ -562,7 +562,7 @@ example, we can leave data-dir out of the parts list:
 It will still be treated as a part:
 
     >>> print system(buildout),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Updating data-dir
     buildout: Updating debug
     File 1 /sample-buildout/mydata/file
@@ -600,7 +600,7 @@ the data-dir part after the debug part, it will be included before:
 It will still be treated as a part:
 
     >>> print system(buildout),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Updating data-dir
     buildout: Updating debug
     File 1 /sample-buildout/mydata/file
@@ -647,7 +647,7 @@ To see how this works, we use an example:
     ... """)
 
     >>> print system(buildout),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Uninstalling debug
     buildout: Uninstalling data-dir
     buildout: Installing debug
@@ -719,7 +719,7 @@ Here is a more elaborate example.
     ... """)
 
     >>> print system(buildout),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Uninstalling debug
     buildout: Installing debug
     name base
@@ -759,7 +759,7 @@ delimiter.)
 
     >>> os.environ['HOME'] = home
     >>> print system(buildout),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Uninstalling debug
     buildout: Installing debug
     name base
@@ -839,7 +839,7 @@ Note that we used the installed buildout option to specify an
 alternate file to store information about installed parts.
     
     >>> print system(buildout+' -c other.cfg debug:op1=foo -v'),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Installing debug
     name other
     op1 foo
@@ -852,7 +852,7 @@ WARNING.
 Options can also be combined in the usual Unix way, as in:
     
     >>> print system(buildout+' -vcother.cfg debug:op1=foo'),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Updating debug
     name other
     op1 foo
@@ -894,7 +894,7 @@ the buildout in the usual way:
     ... """)
 
     >>> print system(buildout),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Uninstalling debug
     buildout: Installing debug
     recipe recipes:debug
@@ -976,7 +976,7 @@ Now we'll update our configuration file:
 and run the buildout specifying just d3 and d4:
 
     >>> print system(buildout+' install d3 d4'),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Uninstalling d3
     buildout: Installing d3
     d3: Creating directory data3
@@ -1045,7 +1045,7 @@ directories are still there.
 Now, if we run the buildout without the install command:
 
     >>> print system(buildout),
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Uninstalling d2
     buildout: Uninstalling d1
     buildout: Uninstalling debug
@@ -1105,7 +1105,7 @@ provide alternate locations, and even names for these directories.
     buildout: Creating directory /sample-alt/work
     buildout: Creating directory /sample-alt/basket
     buildout: Creating directory /sample-alt/developbasket
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
     buildout: Uninstalling d4
     buildout: Uninstalling d3
     buildout: Uninstalling d2
@@ -1141,7 +1141,7 @@ You can also specify an alternate buildout directory:
     buildout: Creating directory /sample-alt/parts
     buildout: Creating directory /sample-alt/eggs
     buildout: Creating directory /sample-alt/develop-eggs
-    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Develop: /sample-buildout/recipes
 
     >>> ls(alt)
     -  .installed.cfg
@@ -1189,7 +1189,7 @@ configuration file.  Because the verbosity is subtracted from the log
 level, we get a final log level of 20, which is the INFO level.
 
     >>> print system(buildout),
-    INFO Develop: /sample-buildout/recipes/setup.py
+    INFO Develop: /sample-buildout/recipes
 
 Predefined buildout options
 ---------------------------
@@ -1393,7 +1393,7 @@ egg to be built:
 
     >>> os.chdir(sample_bootstrapped)
     >>> print system(os.path.join(sample_bootstrapped, 'bin', 'buildout')),
-    buildout: Develop: /sample-bootstrapped/demo/setup.py
+    buildout: Develop: /sample-bootstrapped/demo
 
 Now we can add the extensions option.  We were a bit tricly and ran
 the buildout once with the demo develop egg defined but without the
@@ -1414,7 +1414,7 @@ We see that out extension is loaded and executed:
 
     >>> print system(os.path.join(sample_bootstrapped, 'bin', 'buildout')),
     ext ['buildout']
-    buildout: Develop: /sample-bootstrapped/demo/setup.py
+    buildout: Develop: /sample-bootstrapped/demo
 
 
 
