@@ -334,46 +334,8 @@ class Buildout(UserDict.DictMixin):
             try:
                 for setup in develop.split():
                     setup = self._buildout_path(setup)
-                    if os.path.isdir(setup):
-                        setup = os.path.join(setup, 'setup.py')
-
                     self._logger.info("Develop: %s", setup)
-
-
-                    fd, tsetup = tempfile.mkstemp()
-                    try:
-                        os.write(fd, runsetup_template % dict(
-                            setuptools=pkg_resources_loc,
-                            setupdir=os.path.dirname(setup),
-                            setup=setup,
-                            __file__ = setup,
-                            ))
-
-                        args = [
-                            zc.buildout.easy_install._safe_arg(tsetup),
-                            '-q', 'develop', '-mxN',
-                            '-f', zc.buildout.easy_install._safe_arg(
-                                ' '.join(self._links)
-                                ),
-                            '-d', zc.buildout.easy_install._safe_arg(dest),
-                            ]
-
-                        if self._log_level <= logging.DEBUG:
-                            if self._log_level == logging.DEBUG:
-                                del args[1]
-                            else:
-                                args[1] == '-v'
-                            self._logger.debug("in: %s\n%r",
-                                               os.path.dirname(setup), args)
-
-                        assert os.spawnl(
-                            os.P_WAIT, sys.executable, sys.executable,
-                            *args) == 0
-
-                    finally:
-                        os.close(fd)
-                        os.remove(tsetup)
-
+                    zc.buildout.easy_install.develop(setup, dest)
             except:
                 # if we had an error, we need to roll back changes, by
                 # removing any files we created.
@@ -531,8 +493,11 @@ class Buildout(UserDict.DictMixin):
         if (realpath(os.path.abspath(sys.argv[0]))
             !=
             realpath(
-                os.path.join(os.path.abspath(self['buildout']['bin-directory']),
-                             'buildout')
+                os.path.join(os.path.abspath(
+                                 self['buildout']['bin-directory']
+                                 ),
+                             'buildout',
+                             )
                 )
             ):
             self._logger.debug("Running %r", realpath(sys.argv[0]))
@@ -608,7 +573,7 @@ class Buildout(UserDict.DictMixin):
 
         fd, tsetup = tempfile.mkstemp()
         try:
-            os.write(fd, runsetup_template % dict(
+            os.write(fd, zc.buildout.easy_install.runsetup_template % dict(
                 setuptools=pkg_resources_loc,
                 setupdir=os.path.dirname(setup),
                 setup=setup,
@@ -795,19 +760,6 @@ class Options(UserDict.DictMixin):
 
     def copy(self):
         return dict([(k, self[k]) for k in self.keys()])
-        
-runsetup_template = """
-import sys
-sys.path.insert(0, %(setuptools)r)
-import os, setuptools
-
-__file__ = %(__file__)r
-
-os.chdir(%(setupdir)r)
-sys.argv[0] = %(setup)r
-execfile(%(setup)r)
-"""
-
 
 _spacey_nl = re.compile('[ \t\r\f\v]*\n[ \t\r\f\v\n]*'
                         '|'

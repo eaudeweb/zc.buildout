@@ -34,10 +34,13 @@ logger = logging.getLogger('zc.buildout.easy_install')
 
 url_match = re.compile('[a-z0-9+.-]+://').match
 
+setuptools_loc = pkg_resources.working_set.find(
+    pkg_resources.Requirement.parse('setuptools')
+    ).location
+
 # Include buildout and setuptools eggs in paths
 buildout_and_setuptools_path = [
-    pkg_resources.working_set.find(
-        pkg_resources.Requirement.parse('setuptools')).location,
+    setuptools_loc,
     pkg_resources.working_set.find(
         pkg_resources.Requirement.parse('zc.buildout')).location,
     ]
@@ -407,8 +410,8 @@ def build(spec, dest, build_ext,
         return dist
 
     # Get an editable version of the package to a temporary directory:
-    tmp = tempfile.mkdtemp('editable')
-    tmp2 = tempfile.mkdtemp('editable')
+    tmp = tempfile.mkdtemp('build')
+    tmp2 = tempfile.mkdtemp('build')
     try:
         index = _get_index(executable, index_url, links)
         dist = index.fetch_distribution(requirement, tmp2, False, True)
@@ -449,6 +452,65 @@ def build(spec, dest, build_ext,
         shutil.rmtree(tmp)
         shutil.rmtree(tmp2)
 
+def develop(setup, dest,
+            build_ext=None,
+            executable=sys.executable):
+
+    if os.path.isdir(setup):
+        directory = setup
+        setup = os.path.join(directory, 'setup.py')
+    else:
+        directory = os.path.dirname(setup)
+        
+    undo = []
+    try:
+        if build_ext:
+            setup_cfg = os.path.join(directory, 'setup.cfg')
+            if os.path.exists(setup_cfg):
+                os.rename(setup_cfg, setup_cfg+'-develop-aside')
+                def restore_old_setup():
+                    if os.path.exists(setup_cfg):
+                        os.remove(setup_cfg)
+                    os.rename(setup_cfg+'-develop-aside', setup_cfg)
+                undo.append(restore_old_setup)
+            else:
+                open(setup_cfg, 'w')
+                undo.append(lambda: os.remove(setup_cfg))
+            setuptools.command.setopt.edit_config(
+                setup_cfg, dict(build_ext=build_ext))
+
+        fd, tsetup = tempfile.mkstemp()
+        undo.append(lambda: os.remove(tsetup))
+        undo.append(lambda: os.close(fd))
+
+        os.write(fd, runsetup_template % dict(
+            setuptools=setuptools_loc,
+            setupdir=directory,
+            setup=setup,
+            __file__ = setup,
+            ))
+
+        args = [
+            zc.buildout.easy_install._safe_arg(tsetup),
+            '-q', 'develop', '-mxN',
+            '-d', _safe_arg(dest),
+            ]
+
+        log_level = logger.getEffectiveLevel()
+        if log_level <= logging.DEBUG:
+            if log_level == logging.DEBUG:
+                del args[1]
+            else:
+                args[1] == '-v'
+            logger.debug("in: %s\n%r", directory, args)
+
+        assert os.spawnl(os.P_WAIT, executable, executable, *args) == 0
+
+    finally:
+        undo.reverse()
+        [f() for f in undo]
+            
+            
 def working_set(specs, executable, path):
     return install(specs, None, executable=executable, path=path)
 
@@ -595,6 +657,15 @@ if _interactive:
     import code
     code.interact(banner="", local=globals())
 '''
+        
+runsetup_template = """
+import sys
+sys.path.insert(0, %(setuptools)r)
+import os, setuptools
 
+__file__ = %(__file__)r
 
-
+os.chdir(%(setupdir)r)
+sys.argv[0] = %(setup)r
+execfile(%(setup)r)
+"""
