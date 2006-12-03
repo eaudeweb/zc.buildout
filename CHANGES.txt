@@ -39,6 +39,9 @@ Feature Changes
 
 - Deprecated the buildout-section extendedBy option.
 
+- Removed the limitation that parts named in the install command can
+  only name configured parts.
+
 Bugs Fixed
 ----------
 
