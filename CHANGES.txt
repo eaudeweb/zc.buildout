@@ -32,8 +32,6 @@ Feature Changes
   list before the referencing part.  This means that you can omit
   parts from the parts list if they are referenced by other parts.
 
-  XXX need tests for this.
-
 - Removed support ConfigParser-style variable substitutions
   (e.g. %(foo)s). Only the string-template style of variable
   (e.g. ${section:option}) substitutions will be supported.

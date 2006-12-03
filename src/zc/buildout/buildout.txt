@@ -532,6 +532,87 @@ Section and option names in variable substitutions are only allowed to
 contain alphanumeric characters, hyphens, periods and spaces. This
 restriction might be relaxed in future releases.
 
+
+Automatic part selection and ordering
+-------------------------------------
+
+When a section with a recipe is refered to, either through variable
+substitution or by an initializing recipe, the section is treated as a
+part and added to the part list before the referencing part.  For
+example, we can leave data-dir out of the parts list:
+
+    >>> write(sample_buildout, 'buildout.cfg',
+    ... """
+    ... [buildout]
+    ... develop = recipes
+    ... parts = debug
+    ... log-level = INFO
+    ...
+    ... [debug]
+    ... recipe = recipes:debug
+    ... File 1 = ${data-dir:path}/file
+    ... File 2 = ${debug:File 1}/log
+    ...
+    ... [data-dir]
+    ... recipe = recipes:mkdir
+    ... path = mydata
+    ... """)
+
+
+It will still be treated as a part:
+
+    >>> print system(buildout),
+    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Updating data-dir
+    buildout: Updating debug
+    File 1 /sample-buildout/mydata/file
+    File 2 /sample-buildout/mydata/file/log
+    recipe recipes:debug
+
+    >>> cat('.installed.cfg') # doctest: +ELLIPSIS
+    [buildout]
+    installed_develop_eggs = /sample-buildout/develop-eggs/recipes.egg-link
+    parts = data-dir debug
+    ...
+
+Note that the data-dir part is included *before* the debug part,
+because the debug part refers to the data-dir part.  Even if we list
+the data-dir part after the debug part, it will be included before:
+
+    >>> write(sample_buildout, 'buildout.cfg',
+    ... """
+    ... [buildout]
+    ... develop = recipes
+    ... parts = debug data-dir
+    ... log-level = INFO
+    ...
+    ... [debug]
+    ... recipe = recipes:debug
+    ... File 1 = ${data-dir:path}/file
+    ... File 2 = ${debug:File 1}/log
+    ...
+    ... [data-dir]
+    ... recipe = recipes:mkdir
+    ... path = mydata
+    ... """)
+
+
+It will still be treated as a part:
+
+    >>> print system(buildout),
+    buildout: Develop: /sample-buildout/recipes/setup.py
+    buildout: Updating data-dir
+    buildout: Updating debug
+    File 1 /sample-buildout/mydata/file
+    File 2 /sample-buildout/mydata/file/log
+    recipe recipes:debug
+
+    >>> cat('.installed.cfg') # doctest: +ELLIPSIS
+    [buildout]
+    installed_develop_eggs = /sample-buildout/develop-eggs/recipes.egg-link
+    parts = data-dir debug
+    ...
+
 Multiple configuration files
 ----------------------------
 
@@ -926,12 +1007,18 @@ The .installed.cfg is only updated for the recipes that ran:
     >>> cat(sample_buildout, '.installed.cfg')
     [buildout]
     installed_develop_eggs = /sample-buildout/develop-eggs/recipes.egg-link
-    parts = debug d2 d3 d4 d1
+    parts = debug d1 d2 d3 d4
     <BLANKLINE>
     [debug]
     __buildout_installed__ = 
     __buildout_signature__ = recipes-PiIFiO8ny5yNZ1S3JfT0xg==
     recipe = recipes:debug
+    <BLANKLINE>
+    [d1]
+    __buildout_installed__ = /sample-buildout/d1
+    __buildout_signature__ = recipes-PiIFiO8ny5yNZ1S3JfT0xg==
+    path = /sample-buildout/d1
+    recipe = recipes:mkdir
     <BLANKLINE>
     [d2]
     __buildout_installed__ = /sample-buildout/d2
@@ -950,12 +1037,6 @@ The .installed.cfg is only updated for the recipes that ran:
     __buildout_signature__ = recipes-PiIFiO8ny5yNZ1S3JfT0xg==
     path = /sample-buildout/data4
     recipe = recipes:mkdir
-    <BLANKLINE>
-    [d1]
-    __buildout_installed__ = /sample-buildout/d1
-    __buildout_signature__ = recipes-PiIFiO8ny5yNZ1S3JfT0xg==
-    path = /sample-buildout/d1
-    recipe = recipes:mkdir
 
 Note that the installed data for debug, d1, and d2 haven't changed,
 because we didn't install those parts and that the d1 and d2
@@ -965,8 +1046,8 @@ Now, if we run the buildout without the install command:
 
     >>> print system(buildout),
     buildout: Develop: /sample-buildout/recipes/setup.py
-    buildout: Uninstalling d1
     buildout: Uninstalling d2
+    buildout: Uninstalling d1
     buildout: Uninstalling debug
     buildout: Installing debug
     recipe recipes:debug

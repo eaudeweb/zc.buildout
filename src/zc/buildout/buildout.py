@@ -184,21 +184,8 @@ class Buildout(UserDict.DictMixin):
         conf_parts = conf_parts and conf_parts.split() or []
         installed_parts = installed_part_options['buildout']['parts']
         installed_parts = installed_parts and installed_parts.split() or []
-
-
-        # If install_parts is given, then they must be listed in parts
-        # and we don't uninstall anything. Otherwise, we install
-        # the configured parts and uninstall anything else.
-
-        # Why?
         
         if install_parts:
-##             extra = [p for p in install_parts if p not in conf_parts]
-##             if extra:
-##                 self._error(
-##                     'Invalid install parts: %s.\n'
-##                     'Install parts must be listed in the configuration.',
-##                     ' '.join(extra))
             uninstall_missing = False
         else:
             install_parts = conf_parts
@@ -311,15 +298,12 @@ class Buildout(UserDict.DictMixin):
                               ] = '\n'.join(installed_files)
                 saved_options['__buildout_signature__'] = signature
 
-                if part not in installed_parts:
-                    installed_parts.append(part)
+                installed_parts = [p for p in installed_parts if p != part]
+                installed_parts.append(part)
 
         finally:
-            installed_part_options['buildout']['parts'] = ' '.join(
-                [p for p in conf_parts if p in installed_parts]
-                +
-                [p for p in installed_parts if p not in conf_parts] 
-            )
+            installed_part_options['buildout']['parts'] = (
+                ' '.join(installed_parts))
             installed_part_options['buildout']['installed_develop_eggs'
                                                ] = installed_develop_eggs
             
