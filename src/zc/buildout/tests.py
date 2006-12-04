@@ -730,6 +730,7 @@ existing setup.cfg:
     >>> zc.buildout.easy_install.develop(
     ...   extdemo, dest, 
     ...   {'include-dirs': os.path.join(sample_buildout, 'include')})
+    '/tmp/tmp7AFYXv/_TEST_/dest/extdemo.egg-link'
 
     >>> ls(dest)
     -  extdemo.egg-link
@@ -807,9 +808,10 @@ initextdemo(void)
 {
     PyObject *m;
     m = Py_InitModule3("extdemo", methods, "");
+#ifdef TWO
+    PyModule_AddObject(m, "val", PyInt_FromLong(2));
+#else
     PyModule_AddObject(m, "val", PyInt_FromLong(EXTDEMO));
-#ifdef VAL2
-    PyModule_AddObject(m, "val2", PyInt_FromLong(2));
 #endif
 }
 """

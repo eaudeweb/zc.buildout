@@ -1,5 +1,5 @@
-Custon eggs
-===========
+Creating eggs with extensions neededing custom build settings
+=============================================================
 
 Sometimes, It's necessary to provide extra control over how an egg is
 created.  This is commonly true for eggs with extension modules that
@@ -19,6 +19,42 @@ library-dirs
 rpath
    A new-line separated list of directories to search for dynamic libraries
    at run time.
+
+define
+   A comma-separated list of names of C preprocessor variables to
+   define.
+
+undef
+   A comman separated list of names of C preprocessor variables to
+   undefine.
+
+libraries
+   The name of an additional library to link with.  Due to limitations
+   in distutils and desprite the option name, only a single library
+   can be specified.
+
+link-objects
+   The name of an link object to link afainst.  Due to limitations
+   in distutils and desprite the option name, only a single link object
+   can be specified.
+
+debug
+   Compile/link with debugging information
+
+force
+   Forcibly build everything (ignore file timestamps)
+
+compiler
+   Specify the compiler type
+
+swig
+   The path to the swig executable
+
+swig-cpp           
+   Make SWIG create C++ files (default is C)
+
+swig-opts
+   List of SWIG command line options
 
 In addition, the following options can be used to specify the egg:
 
@@ -59,9 +95,10 @@ package that has a simple extension module::
   {
       PyObject *m;
       m = Py_InitModule3("extdemo", methods, "");
+  #ifdef TWO
+      PyModule_AddObject(m, "val", PyInt_FromLong(2));
+  #else
       PyModule_AddObject(m, "val", PyInt_FromLong(EXTDEMO));
-  #ifdef VAL2
-      PyModule_AddObject(m, "val2", PyInt_FromLong(2));
   #endif
   }
 
@@ -162,3 +199,131 @@ When we run the script, we'll 42 printed:
 
     >>> print system(join('bin', 'demo')),
     42
+
+Controlling develop-egg generation
+==================================
+
+If you want to provide custom build options for a develop egg, you can
+use the develop recipe.  The recipe has the following options:
+
+path
+   The path to a setup script or directory containing a startup
+   script. This is required.
+
+include-dirs
+   A new-line separated list of directories to search for include
+   files.
+
+library-dirs
+   A new-line separated list of directories to search for libraries
+   to link with.
+
+rpath
+   A new-line separated list of directories to search for dynamic libraries
+   at run time.
+
+define
+   A comma-separated list of names of C preprocessor variables to
+   define.
+
+undef
+   A comman separated list of names of C preprocessor variables to
+   undefine.
+
+libraries
+   The name of an additional library to link with.  Due to limitations
+   in distutils and desprite the option name, only a single library
+   can be specified.
+
+link-objects
+   The name of an link object to link afainst.  Due to limitations
+   in distutils and desprite the option name, only a single link object
+   can be specified.
+
+debug
+   Compile/link with debugging information
+
+force
+   Forcibly build everything (ignore file timestamps)
+
+compiler
+   Specify the compiler type
+
+swig
+   The path to the swig executable
+
+swig-cpp           
+   Make SWIG create C++ files (default is C)
+
+swig-opts
+   List of SWIG command line options
+
+python
+   The name of a section to get the Python executable from.
+   If not specified, then the buildout python option is used.  The
+   Python executable is found in the executable option of the named
+   section. 
+
+To illustrate this, we'll use a directory containing the extdemo
+example from the earlier section:
+
+    >>> ls(extdemo)
+    -  MANIFEST
+    -  MANIFEST.in
+    -  README
+    -  extdemo.c
+    -  setup.py
+
+    >>> write('buildout.cfg',
+    ... """
+    ... [buildout]
+    ... develop = demo
+    ... parts = extdemo demo
+    ...
+    ... [extdemo]
+    ... setup = %(extdemo)s
+    ... recipe = zc.recipe.egg:develop
+    ... include-dirs = include
+    ... define = TWO
+    ...
+    ... [demo]
+    ... recipe = zc.recipe.egg
+    ... eggs = demo 
+    ...        extdemo
+    ... entry-points = demo=demo:main
+    ... """ % dict(extdemo=extdemo))
+
+Note that we added a define option to cause the preprocessor variable
+TWO to be defined.  This will cause the module-variable, 'val', to be
+set with a value of 2.
+
+    >>> print system(buildout),
+    buildout: Develop: /tmp/tmpCXjRps/_TEST_/sample-buildout/demo
+    buildout: Uninstalling extdemo
+    buildout: Installing extdemo
+    buildout: Updating demo
+
+Our develop-eggs now includes an egg link for extdemo:
+
+    >>> ls('develop-eggs')
+    -  demo.egg-link
+    -  extdemo.egg-link
+    -  zc.recipe.egg.egg-link
+
+and the extdemo now has a built extension:
+
+    >>> ls(extdemo)
+    -  MANIFEST
+    -  MANIFEST.in
+    -  README
+    d  build
+    -  extdemo.c
+    d  extdemo.egg-info
+    -  extdemo.so
+    -  setup.py
+
+Because develop eggs take precedence over non-develop eggs, the demo
+script will use the new develop egg:
+
+    >>> print system(join('bin', 'demo')),
+    2

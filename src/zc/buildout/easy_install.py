@@ -407,12 +407,15 @@ def build(spec, dest, build_ext,
 
     dist = _satisfied(requirement, env, dest, executable, index_url, links)
     if dist is not None:
-        return dist
+        return [dist.location]
 
-    # Get an editable version of the package to a temporary directory:
-    tmp = tempfile.mkdtemp('build')
-    tmp2 = tempfile.mkdtemp('build')
+    undo = []
     try:
+        tmp = tempfile.mkdtemp('build')
+        undo.append(lambda : shutil.rmtree(tmp)) 
+        tmp2 = tempfile.mkdtemp('build')
+        undo.append(lambda : shutil.rmtree(tmp2))
+
         index = _get_index(executable, index_url, links)
         dist = index.fetch_distribution(requirement, tmp2, False, True)
         if dist is None:
@@ -445,12 +448,39 @@ def build(spec, dest, build_ext,
         setuptools.command.setopt.edit_config(
             setup_cfg, dict(build_ext=build_ext))
 
-        # Now run easy_install for real:
+        tmp3 = tempfile.mkdtemp('build', dir=dest)
+        undo.append(lambda : shutil.rmtree(tmp3)) 
+
         _call_easy_install(base, env, pkg_resources.WorkingSet(),
-                           dest, links, index_url, executable, True)
+                           tmp3, links, index_url, executable, True)
+
+        return _copyeggs(tmp3, dest, '.egg', undo)
+        
     finally:
-        shutil.rmtree(tmp)
-        shutil.rmtree(tmp2)
+        undo.reverse()
+        [f() for f in undo]
+        
+
+def _rm(*paths):
+    for path in paths:
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
+
+def _copyeggs(src, dest, suffix, undo):
+    result = []
+    undo.append(lambda : _rm(*result))
+    for name in os.listdir(src):
+        if name.endswith(suffix):
+            new = os.path.join(dest, name)
+            os.rename(os.path.join(src, name), new)
+            result.append(new)
+
+    assert len(result) == 1
+    undo.pop()
+    
+    return result[0]
 
 def develop(setup, dest,
             build_ext=None,
@@ -490,10 +520,13 @@ def develop(setup, dest,
             __file__ = setup,
             ))
 
+        tmp3 = tempfile.mkdtemp('build', dir=dest)
+        undo.append(lambda : shutil.rmtree(tmp3)) 
+
         args = [
             zc.buildout.easy_install._safe_arg(tsetup),
             '-q', 'develop', '-mxN',
-            '-d', _safe_arg(dest),
+            '-d', _safe_arg(tmp3),
             ]
 
         log_level = logger.getEffectiveLevel()
@@ -505,6 +538,8 @@ def develop(setup, dest,
             logger.debug("in: %s\n%r", directory, args)
 
         assert os.spawnl(os.P_WAIT, executable, executable, *args) == 0
+
+        return _copyeggs(tmp3, dest, '.egg-link', undo)
 
     finally:
         undo.reverse()

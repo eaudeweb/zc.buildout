@@ -489,9 +489,10 @@ extension, extdemo.c::
   {
       PyObject *m;
       m = Py_InitModule3("extdemo", methods, "");
+  #ifdef TWO
+      PyModule_AddObject(m, "val", PyInt_FromLong(2));
+  #else
       PyModule_AddObject(m, "val", PyInt_FromLong(EXTDEMO));
-  #ifdef VAL2
-      PyModule_AddObject(m, "val2", PyInt_FromLong(2));
   #endif
   }
 
@@ -514,6 +515,9 @@ distribution:
     ...   'extdemo', dest, 
     ...   {'include-dirs': os.path.join(sample_buildout, 'include')},
     ...   links=[link_server], index=link_server+'index/')
+    '/sample-install/extdemo-1.4-py2.4-unix-i686.egg'
+
+The function returns the list of eggs 
 
 Now if we look in our destination directory, we see we have an extdemo egg:
 
@@ -563,6 +567,9 @@ distribution:
     >>> zc.buildout.easy_install.develop(
     ...   extdemo, dest, 
     ...   {'include-dirs': os.path.join(sample_buildout, 'include')})
+    '/sample-install/extdemo.egg-link'
+
+The name of the egg link created is returned.
 
 Now if we look in our destination directory, we see we have an extdemo
 egg link:
