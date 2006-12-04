@@ -465,7 +465,7 @@ def _rm(*paths):
     for path in paths:
         if os.path.isdir(path):
             shutil.rmtree(path)
-        else:
+        elif os.path.exists(path):
             os.remove(path)
 
 def _copyeggs(src, dest, suffix, undo):
@@ -474,6 +474,7 @@ def _copyeggs(src, dest, suffix, undo):
     for name in os.listdir(src):
         if name.endswith(suffix):
             new = os.path.join(dest, name)
+            _rm(new)
             os.rename(os.path.join(src, name), new)
             result.append(new)
 
