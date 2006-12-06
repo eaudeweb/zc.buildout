@@ -796,6 +796,12 @@ Uninstall recipes need to be called when a part is removed too:
     ... ''')
 
     >>> print system(join('bin', 'buildout')),
+    buildout: Develop: /sample-buildout/recipes
+    buildout: Uninstalling demo
+    buildout: Running uninstall recipe
+    uninstalling
+    buildout: Installing demo
+    installing
 
 
     >>> write('buildout.cfg', '''
@@ -803,9 +809,12 @@ Uninstall recipes need to be called when a part is removed too:
     ... develop = recipes
     ... parts = 
     ... ''')
-    
 
     >>> print system(join('bin', 'buildout')),
+    buildout: Develop: /sample-buildout/recipes
+    buildout: Uninstalling demo
+    buildout: Running uninstall recipe
+    uninstalling
 
 """
 

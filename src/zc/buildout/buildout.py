@@ -247,19 +247,16 @@ class Buildout(UserDict.DictMixin):
                     continue
 
                 # ununstall part
-                self._logger.info('Uninstalling waaa %s', part)
+                self._logger.info('Uninstalling %s', part)
 
                 # run uinstall recipe
                 recipe, entry = _recipe(installed_part_options[part])
-                print '?', recipe, entry
                 try:
                     uninstaller = _install_and_load(
-                        recipe, 'zc.buildout.ununstall', entry, self)
+                        recipe, 'zc.buildout.uninstall', entry, self)
                     self._logger.info('Running uninstall recipe')
                     uninstaller(part, installed_part_options[part])
-                except (ImportError, pkg_resources.DistributionNotFound):
-                    print 'could not load'
-                    # no uninstall recipe registered
+                except (ImportError, pkg_resources.DistributionNotFound), v:
                     pass
 
                 # remove created files and directories
@@ -624,29 +621,38 @@ class Buildout(UserDict.DictMixin):
 
 
 def _install_and_load(spec, group, entry, buildout):
-    req = pkg_resources.Requirement.parse(spec)
+    try:
 
-    buildout_options = buildout['buildout']
-    if pkg_resources.working_set.find(req) is None:
-        if buildout_options['offline'] == 'true':
-            dest = None
-            path = [buildout_options['develop-eggs-directory'],
-                    buildout_options['eggs-directory'],
-                    ]
-        else:
-            dest = buildout_options['eggs-directory']
-            path = [buildout_options['develop-eggs-directory']]
+        req = pkg_resources.Requirement.parse(spec)
 
-        zc.buildout.easy_install.install(
-            [spec], dest,
-            links=buildout._links,
-            index=buildout_options.get('index'),
-            path=path,
-            working_set=pkg_resources.working_set,
-            )
+        buildout_options = buildout['buildout']
+        if pkg_resources.working_set.find(req) is None:
+            if buildout_options['offline'] == 'true':
+                dest = None
+                path = [buildout_options['develop-eggs-directory'],
+                        buildout_options['eggs-directory'],
+                        ]
+            else:
+                dest = buildout_options['eggs-directory']
+                path = [buildout_options['develop-eggs-directory']]
 
-    return pkg_resources.load_entry_point(
-        req.project_name, group, entry)
+            zc.buildout.easy_install.install(
+                [spec], dest,
+                links=buildout._links,
+                index=buildout_options.get('index'),
+                path=path,
+                working_set=pkg_resources.working_set,
+                )
+
+        return pkg_resources.load_entry_point(
+            req.project_name, group, entry)
+
+    except Exception, v:
+        buildout._logger.log(
+            1,
+            "Could't load %s entry point %s\nfrom %s:\n%s.",
+            group, entry, spec, v)
+        raise
 
 class Options(UserDict.DictMixin):
 
