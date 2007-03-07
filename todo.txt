@@ -1,3 +1,6 @@
+====
+TODO
+====
 
 - Report error if repeated parts
 
@@ -53,9 +56,39 @@
 - document recipe initialization order
 
 
+Download Cache
+==============
 
+ a) cache for distutils fetches (buildout cache)
+
+    - the cache should be in the 'find-links' so that distutils picks them up
+      enabling the cache feature
+ 
+ b) cache for recipes that download things (file cache)
+
+    - simple library (z3c.filecache) that doesn't depend on buildout and is
+      not a part of buildout but a library with a simple API (e.g. get(url,
+      directory)->local file or None; set(url, directory, already downloaded
+      file) -> return path of new file (move given file to download
+      directory))
+
+    - recipes that want to use this mechanism would depend on z3c.filecache
+
+ - files of a) and b) probably should be held in separate areas
+
+ - check work that fred did
+
+ - a persistent cache should be optional, temporary directories will be used
+   if no cache is defined
+
+ - implementations for a) and b) have to create a directory in the download
+   cache directory to store their files. case a) will be called "zc.buildout",
+   case be will be called like the package that provides the cache feature
+   (e.g. z3c.filecache).
 
 Issues
+======
+
 
 - Should we include setuptools and buildout eggs for buildout process
   in environment when searching for requirements?

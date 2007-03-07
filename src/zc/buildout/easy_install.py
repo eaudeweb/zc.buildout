@@ -117,7 +117,9 @@ class Installer:
                  path=None,
                  newest=True,
                  versions=None,
+                 download_cache=None,
                  ):
+        self._download_cache = download_cache
         self._dest = dest
         self._links = list(links)
         self._index_url = index
@@ -257,6 +259,16 @@ class Installer:
             if self._dest is not None:
                 logger.info("Getting new distribution for %s", requirement)
 
+                if self._download_cache is None:
+                    # There is no persistent download cache defined,
+                    # so we create one that will be removed later on again.
+                    download_cache = tempfile.mkdtemp('download_cache')
+                    cleanup_download_cache = (
+                        lambda:shutil.rmtree(download_cache))
+                else:
+                    download_cache = self._download_cache
+                    cleanup_download_cache = lambda:None
+
                 # Retrieve the dist:grokonepage
                 index = self._index
                 dist = index.obtain(requirement)
@@ -265,15 +277,23 @@ class Installer:
                         "Couldn't find a distribution for %s."
                         % requirement)
 
-                fname = dist.location
-                if url_match(fname):
-                    fname = urlparse.urlparse(fname)[2]
+                try:
+                    # Retrieve the dist:
+                    index = self._index
+                    dist = index.obtain(requirement)
+                    if dist is None:
+                        raise zc.buildout.UserError(
+                            "Couldn't find a distribution for %s."
+                            % requirement)
 
-                if fname.endswith('.egg'):
-                    # It's already an egg, just fetch it into the dest
-                    tmp = tempfile.mkdtemp('get_dist')
-                    try:
-                        dist = index.fetch_distribution(requirement, tmp)
+                    fname = dist.location
+                    if url_match(fname):
+                        fname = urlparse.urlparse(fname)[2]
+
+                    if fname.endswith('.egg'):
+                        # It's already an egg, just fetch it into the dest
+                        dist = index.fetch_distribution(requirement,
+                                                        download_cache)
                         if dist is None:
                             raise zc.buildout.UserError(
                                 "Couln't download a distribution for %s."
@@ -304,23 +324,17 @@ class Installer:
                                     dist.location, newloc)
                             else:
                                 shutil.copyfile(dist.location, newloc)
-
-                    finally:
-                        shutil.rmtree(tmp)
-
-                else:
-                    # It's some other kind of dist.  We'll download it to
-                    # a temporary directory and let easy_install have it's
-                    # way with it:
-                    tmp = tempfile.mkdtemp('get_dist')
-                    try:
-                        dist = index.fetch_distribution(requirement, tmp)
+                    else:
+                        # It's some other kind of dist.  We'll download it to
+                        # a temporary directory and let easy_install have it's
+                        # way with it:
+                        dist = index.fetch_distribution(requirement,
+                                                        download_cache)
 
                         # May need a new one.  Call easy_install
                         self._call_easy_install(dist.location, ws, self._dest)
-                    finally:
-                        shutil.rmtree(tmp)
-
+                finally:
+                    cleanup_download_cache()
 
                 # Because we have added a new egg, we need to rescan
                 # the destination directory.
@@ -507,9 +521,11 @@ def default_versions(versions=None):
 def install(specs, dest,
             links=(), index=None,
             executable=sys.executable, always_unzip=False,
-            path=None, working_set=None, newest=True, versions=None):
-    installer = Installer(dest, links, index, executable, always_unzip, path,
-                          newest, versions)
+            path=None, working_set=None, newest=True, versions=None,
+            download_cache=None):
+    installer = Installer(dest, links, index, executable,
+                          always_unzip, path, newest, 
+                          versions, download_cache)
     return installer.install(specs, working_set)
 
 
@@ -521,7 +537,6 @@ def build(spec, dest, build_ext,
                           versions)
     return installer.build(spec, build_ext)
 
-        
 
 def _rm(*paths):
     for path in paths:
