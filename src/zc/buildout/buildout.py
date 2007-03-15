@@ -1201,6 +1201,10 @@ def main(args=None):
                     options.append(('buildout', 'newest', 'false'))
                 elif op[0] == 'D':
                     debug = True
+                elif op[0] == 'B':
+                    zc.buildout.easy_install.set_download_type(False)
+                elif op[0] == 'b':
+                    zc.buildout.easy_install.set_download_type(True)
                 else:
                     _help()
                 op = op[1:]

@@ -28,6 +28,8 @@ import setuptools.package_index
 import setuptools.archive_util
 import zc.buildout
 
+download_binary_distributions = True
+
 default_index_url = os.environ.get('buildout-testing-index-url')
 
 logger = logging.getLogger('zc.buildout.easy_install')
@@ -45,6 +47,24 @@ buildout_and_setuptools_path = [
     pkg_resources.working_set.find(
         pkg_resources.Requirement.parse('zc.buildout')).location,
     ]
+
+def set_download_type(value):
+    global download_binary_distributions
+    
+    if value in [True, False]:
+        # Make sure that if True or False has been specified using 1 or 0 to
+        # convert it to the constant
+        if value == 1:
+            value = True
+        else:
+            value = False
+        
+        download_binary_distributions = value
+    else:
+        raise zc.buildout.UserError(
+                        "Only True and False are valid"
+                        )
+    
 
 class IncompatibleVersionError(zc.buildout.UserError):
     """A specified version is incompatible with a given requirement.
@@ -184,7 +204,7 @@ class Installer:
                 lastv = v
 
         best_we_have = dists[0] # Because dists are sorted from best to worst
-
+                
         # Check if we have the upper limit
         if maxv is not None and best_we_have.version == maxv:
             logger.debug('We have the best distribution that satisfies\n%s',
@@ -414,7 +434,21 @@ class Installer:
 
         for requirement in requirements:
             dist = self._get_dist(requirement, ws, self._always_unzip)
-            ws.add(dist)
+            # Only add the distribution to the working set if it is platform
+            # independent
+            if dist.platform is None or not download_binary_distributions :
+                ws.add(dist)
+            else:
+                distList = self._env.__getitem__(requirement)
+               
+                # env.__getitem__ returns a list sorted by version number
+                # therefore the first version found that is platform independent
+                # is the one we want
+                for adist in distList:
+                    if adist is none:
+                        dist = adist
+                        break
+               
             self._maybe_add_setuptools(ws, dist)
 
         # OK, we have the requested distributions and they're in the working
@@ -433,8 +467,8 @@ class Installer:
                 requirement = self._constrain(requirement)
                 if dest:
                     logger.debug('Getting required %s', requirement)
-                dist = self._get_dist(requirement, ws, self._always_unzip)
                 ws.add(dist)
+                            
                 self._maybe_add_setuptools(ws, dist)
             else:
                 break
