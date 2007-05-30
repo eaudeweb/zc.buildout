@@ -594,11 +594,7 @@ if os.path.exists(bootstrap_py):
     >>> print system(sys.executable+' '+'bootstrap.py'), # doctest: +ELLIPSIS
     Downloading ...
     Warning: creating ...buildout.cfg
-    Creating directory ...bin
-    Creating directory ...parts
-    Creating directory ...eggs
-    Creating directory ...develop-eggs
-    Generated script /sample/bin/buildout.
+    ...Generated script /sample/bin/buildout.
 
     >>> ls(sample_buildout)
     d  bin
@@ -658,11 +654,11 @@ bootstrapping.
     >>> os.chdir(d)
     >>> print system(os.path.join(sample_buildout, 'bin', 'buildout')
     ...              + ' bootstrap'),
-    Creating directory /sample-bootstrap/bin
-    Creating directory /sample-bootstrap/parts
-    Creating directory /sample-bootstrap/eggs
-    Creating directory /sample-bootstrap/develop-eggs
-    Generated script /sample-bootstrap/bin/buildout.
+    Creating directory '/sample-bootstrap/bin'.
+    Creating directory '/sample-bootstrap/parts'.
+    Creating directory '/sample-bootstrap/eggs'.
+    Creating directory '/sample-bootstrap/develop-eggs'.
+    Generated script '/sample-bootstrap/bin/buildout'.
     """
 
 
@@ -692,7 +688,7 @@ def bug_92891_bootstrap_crashes_with_egg_recipe_in_buildout_section():
     Generated script '/sample-bootstrap/bin/buildout'.
 
     >>> print system(os.path.join('bin', 'buildout')),
-    Unused options for buildout: 'scripts' 'eggs'
+    Unused options for buildout: 'scripts' 'eggs'.
 
     """
 
