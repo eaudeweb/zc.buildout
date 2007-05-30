@@ -249,7 +249,7 @@ reporting that a version was picked automatically:
     zc.buildout.easy_install DEBUG
       Picked: demo = 0.3
     zc.buildout.easy_install DEBUG
-      Getting required 'demoneeded'.
+      Getting required 'demoneeded'
     zc.buildout.easy_install DEBUG
         required by demo 0.3.
     zc.buildout.easy_install DEBUG

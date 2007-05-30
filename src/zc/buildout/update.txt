@@ -64,17 +64,17 @@ Now if we run the buildout, the buildout will upgrade itself to the
 new versions found in new releases:
 
     >>> print system(buildout),
-    Getting new distribution for zc.buildout
-    Got zc.buildout 99.99
-    Getting new distribution for setuptools
-    Got setuptools 99.99
+    Getting distribution for 'zc.buildout'.
+    Got zc.buildout 99.99.
+    Getting distribution for 'setuptools'.
+    Got setuptools 99.99.
     Upgraded:
       zc.buildout version 99.99,
       setuptools version 99.99;
     restarting.
-    Generated script /sample-buildout/bin/buildout.
-    Develop: /sample-buildout/showversions
-    Installing show-versions
+    Generated script '/sample-buildout/bin/buildout'.
+    Develop: '/sample-buildout/showversions'
+    Installing show-versions.
     zc.buildout 99.99
     setuptools 99.99
 
@@ -121,9 +121,9 @@ We'll actually "upgrade" to an earlier version.
       zc.buildout version 1.0.0,
       setuptools version 0.6;
     restarting.
-    Generated script /sample-buildout/bin/buildout.
-    Develop: /sample-buildout/showversions
-    Updating show-versions
+    Generated script '/sample-buildout/bin/buildout'.
+    Develop: '/sample-buildout/showversions'
+    Updating show-versions.
     zc.buildout 1.0.0
     setuptools 0.6
 
@@ -142,16 +142,16 @@ We won't upgrade in offline mode:
     ... """ % dict(new_releases=new_releases))
 
     >>> print system(buildout+' -o'),
-    Develop: /sample-buildout/showversions
-    Updating show-versions
+    Develop: '/sample-buildout/showversions'
+    Updating show-versions.
     zc.buildout 1.0.0
     setuptools 0.6
 
 Or in non-newest mode:
 
     >>> print system(buildout+' -N'),
-    Develop: /sample-buildout/showversions
-    Updating show-versions
+    Develop: '/sample-buildout/showversions'
+    Updating show-versions.
     zc.buildout 1.0.0
     setuptools 0.6
 
@@ -170,14 +170,14 @@ directory:
     
     >>> cd(sample_buildout2)
     >>> print system(buildout),
-    Creating directory /sample_buildout2/bin
-    Creating directory /sample_buildout2/parts
-    Creating directory /sample_buildout2/eggs
-    Creating directory /sample_buildout2/develop-eggs
-    Getting new distribution for zc.buildout
-    Got zc.buildout 99.99
-    Getting new distribution for setuptools
-    Got setuptools 99.99
-    Not upgrading because not running a local buildout command
+    Creating directory '/sample_buildout2/bin'.
+    Creating directory '/sample_buildout2/parts'.
+    Creating directory '/sample_buildout2/eggs'.
+    Creating directory '/sample_buildout2/develop-eggs'.
+    Getting distribution for 'zc.buildout'.
+    Got zc.buildout 99.99.
+    Getting distribution for 'setuptools'.
+    Got setuptools 99.99.
+    Not upgrading because not running a local buildout command.
 
     >>> ls('bin')

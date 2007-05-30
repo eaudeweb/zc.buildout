@@ -381,7 +381,7 @@ class Installer:
 
     def _get_dist(self, requirement, ws, always_unzip):
 
-        __doing__ = 'Getting distribution for %s.', str(requirement)
+        __doing__ = 'Getting distribution for %r.', str(requirement)
 
         # Maybe an existing dist is already the best dist that satisfies the
         # requirement
@@ -389,8 +389,7 @@ class Installer:
 
         if dist is None:
             if self._dest is not None:
-                logger.info("Getting new distribution for %r",
-                            str(requirement))
+                logger.info(*__doing__)
 
             # Retrieve the dist:
             if avail is None:
@@ -464,7 +463,7 @@ class Installer:
 
             self._env.scan([self._dest])
             dist = self._env.best_match(requirement, ws)
-            logger.info("Got %s", dist)            
+            logger.info("Got %s.", dist)            
 
         else:
             dists = [dist]
@@ -569,9 +568,9 @@ class Installer:
                 [requirement] = err
                 requirement = self._constrain(requirement)
                 if dest:
-                    logger.debug('Getting required %r.', str(requirement))
+                    logger.debug('Getting required %r', str(requirement))
                 else:
-                    logger.debug('Adding required %r.', str(requirement))
+                    logger.debug('Adding required %r', str(requirement))
                 _log_requirement(ws, requirement)
                     
                 for dist in self._get_dist(requirement, ws, self._always_unzip
@@ -597,8 +596,8 @@ class Installer:
         # Retrieve the dist:
         if avail is None:
             raise zc.buildout.UserError(
-                "Couldn't find a source distribution for %s."
-                % requirement)
+                "Couldn't find a source distribution for %r."
+                % str(requirement))
 
         logger.debug('Building %r', spec)
 
@@ -970,7 +969,7 @@ class VersionConflict(zc.buildout.UserError):
                   ]
         for dist in self.ws:
             if req in dist.requires():
-                result.append("but %s requires %s." % (dist, req))
+                result.append("but %s requires %r." % (dist, str(req)))
         return '\n'.join(result)
 
 class MissingDistribution(zc.buildout.UserError):
@@ -982,7 +981,7 @@ class MissingDistribution(zc.buildout.UserError):
 
     def __str__(self):
         req, ws = self.data
-        return "Couldn't find a distribution for %s." % req
+        return "Couldn't find a distribution for %r." % str(req)
 
 def _log_requirement(ws, req):
     ws = list(ws)
