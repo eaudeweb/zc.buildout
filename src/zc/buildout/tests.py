@@ -2073,6 +2073,25 @@ directory and then use the wacky extension to load the demo package
     
     """
 
+# XXX Tests needed:
+
+# Link added from package meta data
+
+# prefer final:
+#  - no existing and newer dev available
+#  - no existing and only dev available
+#  - final existing and only dev acailable
+#  - final existing and newer final available
+#  - final existing and same final available
+#  - final existing and older final available
+#  - only dev existing and final available
+#  - only dev existing and no final available newer dev available
+#  - only dev existing and no final available older dev available
+#  - only dev existing and no final available same dev available
+# Maybe same variations for non-prefer-final case.
+# Looks like a job for something fit like.
+
+
 ######################################################################
     
 def create_sample_eggs(test, executable=sys.executable):
@@ -2082,15 +2101,16 @@ def create_sample_eggs(test, executable=sys.executable):
     try:
         write(tmp, 'README.txt', '')
 
-        for i in (0, 1):
+        for i in (0, 1, 2):
             write(tmp, 'eggrecipedemobeeded.py', 'y=%s\n' % i)
+            c1 = i==2 and 'c1' or ''
             write(
                 tmp, 'setup.py',
                 "from setuptools import setup\n"
                 "setup(name='demoneeded', py_modules=['eggrecipedemobeeded'],"
-                " zip_safe=True, version='1.%s', author='bob', url='bob', "
+                " zip_safe=True, version='1.%s%s', author='bob', url='bob', "
                 "author_email='bob')\n"
-                % i
+                % (i, c1)
                 )
             zc.buildout.testing.sdist(tmp, dest)
 
@@ -2104,13 +2124,14 @@ def create_sample_eggs(test, executable=sys.executable):
 
         os.remove(os.path.join(tmp, 'eggrecipedemobeeded.py'))
 
-        for i in (1, 2, 3):
+        for i in (1, 2, 3, 4):
             write(
                 tmp, 'eggrecipedemo.py',
                 'import eggrecipedemobeeded\n'
                 'x=%s\n'
                 'def main(): print x, eggrecipedemobeeded.y\n'
                 % i)
+            c1 = i==4 and 'c1' or ''
             write(
                 tmp, 'setup.py',
                 "from setuptools import setup\n"
@@ -2118,7 +2139,7 @@ def create_sample_eggs(test, executable=sys.executable):
                 " install_requires = 'demoneeded',"
                 " entry_points={'console_scripts': "
                      "['demo = eggrecipedemo:main']},"
-                " zip_safe=True, version='0.%s')\n" % i
+                " zip_safe=True, version='0.%s%s')\n" % (i, c1)
                 )
             zc.buildout.testing.bdist_egg(tmp, executable, dest)
     finally:
