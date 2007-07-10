@@ -217,23 +217,37 @@ class Installer:
                 'Using our best, %s.',
                 str(req), best_available)
             return best_we_have, None
-        else:
-            # Let's find out if we already have the best available:
-            if ((best_we_have.parsed_version >= best_available.parsed_version)
-                or
-                (self._prefer_final
-                 and
-                 _final_version(best_we_have.parsed_version)
-                 and not _final_version(best_available.parsed_version)
-                 )
-                ):
-                # Yup. Use it.
-                logger.debug(
-                    'We have the best distribution that satisfies %r.',
-                    str(req))
-                return best_we_have, None
 
-        return None, best_available
+        if self._prefer_final:
+            if _final_version(best_available.parsed_version):
+                if _final_version(best_we_have.parsed_version):
+                    if (best_we_have.parsed_version
+                        <
+                        best_available.parsed_version
+                        ):
+                        return None, best_available
+                else:
+                    return None, best_available
+            else:
+                if (not _final_version(best_we_have.parsed_version)
+                    and
+                    (best_we_have.parsed_version
+                     <
+                     best_available.parsed_version
+                     )
+                    ):
+                    return None, best_available
+        else:
+            if (best_we_have.parsed_version
+                <
+                best_available.parsed_version
+                ):
+                return None, best_available
+            
+        logger.debug(
+            'We have the best distribution that satisfies %r.',
+            str(req))
+        return best_we_have, None
 
     def _load_dist(self, dist):
         dists = pkg_resources.Environment(
