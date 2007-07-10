@@ -2193,6 +2193,97 @@ Using different version numbers to work around zip impporter cache problems. :(
     
     """
 
+def buildout_prefer_final_option():
+    """
+The prefer-final buildout option can be used for override the default
+preference for newer distributions. 
+
+The default is prefer-final = true:
+
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links = %(link_server)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... eggs = demo
+    ... ''' % globals())
+
+    >>> print system(buildout+' -v'), # doctest: +ELLIPSIS
+    Installing 'zc.buildout', 'setuptools'.
+    ...
+    Picked: demo = 0.3
+    ...
+    Picked: demoneeded = 1.1
+
+
+Here we see that the final versions of demo and demoneeded are used.
+We get the same behavior if we add prefer-final = true
+
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links = %(link_server)s
+    ... prefer-final = true
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... eggs = demo
+    ... ''' % globals())
+
+    >>> print system(buildout+' -v'), # doctest: +ELLIPSIS
+    Installing 'zc.buildout', 'setuptools'.
+    ...
+    Picked: demo = 0.3
+    ...
+    Picked: demoneeded = 1.1
+
+If we specify prefer-final = false, we'll get the newest
+distributions:
+
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links = %(link_server)s
+    ... prefer-final = false
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... eggs = demo
+    ... ''' % globals())
+
+    >>> print system(buildout+' -v'), # doctest: +ELLIPSIS
+    Installing 'zc.buildout', 'setuptools'.
+    ...
+    Picked: demo = 0.4c1
+    ...
+    Picked: demoneeded = 1.2c1
+
+We get an error if we specify anything but true or false:
+
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links = %(link_server)s
+    ... prefer-final = no
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... eggs = demo
+    ... ''' % globals())
+
+    >>> print system(buildout+' -v'), # doctest: +ELLIPSIS
+    While:
+      Initializing.
+    Error: Invalid value for prefer-final option: no
+
+    """
+
 
 # XXX Tests needed:
 

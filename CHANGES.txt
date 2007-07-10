@@ -16,7 +16,28 @@ final soon.)
 Change History
 **************
 
-1.0.0b28 (2007-07-05)
+1.0.0b28 (2007-07-??)
+=====================
+
+Feature Changes
+---------------
+
+- Now, final distributions are prefered over non-final versions.  If
+  both final and non-final versions satisfy a requirement, then the
+  final version will be used even if it is older.  The normal way to
+  override this for specific packages is to specifically require a
+  non-final version, either specifically or via a lower bound.
+
+- There is a buildout prefer-final version that can be used with a
+  value of "false"::
+
+    prefer-final = false
+
+  To prefer newer versions, regardless of whether or not they are
+  final, buildout-wide.
+
+
+1.0.0b29 (2007-07-05)
 =====================
 
 Bugs Fixed
