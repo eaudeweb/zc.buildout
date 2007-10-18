@@ -2083,6 +2083,21 @@ In buildout version 2, final releases will be prefered by default.
 You will then need to use a false value for prefer-final to get the
 newset releases.
 
+Dependency links
+----------------
+
+By default buildout will obey the setuptools dependency_links metadata
+when it looks for dependencies. This behavior can be controlled with
+the use-dependency-links buildout option.
+
+  [buildout]
+  ...
+  use-dependency-links = false
+
+The option defaults to true. If you set it to false, then dependency
+links are only looked for in the locations specified by find-links.
+
+
 Controlling the installation database
 -------------------------------------
 
