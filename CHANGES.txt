@@ -19,9 +19,9 @@ Feature Changes
 
 - Added a configuration option that allows buildouts to ignore
   dependency_links metadata specified in setup. By default
-  dependency_links in setup are used in preference to buildout
-  specified find-links. This can make it hard to control where eggs
-  come from. Here's how to tell buildout to ignore URLs in
+  dependency_links in setup are used in addition to buildout specified
+  find-links. This can make it hard to control where eggs come
+  from. Here's how to tell buildout to ignore URLs in
   dependency_links::
 
     [buildout]

@@ -83,7 +83,7 @@ versions
    when selecting distributions.  This can be used to specify a set of
    distribution versions independent of other requirements.
 
-use_depenency_links
+use_dependency_links
    A flag indicating whether to search for dependencies using the
    setup dependency_links metadata or not. If true, links are searched
    for using dependency_links in preference to other
@@ -337,19 +337,23 @@ dictionary:
     >>> [d.version for d in ws]
     ['0.3', '1.1']
 
-Depenency links
----------------
+Dependency links
+----------------
 
-Setuptools allows metadata that descibes where to search for package
+Setuptools allows metadata that describes where to search for package
 dependencies. This option is called dependency_links. Buildout has its
 own notion of where to look for dependencies, but it also uses the
 setup tools dependency_links information if it's available.
 
-Let's demo this by creating an egg that specifies dependency_links. To
-begin, let's create a new egg repository. This repository uses the
-same sample eggs as the normal testing repository.
+Let's demo this by creating an egg that specifies dependency_links. 
 
-    >>> link_server2 = start_server(sample_eggs)
+To begin, let's create a new egg repository. This repository hold a
+newer version of the 'demoneeded' egg than the sample repository does.
+
+    >>> repoloc = tmpdir('repo')
+    >>> from zc.buildout.tests import create_egg
+    >>> create_egg('demoneeded', '1.2', repoloc)
+    >>> link_server2 = start_server(repoloc)
 
 Turn on logging on this server so that we can see when eggs are pulled
 from it.
@@ -361,8 +365,7 @@ from it.
 Now we can create an egg that specifies that its dependencies are
 found on this server.
 
-    >>> from zc.buildout.tests import create_egg
-    >>> repoloc = tmpdir('repo')
+    >>> repoloc = tmpdir('repo2')
     >>> create_egg('hasdeps', '1.0', repoloc, 
     ...            install_requires = "'demoneeded'",
     ...            dependency_links = [link_server2])
@@ -378,7 +381,7 @@ Now let's install the egg.
     ...     ['hasdeps'], example_dest,
     ...     links=[link_server3], index=link_server3+'index/')
     GET 200 /
-    GET 200 /demoneeded-1.1.zip
+    GET 200 /demoneeded-1.2-pyN.N.egg
 
 The server logs show that the dependency was retrieved from the server
 specified in the dependency_links.
@@ -389,28 +392,69 @@ the dependencies.
     >>> rmdir(example_dest)
     >>> example_dest = tmpdir('example-install')
     >>> workingset = zc.buildout.easy_install.install(
-    ...     ['hasdeps'], example_dest, index=link_server3+'index/',
-    ...     links=[link_server, link_server3]) #doctest: +ELLIPSIS
-    GET 200 /...
-
+    ...     ['hasdeps'], example_dest, index=link_server+'index/',
+    ...     links=[link_server, link_server3])
+    GET 200 /
+    GET 200 /demoneeded-1.2-pyN.N.egg
 
 Once again the dependency is fetched from the logging server even
-though it is also available from the non-logging server.
+though it is also available from the non-logging server. This is
+because the version on the logging server is newer and buildout
+normally chooses the newest egg available.
 
 If you wish to control where dependencies come from regardless of
 dependency_links setup metadata use the 'use_dependency_links' option
-to zc.buildout.easy_install.install.
+to zc.buildout.easy_install.install().
 
     >>> rmdir(example_dest)
     >>> example_dest = tmpdir('example-install')
     >>> workingset = zc.buildout.easy_install.install(
-    ...     ['hasdeps'], example_dest, index=link_server3+'index/',
+    ...     ['hasdeps'], example_dest, index=link_server+'index/',
     ...     links=[link_server, link_server3],
     ...     use_dependency_links=False)
 
 Notice that this time the dependency egg is not fetched from the
 logging server. When you specify not to use dependency_links, eggs
 will only be searched for using the links you explicitly provide.
+
+Another way to control this option is with the
+zc.buildout.easy_install.use_dependency_links() function. This
+function sets the default behavior for the zc.buildout.easy_install()
+function.
+
+    >>> zc.buildout.easy_install.use_dependency_links(False)
+    True
+
+The function returns its previous setting.
+
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['hasdeps'], example_dest, index=link_server+'index/',
+    ...     links=[link_server, link_server3])
+
+It can be overridden by passing a keyword argument to the install
+function.
+
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['hasdeps'], example_dest, index=link_server+'index/',
+    ...     links=[link_server, link_server3],
+    ...	    use_dependency_links=True)
+    GET 200 /demoneeded-1.2-pyN.N.egg
+
+To return the dependency_links behavior to normal call the function again.
+
+    >>> zc.buildout.easy_install.use_dependency_links(True)
+    False
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['hasdeps'], example_dest, index=link_server+'index/',
+    ...     links=[link_server, link_server3])
+    GET 200 /demoneeded-1.2-pyN.N.egg
+
 
 Script generation
 -----------------
