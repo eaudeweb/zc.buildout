@@ -698,7 +698,10 @@ def test_describe():
     >>> write(sample_buildout, 'my.recipes', 'recipe.py', 
     ... '''
     ... class MyRecipe:
-    ...     "The coolest recipe on Earth."
+    ...     \"\"\"
+    ...     The coolest recipe on Earth.
+    ...     Ever.
+    ...     \"\""
     ...     def __init__(self, buildout, name, options):
     ...         pass
     ...
@@ -711,6 +714,7 @@ def test_describe():
     >>> print system('%s describe my.recipes' % buildout) 
     my.recipes
         The coolest recipe on Earth.
+        Ever.
     <BLANKLINE>
 
     Let's add a second entry point in the recipe:
@@ -770,6 +774,7 @@ def test_describe():
     >>> print system('%s describe my.recipes:default' % buildout) 
     my.recipes:default
         The coolest recipe on Earth.
+        Ever.
     <BLANKLINE>
 
     >>> print system('%s describe my.recipes:second' % buildout) 
@@ -780,6 +785,7 @@ def test_describe():
     >>> print system('%s describe my.recipes:default my.recipes:second' % buildout) 
     my.recipes:default
         The coolest recipe on Earth.
+        Ever.
     my.recipes:second
         Help not available
     <BLANKLINE>
