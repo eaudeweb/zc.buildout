@@ -801,6 +801,29 @@ class Buildout(UserDict.DictMixin):
     def __iter__(self):
         return iter(self._raw)
 
+    def describe(self, recipes):
+        for recipe_spec in recipes:
+            recipe_class = self._get_recipe_class(recipe_spec)
+            if recipe_class is not None:
+                self._describe_recipe(recipe_spec, recipe_class)
+
+    def _get_recipe_class(self, name):
+        # XXX no version specified yet
+        try:
+            reqs, entry = _recipe({'recipe': name})
+            return  _install_and_load(reqs, 'zc.buildout', entry, self)
+        except pkg_resources.DistributionNotFound:
+            return None
+
+    def _describe_recipe(self, name, recipe_class):
+        docstring = recipe_class.__doc__
+        if docstring is not None:
+            print name
+            for line in docstring.splitlines():
+                print '    %s' % line
+        else:
+            print name
+            print '    Help not available'
 
 def _install_and_load(spec, group, entry, buildout):
     __doing__ = 'Loading recipe %r.', spec
@@ -1369,7 +1392,7 @@ def main(args=None):
     if args:
         command = args.pop(0)
         if command not in (
-            'install', 'bootstrap', 'runsetup', 'setup', 'init',
+            'install', 'bootstrap', 'runsetup', 'setup', 'init', 'describe'
             ):
             _error('invalid command:', command)
     else:

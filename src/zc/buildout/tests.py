@@ -633,6 +633,137 @@ def test_help():
     ...
     """
 
+def test_describe():
+    """
+    If help is followed by recipe names, it shows the 
+    recipe's class docstring.
+   
+    >>> mkdir(sample_buildout, 'my.recipes')
+    >>> write(sample_buildout, 'my.recipes', 'recipe.py', 
+    ... '''
+    ... class MyRecipe:
+    ...     def __init__(self, buildout, name, options):
+    ...         pass
+    ...
+    ...     def install(self):
+    ...         return tuple()
+    ...
+    ...     update = install
+    ... ''')
+
+
+    >>> write(sample_buildout, 'my.recipes', 'setup.py',
+    ... '''
+    ... from setuptools import setup
+    ... setup(
+    ...     name = "my.recipes",
+    ...     entry_points = {'zc.buildout': 
+    ...                      ['default = recipe:MyRecipe']},
+    ...     )
+    ... ''')
+
+    >>> write(sample_buildout, 'my.recipes', 'README.txt', " ")
+
+    >>> write(sample_buildout, 'buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... develop = my.recipes
+    ... parts = my-recipe
+    ... [my-recipe]
+    ... recipe = my.recipes
+    ... ''')
+
+    >>> buildout = os.path.join(sample_buildout, 'bin', 'buildout')
+
+    >>> print system(buildout),
+    Develop: '/sample-buildout/my.recipes'
+    Installing my-recipe.
+
+    >>> print system('%s describe my.recipes' % buildout) 
+    my.recipes
+        Help not available
+    <BLANKLINE>
+
+    Let's add a docstring now:
+
+    >>> write(sample_buildout, 'my.recipes', 'recipe.py', 
+    ... '''
+    ... class MyRecipe:
+    ...     "The coolest recipe on Earth."
+    ...     def __init__(self, buildout, name, options):
+    ...         pass
+    ...
+    ...     def install(self):
+    ...         return tuple()
+    ...
+    ...     update = install
+    ... ''')
+
+    >>> print system('%s describe my.recipes' % buildout) 
+    my.recipes
+        The coolest recipe on Earth.
+    <BLANKLINE>
+
+    Let's add a second recipe in the egg:
+
+    >>> write(sample_buildout, 'my.recipes', 'setup.py',
+    ... '''
+    ... from setuptools import setup
+    ... setup(
+    ...     name = "my.recipes",
+    ...     entry_points = {'zc.buildout': 
+    ...                      ['default = recipe:MyRecipe',
+    ...                       'second = second:OtherRecipe']},
+    ...     )
+    ... ''')
+
+
+    >>> write(sample_buildout, 'my.recipes', 'second.py', 
+    ... '''
+    ... class OtherRecipe:
+    ...     def __init__(self, buildout, name, options):
+    ...         pass
+    ...
+    ...     def install(self):
+    ...         return tuple()
+    ...
+    ...     update = install
+    ... ''')
+
+    Let's test that the second recipe is installable:
+
+    >>> write(sample_buildout, 'buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... develop = my.recipes
+    ... parts = my-recipe
+    ... [my-recipe]
+    ... recipe = my.recipes:second
+    ... ''')
+
+    We have to run the buildout again, because the recipe
+    here is a develop, to be able to test the egg itself:
+
+    >>> print system(buildout) 
+    Develop: '/sample-buildout/my.recipes'
+    Uninstalling my-recipe.
+    Installing my-recipe.
+    <BLANKLINE>
+
+    >>> print system('%s describe my.recipes' % buildout) 
+    my.recipes
+        The coolest recipe on Earth.
+    <BLANKLINE>
+
+    >>> print system('%s describe my.recipes:second' % buildout) 
+    my.recipes:second
+        Help not available
+    <BLANKLINE>
+
+
+
+    """
+
 def test_bootstrap_with_extension():
     """
 We had a problem running a bootstrap with an extension.  Let's make
