@@ -4,7 +4,7 @@ Buildout
 
 .. contents::
 
-The Buildout project provides support for creating applications,
+ The Buildout project provides support for creating applications,
 especially Python applications.  It provides tools for assembling
 applications from multiple parts, Python or otherwise.  An application
 may actually contain multiple programs, processes, and configuration
