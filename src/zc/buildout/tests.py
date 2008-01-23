@@ -635,8 +635,8 @@ def test_help():
 
 def test_describe():
     """
-    If help is followed by recipe names, it shows the 
-    recipe's class docstring.
+    The describe command shows an arbitrary 
+    recipe's class docstring used in the buildout.
   
     Let's call describe for zc.recipe.egg:
 
@@ -775,6 +775,10 @@ def test_describe():
 
 def test_describe_versions():
     """
+    Sometimes a recipe comes in two version in a buildout
+    environment. Let's make sure the describe command
+    handles this correctly.
+
     Now let's create our own recipe:
     
     >>> mkdir('myrecipes')
