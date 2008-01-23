@@ -154,6 +154,7 @@ class Buildout(UserDict.DictMixin):
         self.newest = newest == 'true'
 
         versions = options.get('versions')
+        self.versions = versions
         if versions:
             zc.buildout.easy_install.default_versions(dict(self[versions]))
 
@@ -802,18 +803,49 @@ class Buildout(UserDict.DictMixin):
         return iter(self._raw)
 
     def describe(self, recipes):
-        for recipe_spec in recipes:
+        for recipe in recipes:
+            recipe_spec = self._compute_recipe_and_version(recipe)
             recipe_class = self._get_recipe_class(recipe_spec)
+            if self.multiple_entry_points(recipe_spec):
+                return
             if recipe_class is not None:
-                self._describe_recipe(recipe_spec, recipe_class)
+                self._describe_recipe(recipe, recipe_class)
+
+    def multiple_entry_points(self, name):
+        entry_points = list(pkg_resources.iter_entry_points(
+                'zc.buildout', name))
+        if len(entry_points) > 1:
+            print '%s has multiple entry points:' % name
+            for entry_point in entry_points:
+                print entry_point
+            print
+            print "To get help about one of them use 'buildout",
+            print "describe %s:xxx'." % name
+            return True
+        else:
+            return False
 
     def _get_recipe_class(self, name):
-        # XXX no version specified yet
         try:
             reqs, entry = _recipe({'recipe': name})
             return  _install_and_load(reqs, 'zc.buildout', entry, self)
         except pkg_resources.DistributionNotFound:
             return None
+
+    def _compute_recipe_and_version(self, name):
+        #if the recipe version is specified in versions section,
+        #do nothing
+        if self.versions and name in self[self.versions].keys():
+            return name
+        else:
+            #iterate parts recipes
+            parts = self['buildout']['parts'].split()
+            recipes = [self[part]['recipe'] for part in parts]
+            for recipe in recipes:
+            #and use first recipe name that holds a version spec
+                if name in recipe:
+                    return recipe
+        return name
 
     def _describe_recipe(self, name, recipe_class):
         docstring = recipe_class.__doc__

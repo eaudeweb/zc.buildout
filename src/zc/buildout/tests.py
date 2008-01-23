@@ -713,7 +713,7 @@ def test_describe():
         The coolest recipe on Earth.
     <BLANKLINE>
 
-    Let's add a second recipe in the egg:
+    Let's add a second entry point in the recipe:
 
     >>> write(sample_buildout, 'my.recipes', 'setup.py',
     ... '''
@@ -760,11 +760,26 @@ def test_describe():
     <BLANKLINE>
 
     >>> print system('%s describe my.recipes' % buildout) 
-    my.recipes
+    my.recipes has multiple entry points:
+        default
+        second
+    <BLANKLINE>
+    To get help about one of them use 'buildout describe my.recipes:xxx'.
+    <BLANKLINE>
+
+    >>> print system('%s describe my.recipes:default' % buildout) 
+    my.recipes:default
         The coolest recipe on Earth.
     <BLANKLINE>
 
     >>> print system('%s describe my.recipes:second' % buildout) 
+    my.recipes:second
+        Help not available
+    <BLANKLINE>
+
+    >>> print system('%s describe my.recipes:default my.recipes:second' % buildout) 
+    my.recipes:default
+        The coolest recipe on Earth.
     my.recipes:second
         Help not available
     <BLANKLINE>
@@ -903,7 +918,6 @@ def test_describe_versions():
     ... ''')
 
     >>> print system('%s describe my.recipes' % buildout) 
-    Couldn't find index page for 'my.recipes' (maybe misspelled?)
     my.recipes
         my.recipes 0.1.4
     <BLANKLINE>
@@ -917,7 +931,6 @@ def test_describe_versions():
     ... ''')
 
     >>> print system('%s describe my.recipes' % buildout) 
-    Couldn't find index page for 'my.recipes' (maybe misspelled?)
     my.recipes
         my.recipes 0.1.3
     <BLANKLINE>
@@ -941,6 +954,21 @@ def test_describe_versions():
         my.recipes 0.1.3
     <BLANKLINE>
 
+    >>> write(sample_buildout, 'buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = my-recipe
+    ... versions = versions
+    ... [versions]
+    ... my.recipes = 0.1.4
+    ... [my-recipe]
+    ... recipe = my.recipes
+    ... ''')
+
+    >>> print system('%s describe my.recipes' % buildout) 
+    my.recipes
+        my.recipes 0.1.4
+    <BLANKLINE>
 
 
     """
