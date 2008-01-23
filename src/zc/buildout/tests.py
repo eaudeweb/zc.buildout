@@ -637,7 +637,16 @@ def test_describe():
     """
     If help is followed by recipe names, it shows the 
     recipe's class docstring.
-   
+  
+    Let's call describe for zc.recipe.egg:
+
+    >>> print system('%s describe zc.recipe.egg' % buildout)  
+    zc.recipe.egg
+        Help not available
+    <BLANKLINE>
+
+    Now let's create our own recipe:
+    
     >>> mkdir(sample_buildout, 'my.recipes')
     >>> write(sample_buildout, 'my.recipes', 'recipe.py', 
     ... '''
