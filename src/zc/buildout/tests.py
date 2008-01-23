@@ -773,6 +773,175 @@ def test_describe():
 
     """
 
+def test_describe_versions():
+    """
+    Now let's create our own recipe:
+    
+    >>> mkdir('myrecipes')
+    >>> write('myrecipes', 'recipe.py', 
+    ... '''
+    ... class MyRecipe:
+    ...     "my.recipes 0.1.3"
+    ...     def __init__(self, buildout, name, options):
+    ...         pass
+    ...
+    ...     def install(self):
+    ...         return tuple()
+    ...
+    ...     update = install
+    ... ''')
+
+
+    >>> write('myrecipes', 'setup.py',
+    ... '''
+    ... from setuptools import setup
+    ... setup(
+    ...     version = '0.1.3',
+    ...     name = "my.recipes",
+    ...     py_modules=['recipe'],
+    ...     entry_points = {'zc.buildout': 
+    ...                      ['default = recipe:MyRecipe']},
+    ...     )
+    ... ''')
+
+
+    Let's add our egg manually:
+
+    >>> bdist_egg(join(sample_buildout, 'myrecipes'),
+    ...           sys.executable, join(sample_buildout, 'eggs'))
+
+    Let's check the folder:
+
+    >>> ls(join(sample_buildout, 'eggs'))
+    -  my.recipes-0.1.3-pyN.N.egg
+    d  setuptools.eggpyN.N.egg
+    -  zc.buildout.egg-link
+
+
+    >>> write(sample_buildout, 'buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = my-recipe
+    ... [my-recipe]
+    ... recipe = my.recipes
+    ... ''')
+
+    >>> buildout = os.path.join(sample_buildout, 'bin', 'buildout')
+
+    Let's check the describe call:
+
+    >>> print system('%s describe my.recipes' % buildout) 
+    Couldn't find index page for 'my.recipes' (maybe misspelled?)
+    my.recipes
+        my.recipes 0.1.3
+    <BLANKLINE>
+
+    Now we change the version:
+
+    >>> write('myrecipes', 'setup.py',
+    ... '''
+    ... from setuptools import setup
+    ... setup(
+    ...     version = '0.1.4',
+    ...     name = "my.recipes",
+    ...     py_modules=['recipe'],
+    ...     entry_points = {'zc.buildout': 
+    ...                      ['default = recipe:MyRecipe']},
+    ...     )
+    ... ''')
+
+
+    We change the docstring as well:
+
+    >>> write('myrecipes', 'recipe.py', 
+    ... '''
+    ... class MyRecipe:
+    ...     "my.recipes 0.1.4"
+    ...     def __init__(self, buildout, name, options):
+    ...         pass
+    ...
+    ...     def install(self):
+    ...         return tuple()
+    ...
+    ...     update = install
+    ... ''')
+
+    Let's add our egg manually:
+
+    >>> bdist_egg(join(sample_buildout, 'myrecipes'),
+    ...           sys.executable, join(sample_buildout, 'eggs'))
+
+    Let's check the folder:
+
+    >>> ls(join(sample_buildout, 'eggs'))
+    -  my.recipes-0.1.3-pyN.N.egg
+    -  my.recipes-0.1.4-pyN.N.egg
+    d  setuptools.eggpyN.N.egg
+    -  zc.buildout.egg-link
+
+
+    Let's try the describe command now:
+    
+    >>> print system('%s describe my.recipes' % buildout) 
+    Couldn't find index page for 'my.recipes' (maybe misspelled?)
+    my.recipes
+        my.recipes 0.1.4
+    <BLANKLINE>
+
+    Now let's play with versions:
+
+    >>> write(sample_buildout, 'buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = my-recipe
+    ... [my-recipe]
+    ... recipe = my.recipes == 0.1.4
+    ... ''')
+
+    >>> print system('%s describe my.recipes' % buildout) 
+    Couldn't find index page for 'my.recipes' (maybe misspelled?)
+    my.recipes
+        my.recipes 0.1.4
+    <BLANKLINE>
+
+    >>> write(sample_buildout, 'buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = my-recipe
+    ... [my-recipe]
+    ... recipe = my.recipes == 0.1.3
+    ... ''')
+
+    >>> print system('%s describe my.recipes' % buildout) 
+    Couldn't find index page for 'my.recipes' (maybe misspelled?)
+    my.recipes
+        my.recipes 0.1.3
+    <BLANKLINE>
+
+
+    Let's use the versions section:
+
+    >>> write(sample_buildout, 'buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = my-recipe
+    ... versions = versions
+    ... [versions]
+    ... my.recipes = 0.1.3
+    ... [my-recipe]
+    ... recipe = my.recipes
+    ... ''')
+
+    >>> print system('%s describe my.recipes' % buildout) 
+    my.recipes
+        my.recipes 0.1.3
+    <BLANKLINE>
+
+
+
+    """
+
+
 def test_bootstrap_with_extension():
     """
 We had a problem running a bootstrap with an extension.  Let's make
