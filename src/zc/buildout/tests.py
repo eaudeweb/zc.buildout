@@ -641,8 +641,14 @@ def test_describe():
     Let's call describe for zc.recipe.egg:
 
     >>> print system('%s describe zc.recipe.egg' % buildout)  
-    zc.recipe.egg
-        Help not available
+    zc.recipe.egg has multiple entry points:
+        develop
+        script
+        default
+        eggs
+        custom
+        scripts
+    To get help about one of them use 'buildout describe zc.recipe.egg:xxx'.
     <BLANKLINE>
 
     Now let's create our own recipe:
@@ -698,8 +704,7 @@ def test_describe():
     >>> write(sample_buildout, 'my.recipes', 'recipe.py', 
     ... '''
     ... class MyRecipe:
-    ...     \"\"\"
-    ...     The coolest recipe on Earth.
+    ...     \"\"\"The coolest recipe on Earth.
     ...     Ever.
     ...     \"\""
     ...     def __init__(self, buildout, name, options):
@@ -767,7 +772,6 @@ def test_describe():
     my.recipes has multiple entry points:
         default
         second
-    <BLANKLINE>
     To get help about one of them use 'buildout describe my.recipes:xxx'.
     <BLANKLINE>
 

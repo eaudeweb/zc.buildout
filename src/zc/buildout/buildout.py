@@ -804,21 +804,34 @@ class Buildout(UserDict.DictMixin):
 
     def describe(self, recipes):
         for recipe in recipes:
+            recipe = recipe.strip()
             recipe_spec = self._compute_recipe_and_version(recipe)
             recipe_class = self._get_recipe_class(recipe_spec)
-            if self.multiple_entry_points(recipe_spec):
+            if self._multiple_entry_points(recipe):
                 return
             if recipe_class is not None:
                 self._describe_recipe(recipe, recipe_class)
 
-    def multiple_entry_points(self, name):
-        entry_points = list(pkg_resources.iter_entry_points(
-                'zc.buildout', name))
+    def _multiple_entry_points(self, name):
+        if ':' in name:
+            reqs, entry = name.split(':')
+        else:
+            reqs = name
+            entry = None    
+ 
+        if entry is not None:
+            entries = list(pkg_resources.iter_entry_points('zc.buildout', entry))
+        else:
+            entries = list(pkg_resources.iter_entry_points('zc.buildout'))
+            
+ 
+        entry_points = [entry_point for entry_point in 
+                        entries if entry_point.dist.project_name == reqs]
+        
         if len(entry_points) > 1:
             print '%s has multiple entry points:' % name
             for entry_point in entry_points:
-                print entry_point
-            print
+                print '    %s' % entry_point.name
             print "To get help about one of them use 'buildout",
             print "describe %s:xxx'." % name
             return True
@@ -847,12 +860,25 @@ class Buildout(UserDict.DictMixin):
                     return recipe
         return name
 
+    def _print_docstring(self, docstring):
+        lines = [line for line in docstring.splitlines()
+                 if line is not None]
+        if len(lines) < 2:
+            print '    %s' % lines[0]
+        else:
+            line_2_len = len(lines[1])
+            spaces = line_2_len - len(lines[1].lstrip())
+            lines[0] = ' '*spaces + lines[0] 
+            if lines[-1].strip() == '':
+                lines = lines[:-1]
+            for line in lines:
+                print line
+
     def _describe_recipe(self, name, recipe_class):
         docstring = recipe_class.__doc__
         if docstring is not None:
             print name
-            for line in docstring.splitlines():
-                print '    %s' % line
+            self._print_docstring(docstring)
         else:
             print name
             print '    Help not available'
