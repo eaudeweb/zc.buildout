@@ -641,14 +641,17 @@ def test_describe():
     Let's call describe for zc.recipe.egg:
 
     >>> print system('%s describe zc.recipe.egg' % buildout)  
-    zc.recipe.egg has multiple entry points:
+    zc.recipe.egg
+        No description available
+    <BLANKLINE>
+    zc.recipe.egg has multiple entry points.
+    We have described the default entry point.
+    The other entry points are:
         develop
         script
-        default
         eggs
         custom
         scripts
-    To get help about one of them use 'buildout describe zc.recipe.egg:xxx'.
     <BLANKLINE>
 
     Now let's create our own recipe:
@@ -696,7 +699,7 @@ def test_describe():
 
     >>> print system('%s describe my.recipes' % buildout) 
     my.recipes
-        Help not available
+        No description available
     <BLANKLINE>
 
     Let's add a docstring now:
@@ -769,10 +772,13 @@ def test_describe():
     <BLANKLINE>
 
     >>> print system('%s describe my.recipes' % buildout) 
-    my.recipes has multiple entry points:
-        default
+    my.recipes
+        No description available
+    <BLANKLINE>
+    my.recipes has multiple entry points.
+    We have described the default entry point.
+    The other entry points are:
         second
-    To get help about one of them use 'buildout describe my.recipes:xxx'.
     <BLANKLINE>
 
     >>> print system('%s describe my.recipes:default' % buildout) 
@@ -783,7 +789,7 @@ def test_describe():
 
     >>> print system('%s describe my.recipes:second' % buildout) 
     my.recipes:second
-        Help not available
+        No description available
     <BLANKLINE>
 
     >>> print system('%s describe my.recipes:default my.recipes:second' % buildout) 
@@ -791,10 +797,63 @@ def test_describe():
         The coolest recipe on Earth.
         Ever.
     my.recipes:second
-        Help not available
+        No description available
     <BLANKLINE>
 
+    Let's call describe for an egg that cannot be installed:
 
+    >>> print system('%s describe foo.bar' % buildout)  
+    Couldn't find index page for 'foo.bar' (maybe misspelled?)
+    Getting distribution for 'foo.bar'.
+    While:
+      Installing recipe foo.bar.
+      Getting distribution for 'foo.bar'.
+    Error: Couldn't find a distribution for 'foo.bar'.
+    <BLANKLINE>
+    """
+
+def test_describe_egg_no_recipe():
+    """
+    Let's create an egg that is not a recipe.
+
+    >>> mkdir(sample_buildout, 'my_egg')
+    >>> write(sample_buildout, 'my_egg', 'egg.py', 
+    ... '''
+    ... class MyEgg:
+    ...     pass
+    ... ''')
+
+    >>> write(sample_buildout, 'my_egg', 'setup.py',
+    ... '''
+    ... from setuptools import setup
+    ... setup(
+    ...     name = "my.egg",
+    ...     py_modules=['egg'],
+    ...     )
+    ... ''')
+
+    >>> write(sample_buildout, 'my_egg', 'README.txt', " ")
+
+    >>> write(sample_buildout, 'buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... develop = my_egg
+    ... parts = my.egg
+    ... [my.egg]
+    ... recipe = zc.recipe.egg
+    ... ''')
+
+    >>> buildout = os.path.join(sample_buildout, 'bin', 'buildout')
+
+    >>> print system(buildout),
+    Develop: '/sample-buildout/my_egg'
+    Installing my.egg.
+
+    Let's ask its description:
+
+    >>> print system('%s describe my.egg' % buildout) 
+    'my.egg' is not a recipe.
+    <BLANKLINE>
 
     """
 

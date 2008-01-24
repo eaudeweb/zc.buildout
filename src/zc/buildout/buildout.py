@@ -20,10 +20,8 @@ import distutils.errors
 import logging
 import md5
 import os
-import pprint
 import re
 import shutil
-import cStringIO
 import sys
 import tempfile
 import urllib2
@@ -46,7 +44,7 @@ class MissingOption(zc.buildout.UserError, KeyError):
     """
 
 class MissingSection(zc.buildout.UserError, KeyError):
-    """A required section is missinh
+    """A required section is missing
     """
 
     def __str__(self):
@@ -805,62 +803,59 @@ class Buildout(UserDict.DictMixin):
     def describe(self, recipes):
         for recipe in recipes:
             recipe = recipe.strip()
-            recipe_spec = self._compute_recipe_and_version(recipe)
+            recipe_spec = self._get_recipe_with_version(recipe)
             recipe_class = self._get_recipe_class(recipe_spec)
-            if self._multiple_entry_points(recipe):
-                return
-            if recipe_class is not None:
-                self._describe_recipe(recipe, recipe_class)
+            description = Description(recipe, recipe_class)
+            description._print()
 
-    def _multiple_entry_points(self, name):
-        if ':' in name:
-            reqs, entry = name.split(':')
-        else:
-            reqs = name
-            entry = None    
- 
-        if entry is not None:
-            entries = list(pkg_resources.iter_entry_points('zc.buildout', entry))
-        else:
-            entries = list(pkg_resources.iter_entry_points('zc.buildout'))
-            
- 
-        entry_points = [entry_point for entry_point in 
-                        entries if entry_point.dist.project_name == reqs]
-        
-        if len(entry_points) > 1:
-            print '%s has multiple entry points:' % name
-            for entry_point in entry_points:
-                print '    %s' % entry_point.name
-            print "To get help about one of them use 'buildout",
-            print "describe %s:xxx'." % name
-            return True
-        else:
-            return False
-
-    def _get_recipe_class(self, name):
-        try:
-            reqs, entry = _recipe({'recipe': name})
-            return  _install_and_load(reqs, 'zc.buildout', entry, self)
-        except pkg_resources.DistributionNotFound:
-            return None
-
-    def _compute_recipe_and_version(self, name):
+    def _get_recipe_with_version(self, name):
         #if the recipe version is specified in versions section,
         #do nothing
-        if self.versions and name in self[self.versions].keys():
+        if (self.versions and 
+                name in self[self.versions].keys()):
             return name
         else:
             #iterate parts recipes
             parts = self['buildout']['parts'].split()
             recipes = [self[part]['recipe'] for part in parts]
             for recipe in recipes:
-            #and use first recipe name that holds a version spec
+            #and use first recipe self.name that holds a version spec
                 if name in recipe:
                     return recipe
         return name
 
-    def _print_docstring(self, docstring):
+    def _get_recipe_class(self, name):
+        try:
+            reqs, entry = _recipe({'recipe': name})
+            return  _install_and_load(reqs, 'zc.buildout', entry, self)
+        except (ImportError, pkg_resources.DistributionNotFound):
+            return None
+
+class Description(object):
+    def __init__(self, name, _class):
+        self.name = name
+        self._class = _class
+
+    def _print(self):
+        if self._class is None:
+            self.print_no_recipe()
+        else:
+            self.print_description()
+        if (not self.entrypoint_specified()) and self.has_multiple_entry_points():
+            self.print_multiple_entry_points()
+
+    def print_no_recipe(self):
+        print "'%s' is not a recipe." % self.name
+
+    def print_description(self):
+        print self.name
+        docstring = self._class.__doc__
+        if docstring is not None:
+            self.print_formatted_docstring(docstring)
+        else:
+            print '    No description available'
+
+    def print_formatted_docstring(self, docstring):
         lines = [line for line in docstring.splitlines()
                  if line is not None]
         if len(lines) < 2:
@@ -874,14 +869,25 @@ class Buildout(UserDict.DictMixin):
             for line in lines:
                 print line
 
-    def _describe_recipe(self, name, recipe_class):
-        docstring = recipe_class.__doc__
-        if docstring is not None:
-            print name
-            self._print_docstring(docstring)
-        else:
-            print name
-            print '    Help not available'
+    def entrypoint_specified(self):
+        return ':' in self.name
+
+    def has_multiple_entry_points(self):
+        entries = list(pkg_resources.iter_entry_points('zc.buildout'))
+ 
+        self.entry_points = [entry_point for entry_point in 
+                        entries if entry_point.dist.project_name == self.name]
+        
+        return len(self.entry_points) > 1
+
+    def print_multiple_entry_points(self):
+        print
+        print '%s has multiple entry points.' % self.name
+        print 'We have described the default entry point.'
+        print 'The other entry points are:'
+        for entry_point in self.entry_points:
+            if entry_point.name != 'default':
+                print '    %s' % entry_point.name
 
 def _install_and_load(spec, group, entry, buildout):
     __doing__ = 'Loading recipe %r.', spec
