@@ -58,28 +58,53 @@ local files::
 Now we can run the buildout and make sure all attempts to dist.plone.org fails::
 
     >>> print system(buildout)
-    <BLANKLINE>
-    Link to file://.../setuptools/ ***BLOCKED*** by --allow-hosts
-    <BLANKLINE>
-    <BLANKLINE>
-    Link to file://.../ ***BLOCKED*** by --allow-hosts
-    <BLANKLINE>
     Develop: '/sample-buildout/allowdemo'
     Installing eggs.
     <BLANKLINE>
     Link to http://dist.plone.org ***BLOCKED*** by --allow-hosts
     <BLANKLINE>
-    <BLANKLINE>
-    Link to file://.../kss.core/ ***BLOCKED*** by --allow-hosts
-    <BLANKLINE>
     Couldn't find index page for 'kss.core' (maybe misspelled?)
-    <BLANKLINE>
-    Link to file://.../ ***BLOCKED*** by --allow-hosts
-    <BLANKLINE>
     Getting distribution for 'kss.core'.
     While:
       Installing eggs.
       Getting distribution for 'kss.core'.
     Error: Couldn't find a distribution for 'kss.core'.
     <BLANKLINE>
+
+That's what we wanted : this will prevent any attempt to access
+unwanted domains. For instance, some packages are listing in their
+links `svn://` links. These can lead to error in some cases, and
+can therefore be protected like this::
+
+XXX (showcase with a svn:// file)
+
+    >>> write(sample_buildout, 'buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... develop = allowdemo
+    ... parts = eggs
+    ... allow-hosts =
+    ...     ^(!svn://).*
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... eggs = allowdemo
+    ... ''')
+
+Now we can run the buildout and make sure all attempts to dist.plone.org fails::
+
+    >>> print system(buildout)
+    Develop: '/sample-buildout/allowdemo'
+    Installing eggs.
+    <BLANKLINE>
+    Link to http://dist.plone.org ***BLOCKED*** by --allow-hosts
+    <BLANKLINE>
+    Couldn't find index page for 'kss.core' (maybe misspelled?)
+    Getting distribution for 'kss.core'.
+    While:
+      Installing eggs.
+      Getting distribution for 'kss.core'.
+    Error: Couldn't find a distribution for 'kss.core'.
+    <BLANKLINE>
+
 

@@ -71,6 +71,19 @@ def _get_version(executable):
         _versions[executable] = version
         return version
 
+FILE_SCHEME = re.compile('file://', re.I).match
+
+class AllowHostsPackageIndex(setuptools.package_index.PackageIndex):
+    """Will allow urls that are local to the system.
+
+    No matter what is allow_hosts.
+    """
+    def url_ok(self, url, fatal=False):
+        if FILE_SCHEME(url):
+            return True
+        return setuptools.package_index.PackageIndex.url_ok(self, url, False)
+        
+
 _indexes = {}
 def _get_index(executable, index_url, find_links, allow_hosts=('*',)):
     key = executable, index_url, tuple(find_links)
@@ -80,11 +93,10 @@ def _get_index(executable, index_url, find_links, allow_hosts=('*',)):
 
     if index_url is None:
         index_url = default_index_url
-    index = setuptools.package_index.PackageIndex(
+    index = AllowHostsPackageIndex(
         index_url, hosts=allow_hosts, python=_get_version(executable)
         )
         
-    index._l = allow_hosts
     if find_links:
         index.add_find_links(find_links)
 
