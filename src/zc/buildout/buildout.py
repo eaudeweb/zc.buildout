@@ -1148,19 +1148,15 @@ def _dists_sig(dists):
 
 def _update_section(s1, s2):
     for k, v in s2.items():
-        ks = k.split()
-        key, sign = None, None
-        if len(ks) == 2:
-            key, sign = ks
-
-        if k not in s1 and key in s1:
-            if sign == '+':
-                s2[key] = "\n".join(s1[key].split() + s2[k].split())
-                del s2[k]
-            elif sign == '-':
-                s2[key] = "\n".join([v for v in s1[key].split()
-                                       if v not in s2[k].split()])
-                del s2[k]
+        if k.endswith('+'):
+            key = k.rstrip(' +')
+            s2[key] = "\n".join(s1.get(key, "").split() + s2[k].split())
+            del s2[k]
+        elif k.endswith('-'):
+            key = k.rstrip(' -')
+            s2[key] = "\n".join([v for v in s1.get(key, "").split()
+                                 if v not in s2[k].split()])
+            del s2[k]
                 
     s1.update(s2)
     return s1

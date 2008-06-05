@@ -933,15 +933,19 @@ base configuration file.
     ... extends = base.cfg
     ... parts = part1 part2
     ...
+    ... # appending values
     ... [part1]
     ... option += a3 a4
     ...
+    ... # removing values
     ... [part2]
     ... option -= b1 b2
     ...
+    ... # alt. spelling
     ... [part3]
-    ... option += c3 c4 c5
+    ... option+=c3 c4 c5
     ...
+    ... # normal assignment
     ... [part4]
     ... option = h1 h2
     ...
