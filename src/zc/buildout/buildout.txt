@@ -927,11 +927,10 @@ This is illustrated below; first we define a base configuration.
 Extending this configuration, we can "adjust" the values set in the
 base configuration file.
 
-    >>> write(sample_buildout, 'extension.cfg',
+    >>> write(sample_buildout, 'extension1.cfg',
     ... """
     ... [buildout]
     ... extends = base.cfg
-    ... parts = part1 part2
     ...
     ... # appending values
     ... [part1]
@@ -951,6 +950,23 @@ base configuration file.
     ...
     ... """)
 
+An additional extension.
+
+    >>> write(sample_buildout, 'extension2.cfg',
+    ... """
+    ... [buildout]
+    ... extends = extension1.cfg
+    ...
+    ... # appending values
+    ... [part1]
+    ... option += a5
+    ...
+    ... # removing values
+    ... [part2]
+    ... option -= b1 b2 b3
+    ...
+    ... """)
+    
 To verify that the options are adjusted correctly, we'll set up an
 extension that prints out the options.
     
@@ -998,17 +1014,18 @@ Verify option values.
     ... [buildout]
     ... develop = demo
     ... extensions = demo
-    ... extends = extension.cfg
+    ... extends = extension2.cfg
     ... """)
     
     >>> print system(os.path.join('bin', 'buildout')),
-    ['a1/na2/na3/na4', 'b3/nb4', 'c1/nc2/nc3/nc4/nc5', 'h1 h2']
+    ['a1/na2/na3/na4/na5', 'b4', 'c1/nc2/nc3/nc4/nc5', 'h1 h2']
     Develop: '/sample-buildout/demo'
 
 Cleanup.
 
     >>> os.remove(os.path.join(sample_buildout, 'base.cfg'))
-    >>> os.remove(os.path.join(sample_buildout, 'extension.cfg'))
+    >>> os.remove(os.path.join(sample_buildout, 'extension1.cfg'))
+    >>> os.remove(os.path.join(sample_buildout, 'extension2.cfg'))
     
 Multiple configuration files
 ----------------------------
