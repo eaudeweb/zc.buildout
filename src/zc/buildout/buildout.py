@@ -297,7 +297,9 @@ class Buildout(UserDict.DictMixin):
 
     init = bootstrap
 
-    def install(self, install_args):
+    def install(self, install_args, uninstall_args=None):
+        if uninstall_args is None:
+            uninstall_args = []
         __doing__ = 'Installing.'
 
         self._load_extensions()
@@ -345,7 +347,7 @@ class Buildout(UserDict.DictMixin):
         # load and initialize recipes
         [self[part]['recipe'] for part in install_parts]
         if not install_args:
-            install_parts = self._parts
+            install_parts = [p for p in self._parts if p not in uninstall_args]
 
         if self._log_level < logging.DEBUG:
             sections = list(self)

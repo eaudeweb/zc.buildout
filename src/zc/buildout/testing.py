@@ -22,6 +22,7 @@ import pkg_resources
 
 import zc.buildout.buildout
 import zc.buildout.easy_install
+import logging
 
 from rmtree import rmtree
 
@@ -219,6 +220,52 @@ def buildoutSetUp(test):
         register_teardown(lambda: stop_server(url, thread))
         return url
 
+    def setupBuildout(test, *args):
+        args = list(args)
+        cfg = args.pop()
+        filename = args.pop()
+        directory = os.path.join(*args)
+        eggs = os.path.join(os.path.join(directory, 'eggs'))
+        eggs = os.path.join(os.path.join(directory, 'eggs'))
+        path = os.path.join(directory, filename)
+        install_eggs = test.globs.get('eggs', tuple())
+        sample_buildout = test.globs['sample_buildout']
+        rmdir(directory)
+        test.globs['sample_buildout'] = sample_buildout = tmpdir(sample_buildout)
+        write(path, cfg)
+        os.chdir(sample_buildout)
+        buildout = zc.buildout.buildout.Buildout(
+            path,
+            [# trick bootstrap into putting the buildout develop egg
+            # in the eggs dir.
+            ('buildout', 'develop-eggs-directory', 'eggs'),
+            ],
+            user_defaults=False
+            )
+        # Create the develop-eggs dir, which didn't get created the usual
+        # way due to the trick above:
+        os.mkdir('develop-eggs')
+
+        #Raise the log threshold for the bootstrap, because we don't care about
+        #it
+        logger = logging.getLogger('zc.buildout')
+        level = logging.getLogger('zc.buildout').level
+        logging.getLogger('zc.buildout').setLevel(99999)
+        buildout.bootstrap([])
+        logging.getLogger('zc.buildout').setLevel(level)
+
+        #Remove extra log handlers that dump output outside of the test or mess
+        #the test up.
+        logger.removeHandler(logger.handlers[0])
+        if logger.parent:
+            logger.parent.removeHandler(logger.parent.handlers[1])
+
+        #Install the eggs we need.
+        for egg in install_eggs:
+            zc.buildout.testing.install(egg, eggs)
+        return buildout
+
+
     test.globs.update(dict(
         sample_buildout = sample,
         ls = ls,
@@ -236,6 +283,7 @@ def buildoutSetUp(test):
         bdist_egg = bdist_egg,
         start_server = start_server,
         buildout = os.path.join(sample, 'bin', 'buildout'),
+        setupBuildout = lambda *args:setupBuildout(test, *args),
         ))
     
     zc.buildout.easy_install.prefer_final(prefer_final)
