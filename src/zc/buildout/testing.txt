@@ -129,12 +129,16 @@ number of names to the test namespace:
     - on Unix, try running python%(version)s or just python to get the
       executable
 
-``setupBuildout(path, buildout)``
-    This function rebuilds the buildout using the buildout in the string
-    buildout, and returns the object.  The object can then be introspected as a
-    mapping or manipulated via buildout.install().  This is useful for testing,
-    because pdb can be used normally, which is prevented when one uses system() to
-    fork a process.
+``setupBuildout(dir1...dirN, filename, buildout_cfg)``
+    This function writes the configuration in buildout_cfg into
+    os.path.join(dir1...dirN, filename).  It then chdirs into the same
+    directory, bootstraps a Buildout object, and returns the object.  This
+    allows recipe writers to test their recipes in process, and allows the
+    Buildout to be introspected more easily.
+
+    *DISCLAIMER*:  There is currently no promise of backward compatibility in
+    the API between versions of zc.buildout, and its methods are not to be
+    viewed as a public API.
 
 ``zc.buildout.testing.buildoutTearDown(test)``
 ----------------------------------------------

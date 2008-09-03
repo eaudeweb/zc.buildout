@@ -221,6 +221,18 @@ def buildoutSetUp(test):
         return url
 
     def setupBuildout(test, *args):
+        """ setupBuildout -- Sets up a Buildout for testing
+
+            test - The test suite in which this will be used, this is expected
+                   to be baked in via a curry
+            args - This will be split up as follows:
+                dir1..dirN, filename, buildout_cfg
+                dir1..dirN - directories in the path to the buildout
+                     to bootstrap
+                filename - the filename to write the configuration into
+                buildout_cfg - the configuration to be used to buildout.
+        """
+
         args = list(args)
         cfg = args.pop()
         filename = args.pop()
