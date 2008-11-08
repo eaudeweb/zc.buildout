@@ -231,12 +231,14 @@ def buildoutSetUp(test):
 
         # Raise the log threshold for the bootstrap, because we don't care about
         # it
+        sample_buildout = test.globs['sample_buildout']
         logger = logging.getLogger('zc.buildout')
         level = logger.level
         logger.setLevel(99999)
         # trick bootstrap into putting the buildout develop egg
         # in the eggs dir.
-        buildout['buildout']['develop-eggs-directory'] = 'eggs'
+        buildout['buildout']['develop-eggs-directory'] = os.path.join(
+            sample_buildout, 'eggs')
         buildout['buildout']['log-level'] = 'WARNING'
         buildout.bootstrap([])
 
@@ -293,6 +295,12 @@ def buildoutSetUp(test):
         zc.buildout.buildout.Buildout.zc_buildout_handler = None
 
 
+    setup_template = ("from setuptools import setup\n"
+                     "setup(\n"
+                     "    name = \"%s\",\n"
+                     "    entry_points = {\n"
+                     "%s\n    },\n"
+                     ")\n")
     def setupConfig(
         test, cfg, sample_buildout=None, recipe_name='', recipe_dir='', recipes=None):
 
@@ -312,12 +320,7 @@ def buildoutSetUp(test):
                 entries += "        '%s': ['%s = %s:%s'],\n" % (
                     recipe_name, modulename, modulename, recipe)
             write(sample_buildout, recipe_dir, 'setup.py',
-                    ("from setuptools import setup\n"
-                     "setup(\n"
-                     "    name = \"%s\",\n"
-                     "    entry_points = {\n"
-                     "%s\n    }\n"
-                     ")\n") % (recipe_dir, entries))
+                  setup_template % (recipe_dir, entries))
         write(sample_buildout, 'buildout.cfg', cfg)
         return zc.buildout.buildout.Buildout(*(zc.buildout.buildout.parse([])[:5]))
 
