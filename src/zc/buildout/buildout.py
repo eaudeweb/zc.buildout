@@ -68,6 +68,9 @@ _buildout_default_options = {
 
 class Buildout(UserDict.DictMixin):
 
+    root_handler = None
+    zc_buildout_handler = None
+    
     def __init__(self, config_file, cloptions,
                  user_defaults=True, windows_restart=False, command=None):
 
@@ -677,12 +680,14 @@ class Buildout(UserDict.DictMixin):
         root_logger = logging.getLogger()
         self._logger = logging.getLogger('zc.buildout')
         handler = logging.StreamHandler(sys.stdout)
+        Buildout.root_handler = handler
         log_format = self['buildout']['log-format']
         if not log_format:
             # No format specified. Use different formatter for buildout
             # and other modules, showing logger name except for buildout
             log_format = '%(name)s: %(message)s'
             buildout_handler = logging.StreamHandler(sys.stdout)
+            Buildout.zc_buildout_handler = buildout_handler
             buildout_handler.setFormatter(logging.Formatter('%(message)s'))
             self._logger.propagate = False
             self._logger.addHandler(buildout_handler)
@@ -1384,7 +1389,7 @@ def _help():
     print _usage
     sys.exit(0)
 
-def main(args=None):
+def parse(args):
     if args is None:
         args = sys.argv[1:]
 
@@ -1471,6 +1476,11 @@ def main(args=None):
             _error('invalid command:', command)
     else:
         command = 'install'
+
+    return (config_file, options, user_defaults, windows_restart, command, debug)
+
+def main(args=None):
+    config_file, options, user_defaults, windows_restart, command, debug = parse(args)
 
     try:
         try:

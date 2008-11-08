@@ -199,17 +199,16 @@ def buildoutSetUp(test):
         )
 
     # Use the buildout bootstrap command to create a buildout
-    zc.buildout.buildout.Buildout(
+    bo = zc.buildout.buildout.Buildout(
         'buildout.cfg',
         [('buildout', 'log-level', 'WARNING'),
          # trick bootstrap into putting the buildout develop egg
          # in the eggs dir.
          ('buildout', 'develop-eggs-directory', 'eggs'),
          ]
-        ).bootstrap([])
+        )
+    bo.bootstrap([])
 
-    
-    
     # Create the develop-eggs dir, which didn't get created the usual
     # way due to thr trick above:
     os.mkdir('develop-eggs')
@@ -220,63 +219,107 @@ def buildoutSetUp(test):
         register_teardown(lambda: stop_server(url, thread))
         return url
 
-    def setupBuildout(test, *args):
-        """ setupBuildout -- Sets up a Buildout for testing
+
+    def bootstrapBuildout(test, buildout):
+        """ bootstrapBuildout -- bootstraps a Buildout, first silencing
+                                 annoying log stuff
 
             test - The test suite in which this will be used, this is expected
                    to be baked in via a curry
-            args - This will be split up as follows:
-                dir1..dirN, filename, buildout_cfg
-                dir1..dirN - directories in the path to the buildout
-                     to bootstrap
-                filename - the filename to write the configuration into
-                buildout_cfg - the configuration to be used to buildout.
+            buildout - the Buildout to be bootstrapped
         """
 
-        args = list(args)
-        cfg = args.pop()
-        filename = args.pop()
-        directory = os.path.join(*args)
-        eggs = os.path.join(os.path.join(directory, 'eggs'))
-        eggs = os.path.join(os.path.join(directory, 'eggs'))
-        path = os.path.join(directory, filename)
-        install_eggs = test.globs.get('eggs', tuple())
-        sample_buildout = test.globs['sample_buildout']
-        rmdir(directory)
-        test.globs['sample_buildout'] = sample_buildout = tmpdir(sample_buildout)
-        write(path, cfg)
-        os.chdir(sample_buildout)
-        buildout = zc.buildout.buildout.Buildout(
-            path,
-            [# trick bootstrap into putting the buildout develop egg
-            # in the eggs dir.
-            ('buildout', 'develop-eggs-directory', 'eggs'),
-            ],
-            user_defaults=False
-            )
+        # Raise the log threshold for the bootstrap, because we don't care about
+        # it
+        logger = logging.getLogger('zc.buildout')
+        level = logger.level
+        logger.setLevel(99999)
+        # trick bootstrap into putting the buildout develop egg
+        # in the eggs dir.
+        buildout['buildout']['develop-eggs-directory'] = 'eggs'
+        buildout['buildout']['log-level'] = 'WARNING'
+        buildout.bootstrap([])
+
         # Create the develop-eggs dir, which didn't get created the usual
         # way due to the trick above:
         os.mkdir('develop-eggs')
 
-        #Raise the log threshold for the bootstrap, because we don't care about
-        #it
-        logger = logging.getLogger('zc.buildout')
-        level = logging.getLogger('zc.buildout').level
-        logging.getLogger('zc.buildout').setLevel(99999)
-        buildout.bootstrap([])
-        logging.getLogger('zc.buildout').setLevel(level)
+        #Set the log threshhold back where it belongs.
+        logger.setLevel(level)
 
-        #Remove extra log handlers that dump output outside of the test or mess
-        #the test up.
-        logger.removeHandler(logger.handlers[0])
-        if logger.parent:
-            logger.parent.removeHandler(logger.parent.handlers[1])
+
+    def installBuildout(test,
+        buildout, install_args=None, uninstall_args=None):
+        """ installBuildout -- installs a Buildout, first silencing
+                               annoying log stuff
+
+            test - The test suite in which this will be used, this is expected
+                   to be baked in via a curry
+            buildout - the Buildout to be installed
+        """
+        install_args = install_args or []
+        uninstall_args = uninstall_args or []
+        eggs = os.path.join(test.globs['sample_buildout'], 'eggs')
+        install_eggs = test.globs.get('eggs', tuple())
 
         #Install the eggs we need.
         for egg in install_eggs:
             zc.buildout.testing.install(egg, eggs)
-        return buildout
 
+        # install the builodut
+        buildout.install(install_args, uninstall_args)
+
+
+    def cleanBuildout(test, sample_buildout=None):
+        """ Cleans the sample buildout by deleting the directory, then
+            recreating it."""
+
+        sample_buildout = sample_buildout or test.globs['sample_buildout']
+        rmdir, mkdir, cd = (
+            test.globs['rmdir'], test.globs['mkdir'], test.globs['cd'])
+        start_dir = os.getcwd()
+        here_dir = os.path.split(os.path.abspath(__file__))[0]
+        cd(here_dir)
+        rmdir(sample_buildout)
+        mkdir(sample_buildout)
+        cd(start_dir)
+
+        # Clear out the Buildout-related logging
+        logging.getLogger().removeHandler(
+            zc.buildout.buildout.Buildout.root_handler)
+        logging.getLogger('zc.buildout').removeHandler(
+            zc.buildout.buildout.Buildout.zc_buildout_handler)
+        zc.buildout.buildout.Buildout.root_handler = None
+        zc.buildout.buildout.Buildout.zc_buildout_handler = None
+
+
+    def setupConfig(
+        test, cfg, sample_buildout=None, recipe_name='', recipe_dir='', recipes=None):
+
+        """ Sets up the configuration of for a buildout, as well as any Recipes
+        for testing.  Returns an unbootstrapped
+        zc.buildout.buildout.Buildout."""
+
+        sample_buildout = sample_buildout or test.globs['sample_buildout']
+        recipes = recipes or {}
+        mkdir, write = test.globs['mkdir'], test.globs['write']
+
+        if recipe_dir:
+            mkdir(sample_buildout, recipe_dir)
+            entries = ''
+            for recipe, (modulename, contents) in recipes.items():
+                write(sample_buildout, recipe_dir, modulename + '.py', contents)
+                entries += "        '%s': ['%s = %s:%s'],\n" % (
+                    recipe_name, modulename, modulename, recipe)
+            write(sample_buildout, recipe_dir, 'setup.py',
+                    ("from setuptools import setup\n"
+                     "setup(\n"
+                     "    name = \"%s\",\n"
+                     "    entry_points = {\n"
+                     "%s\n    }\n"
+                     ")\n") % (recipe_dir, entries))
+        write(sample_buildout, 'buildout.cfg', cfg)
+        return zc.buildout.buildout.Buildout(*(zc.buildout.buildout.parse([])[:5]))
 
     test.globs.update(dict(
         sample_buildout = sample,
@@ -295,9 +338,26 @@ def buildoutSetUp(test):
         bdist_egg = bdist_egg,
         start_server = start_server,
         buildout = os.path.join(sample, 'bin', 'buildout'),
-        setupBuildout = lambda *args:setupBuildout(test, *args),
+        bootstrapBuildout = lambda buildout:bootstrapBuildout(test, buildout),
+        installBuildout = (
+            lambda buildout,
+                   install_args=None,
+                   uninstall_args=None:installBuildout(
+                test, buildout, install_args, uninstall_args)),
+        setupConfig = (
+            lambda cfg,
+                   sample_buildout=None,
+                   recipe_name='',
+                   recipe_dir='',
+                   recipes=None:setupConfig(test,
+                                            cfg,
+                                            sample_buildout,
+                                            recipe_name,
+                                            recipe_dir,
+                                            recipes)),
+        cleanBuildout = (
+            lambda sample_buildout=None:cleanBuildout(test, sample_buildout)),
         ))
-    
     zc.buildout.easy_install.prefer_final(prefer_final)
 
 def buildoutTearDown(test):

@@ -129,16 +129,30 @@ number of names to the test namespace:
     - on Unix, try running python%(version)s or just python to get the
       executable
 
-``setupBuildout(dir1...dirN, filename, buildout_cfg)``
-    This function writes the configuration in buildout_cfg into
-    os.path.join(dir1...dirN, filename).  It then chdirs into the same
-    directory, bootstraps a Buildout object, and returns the object.  This
-    allows recipe writers to test their recipes in process, and allows the
-    Buildout to be introspected more easily.
+``bootstrapBuildout(buildout)``
+    This function bootstraps a buildout, first setting up the logging
+    environment so that it won't spam the test runner.
 
     *DISCLAIMER*:  There is currently no promise of backward compatibility in
     the API between versions of zc.buildout, and its methods are not to be
     viewed as a public API.
+
+``installBuildout(buildout,
+                  install_args=[],
+                  uninstall_args=[])``
+    This function installs the buildout and its eggs, first setting up the
+    logging so it won't spam the test runner.
+
+    install_args and uninstall_args indicate what parts should be installed and
+        uninstalled.
+
+    *DISCLAIMER*:  There is currently no promise of backward compatibility in
+    the API between versions of zc.buildout, and its methods are not to be
+    viewed as a public API.
+
+``cleanBuildout(test, sample_buildout=sample)``
+    This function cleans the sample buildout by deleting the directory, then
+    recreating it.
 
 ``zc.buildout.testing.buildoutTearDown(test)``
 ----------------------------------------------

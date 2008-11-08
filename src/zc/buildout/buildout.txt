@@ -113,8 +113,7 @@ directory for our local recipes:
 
 and then we'll create a source file for our mkdir recipe:
 
-    >>> write(sample_buildout, 'recipes', 'mkdir.py', 
-    ... """
+    >>> mkdir_py = """
     ... import logging, os, zc.buildout
     ...
     ... class Mkdir:
@@ -141,7 +140,8 @@ and then we'll create a source file for our mkdir recipe:
     ...
     ...     def update(self):
     ...         pass
-    ... """)
+    ... """
+    >>> write(sample_buildout, 'recipes', 'mkdir.py', mkdir_py)
 
 Currently, recipes must define 3 methods [#future_recipe_methods]_:
 
@@ -401,8 +401,7 @@ If an error occurs during installation, it is up to the recipe to
 clean up any system side effects, such as files created.  Let's update
 the mkdir recipe to support multiple paths:
 
-    >>> write(sample_buildout, 'recipes', 'mkdir.py', 
-    ... """
+    >>> mkdir_py_bad = """
     ... import logging, os, zc.buildout
     ...
     ... class Mkdir:
@@ -433,13 +432,12 @@ the mkdir recipe to support multiple paths:
     ...
     ...     def update(self):
     ...         pass
-    ... """)
+    ... """
 
 If there is an error creating a path, the install method will exit and
 leave previously created paths in place:
 
-    >>> write(sample_buildout, 'buildout.cfg',
-    ... """
+    >>> buildout_cfg = """
     ... [buildout]
     ... develop = recipes
     ... parts = data-dir
@@ -447,9 +445,16 @@ leave previously created paths in place:
     ... [data-dir]
     ... recipe = recipes:mkdir
     ... path = foo bin
-    ... """)
-
-    >>> print system(buildout), # doctest: +ELLIPSIS
+    ... """
+    >>> cleanBuildout(sample_buildout)
+    >>> bo = setupConfig(
+    ...     buildout_cfg,
+    ...     sample_buildout,
+    ...     'zc.buildout',
+    ...     'recipes',
+    ...     {'Mkdir': ('mkdir', mkdir_py_bad)})
+    >>> bootstrapBuildout(bo)
+    >>> installBuildout(bo)
     Develop: '/sample-buildout/recipes'
     Uninstalling data-dir.
     Installing data-dir.
@@ -502,8 +507,7 @@ Now they fail because foo exists, because it was left behind.
 
 Let's fix the recipe:
 
-    >>> write(sample_buildout, 'recipes', 'mkdir.py', 
-    ... """
+    >>> mkdir_py_good = """
     ... import logging, os, zc.buildout
     ...
     ... class Mkdir:
@@ -542,7 +546,8 @@ Let's fix the recipe:
     ...
     ...     def update(self):
     ...         pass
-    ... """)
+    ... """
+    >>> write(sample_buildout, 'recipes', 'mkdir.py', mkdir_py_good)
 
 And put back the typo:
 
