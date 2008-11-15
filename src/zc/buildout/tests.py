@@ -2676,7 +2676,7 @@ def test_suite():
                            r'when that file already exists: '),
                 '[Errno 17] File exists: '
                 ),
-               ])
+               ]),
             ),
         doctest.DocFileSuite(
             'debugging.txt',

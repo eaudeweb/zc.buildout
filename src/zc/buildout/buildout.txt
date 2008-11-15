@@ -456,7 +456,6 @@ leave previously created paths in place:
     >>> bootstrapBuildout(bo)
     >>> installBuildout(bo)
     Develop: '/sample-buildout/recipes'
-    Uninstalling data-dir.
     Installing data-dir.
     data-dir: Creating directory foo
     data-dir: Creating directory bin

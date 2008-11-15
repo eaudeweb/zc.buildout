@@ -1477,40 +1477,50 @@ def parse(args):
     else:
         command = 'install'
 
-    return (config_file, options, user_defaults, windows_restart, command, debug)
+    return (debug, config_file, options, user_defaults, windows_restart, command)
+
+def handle_internal_error(exc_info):
+    import traceback
+    sys.stderr.write(_internal_error_template)
+    traceback.print_exception(*exc_info)
+    sys.exit(1)
+
+def except_(func, debug=False, *args):
+    ret = None
+    try:
+        ret = func(*args)
+    except SystemExit:
+        pass
+    except Exception, v:
+        exc_info = sys.exc_info()
+        import pdb, traceback
+        if debug:
+            _doing()
+            traceback.print_exception(*exc_info)
+            sys.stderr.write('\nStarting pdb:\n')
+            pdb.post_mortem(exc_info[2])
+        else:
+            if isinstance(v, (zc.buildout.UserError,
+                                distutils.errors.DistutilsError,
+                                )
+                            ):
+                _doing()
+                _error(str(v))
+            else:
+                handle_internal_error(exc_info)
+    return ret
 
 def main(args=None):
-    config_file, options, user_defaults, windows_restart, command, debug = parse(args)
+    def do_stuff(
+        config_file, options, user_defaults, windows_restart, command):
+        buildout = Buildout(config_file, options,
+                            user_defaults, windows_restart, command)
+        getattr(buildout, command)(args)
 
     try:
-        try:
-            buildout = Buildout(config_file, options,
-                                user_defaults, windows_restart, command)
-            getattr(buildout, command)(args)
-        except SystemExit:
-            pass
-        except Exception, v:
-            _doing()
-            exc_info = sys.exc_info()
-            import pdb, traceback
-            if debug:
-                traceback.print_exception(*exc_info)
-                sys.stderr.write('\nStarting pdb:\n')
-                pdb.post_mortem(exc_info[2])
-            else:
-                if isinstance(v, (zc.buildout.UserError,
-                                  distutils.errors.DistutilsError,
-                                  )
-                              ):
-                    _error(str(v))
-                else:
-                    sys.stderr.write(_internal_error_template)
-                    traceback.print_exception(*exc_info)
-                    sys.exit(1)
-    
-            
+        except_(do_stuff, *(parse(args)))
     finally:
-            logging.shutdown()
+        logging.shutdown()
 
 if sys.version_info[:2] < (2, 4):
     def reversed(iterable):

@@ -19,6 +19,7 @@ $Id$
 import BaseHTTPServer, os, random, re, shutil, socket, sys
 import tempfile, threading, time, urllib2, errno
 import pkg_resources
+import traceback
 
 import zc.buildout.buildout
 import zc.buildout.easy_install
@@ -294,7 +295,6 @@ def buildoutSetUp(test):
         zc.buildout.buildout.Buildout.root_handler = None
         zc.buildout.buildout.Buildout.zc_buildout_handler = None
 
-
     setup_template = ("from setuptools import setup\n"
                      "setup(\n"
                      "    name = \"%s\",\n"
@@ -322,7 +322,8 @@ def buildoutSetUp(test):
             write(sample_buildout, recipe_dir, 'setup.py',
                   setup_template % (recipe_dir, entries))
         write(sample_buildout, 'buildout.cfg', cfg)
-        return zc.buildout.buildout.Buildout(*(zc.buildout.buildout.parse([])[:5]))
+        return zc.buildout.buildout.Buildout(
+            *(zc.buildout.buildout.parse([])[1:6]))
 
     test.globs.update(dict(
         sample_buildout = sample,
@@ -341,26 +342,63 @@ def buildoutSetUp(test):
         bdist_egg = bdist_egg,
         start_server = start_server,
         buildout = os.path.join(sample, 'bin', 'buildout'),
-        bootstrapBuildout = lambda buildout:bootstrapBuildout(test, buildout),
+        bootstrapBuildout = (
+            lambda buildout:zc.buildout.buildout.except_(
+                bootstrapBuildout, False, test, buildout)),
         installBuildout = (
             lambda buildout,
                    install_args=None,
-                   uninstall_args=None:installBuildout(
-                test, buildout, install_args, uninstall_args)),
+                   uninstall_args=None:zc.buildout.buildout.except_(
+                    installBuildout, False,
+                    test, buildout, install_args, uninstall_args)),
         setupConfig = (
             lambda cfg,
                    sample_buildout=None,
                    recipe_name='',
                    recipe_dir='',
-                   recipes=None:setupConfig(test,
+                   recipes=None:zc.buildout.buildout.except_(setupConfig, False,
+                                            test,
                                             cfg,
                                             sample_buildout,
                                             recipe_name,
                                             recipe_dir,
                                             recipes)),
         cleanBuildout = (
-            lambda sample_buildout=None:cleanBuildout(test, sample_buildout)),
+            lambda sample_buildout=None:zc.buildout.buildout.except_(
+                cleanBuildout, False, test, sample_buildout)),
         ))
+
+    def get_logger(name):
+        logger = logging.getLogger(name)
+        if logger.handlers:
+            error = logger.error
+        else:
+            error = sys.err.write
+        return error
+
+    def _doing(_, v, tb):
+        error = get_logger('zc.buildout')
+        message = str(v)
+        doing = []
+        while tb is not None:
+            d = tb.tb_frame.f_locals.get('__doing__')
+            if d:
+                doing.append(d)
+            tb = tb.tb_next
+            
+        if doing:
+            error('While:')
+            for d in doing:
+                if not isinstance(d, str):
+                    d = d[0] % d[1:]
+                error('  %s' % d)
+
+    def test_handle_internal_error(exc_info):
+        error = get_logger('zc.buildout')
+        _doing(*exc_info)
+        error((zc.buildout.buildout._internal_error_template +
+              ''.join(traceback.format_exception(*exc_info)).strip()))
+    zc.buildout.buildout.handle_internal_error = test_handle_internal_error
     zc.buildout.easy_install.prefer_final(prefer_final)
 
 def buildoutTearDown(test):
