@@ -3247,5 +3247,3 @@ def test_suite():
                ])
             ), 
         ))
-
-    return suite
