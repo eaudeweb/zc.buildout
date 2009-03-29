@@ -1307,6 +1307,8 @@ def _open(base, filename, seen):
             extended_by = options.pop('extended-by', extended_by)
         result[section] = options
 
+    result = _annotate(result, filename)
+
     if extends:
         extends = extends.split()
         extends.reverse()
