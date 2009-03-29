@@ -12,7 +12,7 @@
 #
 ##############################################################################
 
-version = "1.2dev"
+version = "1.2.1dev"
 
 import os
 from setuptools import setup, find_packages
@@ -71,7 +71,7 @@ setup(
     install_requires = 'setuptools',
     include_package_data = True,
     entry_points = {'console_scripts':
-                    ['buildout = %s.buildout:main' % name]}, 
+                    ['buildout = %s.buildout:main' % name]},
     zip_safe=False,
     classifiers = [
        'Intended Audience :: Developers',
