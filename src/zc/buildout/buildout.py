@@ -63,7 +63,29 @@ class MissingSection(zc.buildout.UserError, KeyError):
     def __str__(self):
         return "The referenced section, %r, was not defined." % self[0]
 
-_buildout_default_options = {
+
+def _annotate_section(section, note):
+    for key in section:
+        section[key] = (section[key], note)
+    return section
+
+def _annotate(data, note):
+    for key in data:
+        data[key] = _annotate_section(data[key], note)
+    return data
+
+def _unannotate_section(section):
+    for key in section:
+        value, note = section[key]
+        section[key] = value
+    return section
+
+def _unannotate(data):
+    for key in data:
+        data[key] = _unannotate_section(data[key])
+    return data
+
+_buildout_default_options = _annotate_section({
     'eggs-directory': 'eggs',
     'develop-eggs-directory': 'develop-eggs',
     'bin-directory': 'bin',
@@ -73,7 +95,8 @@ _buildout_default_options = {
     'executable': sys.executable,
     'log-level': 'INFO',
     'log-format': '',
-    }
+    }, 'default_option')
+
 
 class Buildout(UserDict.DictMixin):
 
@@ -99,13 +122,14 @@ class Buildout(UserDict.DictMixin):
                     # Sigh. this model of a buildout nstance
                     # with methods is breaking down :(
                     config_file = None
-                    data['buildout']['directory'] = '.'
+                    data['buildout']['directory'] = ('.', 'computed')
                 else:
                     raise zc.buildout.UserError(
                         "Couldn't open %s" % config_file)
 
             if config_file:
-                data['buildout']['directory'] = os.path.dirname(config_file)
+                data['buildout']['directory'] = (os.path.dirname(config_file),
+                    'computed')
         else:
             base = None
 
@@ -126,10 +150,11 @@ class Buildout(UserDict.DictMixin):
             options = data.get(section)
             if options is None:
                 options = data[section] = {}
-            options[option] = value
+            options[option] = value, "command-line"
                 # The egg dire
 
-        self._raw = data
+        self._annotated = data
+        self._raw = _unannotate(data)
         self._data = {}
         self._parts = []
         # provide some defaults before options are parsed
@@ -1326,14 +1351,21 @@ def _dists_sig(dists):
 
 def _update_section(s1, s2):
     for k, v in s2.items():
+        v2, note2 = v
         if k.endswith('+'):
             key = k.rstrip(' +')
-            s2[key] = "\n".join(s1.get(key, "").split('\n') + s2[k].split('\n'))
+            v1, note1 = s1.get(key, ("", ""))
+            newnote = ' '.join((note1, note2)).strip()
+            s2[key] = "\n".join((v1).split('\n') +
+                v2.split('\n')), newnote
             del s2[k]
         elif k.endswith('-'):
             key = k.rstrip(' -')
-            s2[key] = "\n".join([v for v in s1.get(key, "").split('\n')
-                                 if v not in s2[k].split('\n')])
+            v1, note1 = s1.get(key, ("", ""))
+            newnote = ' '.join((note1, note2)).strip()
+            s2[key] = ("\n".join(
+                [v for v in v1.split('\n')
+                   if v not in v2.split('\n')]), newnote)
             del s2[k]
                 
     s1.update(s2)
