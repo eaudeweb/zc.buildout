@@ -27,6 +27,8 @@ import urllib2
 import ConfigParser
 import UserDict
 import glob
+import copy
+
 
 import pkg_resources
 import zc.buildout
@@ -74,6 +76,25 @@ def _annotate(data, note):
         data[key] = _annotate_section(data[key], note)
     return data
 
+def _print_annotate(data):
+    sections = data.keys()
+    sections.sort()
+    print
+    print "Annotated sections"
+    print "="*len("Annotated sections")
+    for section in sections:
+        print
+        print '[%s]' % section
+        keys = data[section].keys()
+        keys.sort()
+        for key in keys:
+            value, files = data[section][key]
+            print "%s=%s" % (key, value)
+            for file in files.split():
+                print "    " + file
+    print
+    print
+
 def _unannotate_section(section):
     for key in section:
         value, note = section[key]
@@ -95,7 +116,8 @@ _buildout_default_options = _annotate_section({
     'executable': sys.executable,
     'log-level': 'INFO',
     'log-format': '',
-    }, 'default_option')
+    'annotate': 'false',
+    }, 'DEFAULT_VALUE')
 
 
 class Buildout(UserDict.DictMixin):
@@ -122,14 +144,14 @@ class Buildout(UserDict.DictMixin):
                     # Sigh. this model of a buildout nstance
                     # with methods is breaking down :(
                     config_file = None
-                    data['buildout']['directory'] = ('.', 'computed')
+                    data['buildout']['directory'] = ('.', 'COMPUTED_VALUE')
                 else:
                     raise zc.buildout.UserError(
                         "Couldn't open %s" % config_file)
 
             if config_file:
                 data['buildout']['directory'] = (os.path.dirname(config_file),
-                    'computed')
+                    'COMPUTED_VALUE')
         else:
             base = None
 
@@ -150,11 +172,13 @@ class Buildout(UserDict.DictMixin):
             options = data.get(section)
             if options is None:
                 options = data[section] = {}
-            options[option] = value, "command-line"
+            options[option] = value, "COMMAND_LINE_VALUE"
                 # The egg dire
 
-        self._annotated = data
+        self._annotated = copy.deepcopy(data)
         self._raw = _unannotate(data)
+        if data['buildout']['annotate'] == 'true':
+            _print_annotate(self._annotated)
         self._data = {}
         self._parts = []
         # provide some defaults before options are parsed
@@ -1357,14 +1381,14 @@ def _update_section(s1, s2):
         if k.endswith('+'):
             key = k.rstrip(' +')
             v1, note1 = s1.get(key, ("", ""))
-            newnote = ' '.join((note1, note2)).strip()
+            newnote = ' +'.join((note1, note2)).strip()
             s2[key] = "\n".join((v1).split('\n') +
                 v2.split('\n')), newnote
             del s2[k]
         elif k.endswith('-'):
             key = k.rstrip(' -')
             v1, note1 = s1.get(key, ("", ""))
-            newnote = ' '.join((note1, note2)).strip()
+            newnote = ' -'.join((note1, note2)).strip()
             s2[key] = ("\n".join(
                 [v for v in v1.split('\n')
                    if v not in v2.split('\n')]), newnote)
@@ -1487,6 +1511,11 @@ Options:
     will be started. This is especially useful for debuging recipe
     problems.
 
+  -A
+
+    Display annotated sections. Each key-value pair is displayed along
+    with its value origin.
+
 Assignments are of the form: section:option=value and are used to
 provide configuration options that override those given in the
 configuration file.  For example, to run the buildout in offline mode,
@@ -1549,7 +1578,7 @@ def main(args=None):
         if args[0][0] == '-':
             op = orig_op = args.pop(0)
             op = op[1:]
-            while op and op[0] in 'vqhWUoOnND':
+            while op and op[0] in 'vqhWUoOnNDA':
                 if op[0] == 'v':
                     verbosity += 10
                 elif op[0] == 'q':
@@ -1568,6 +1597,8 @@ def main(args=None):
                     options.append(('buildout', 'newest', 'false'))
                 elif op[0] == 'D':
                     debug = True
+                elif op[0] == 'A':
+                    options.append(('buildout', 'annotate', 'true'))
                 else:
                     _help()
                 op = op[1:]
