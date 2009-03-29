@@ -32,6 +32,8 @@ import pkg_resources
 import zc.buildout
 import zc.buildout.easy_install
 
+from rmtree import rmtree
+
 realpath = zc.buildout.easy_install.realpath
 
 pkg_resources_loc = pkg_resources.working_set.find(
@@ -569,7 +571,7 @@ class Buildout(UserDict.DictMixin):
                 continue
             f = self._buildout_path(f)
             if os.path.isdir(f):
-                shutil.rmtree(f)
+                rmtree(f)
             elif os.path.isfile(f):
                 os.remove(f)
                 
@@ -1079,7 +1081,7 @@ class Options(UserDict.DictMixin):
             except:
                 for p in self._created:
                     if os.path.isdir(p):
-                        shutil.rmtree(p)
+                        rmtree(p)
                     elif os.path.isfile(p):
                         os.remove(p)
                     else:
