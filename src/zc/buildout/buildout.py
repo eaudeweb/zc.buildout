@@ -29,6 +29,8 @@ import urllib2
 import ConfigParser
 import UserDict
 import glob
+import copy
+
 
 import pkg_resources
 import zc.buildout
@@ -65,7 +67,48 @@ class MissingSection(zc.buildout.UserError, KeyError):
     def __str__(self):
         return "The referenced section, %r, was not defined." % self[0]
 
-_buildout_default_options = {
+
+def _annotate_section(section, note):
+    for key in section:
+        section[key] = (section[key], note)
+    return section
+
+def _annotate(data, note):
+    for key in data:
+        data[key] = _annotate_section(data[key], note)
+    return data
+
+def _print_annotate(data):
+    sections = data.keys()
+    sections.sort()
+    print
+    print "Annotated sections"
+    print "="*len("Annotated sections")
+    for section in sections:
+        print
+        print '[%s]' % section
+        keys = data[section].keys()
+        keys.sort()
+        for key in keys:
+            value, files = data[section][key]
+            print "%s=%s" % (key, value)
+            for file in files.split():
+                print "    " + file
+    print
+    print
+
+def _unannotate_section(section):
+    for key in section:
+        value, note = section[key]
+        section[key] = value
+    return section
+
+def _unannotate(data):
+    for key in data:
+        data[key] = _unannotate_section(data[key])
+    return data
+
+_buildout_default_options = _annotate_section({
     'eggs-directory': 'eggs',
     'develop-eggs-directory': 'develop-eggs',
     'bin-directory': 'bin',
@@ -75,7 +118,9 @@ _buildout_default_options = {
     'executable': sys.executable,
     'log-level': 'INFO',
     'log-format': '',
-    }
+    'annotate': 'false',
+    }, 'DEFAULT_VALUE')
+
 
 class Buildout(UserDict.DictMixin):
 
@@ -83,7 +128,7 @@ class Buildout(UserDict.DictMixin):
                  user_defaults=True, windows_restart=False, command=None):
 
         __doing__ = 'Initializing.'
-        
+
         self.__windows_restart = windows_restart
 
         # default options
@@ -101,13 +146,14 @@ class Buildout(UserDict.DictMixin):
                     # Sigh. this model of a buildout nstance
                     # with methods is breaking down :(
                     config_file = None
-                    data['buildout']['directory'] = '.'
+                    data['buildout']['directory'] = ('.', 'COMPUTED_VALUE')
                 else:
                     raise zc.buildout.UserError(
                         "Couldn't open %s" % config_file)
 
             if config_file:
-                data['buildout']['directory'] = os.path.dirname(config_file)
+                data['buildout']['directory'] = (os.path.dirname(config_file),
+                    'COMPUTED_VALUE')
         else:
             base = None
 
@@ -128,17 +174,20 @@ class Buildout(UserDict.DictMixin):
             options = data.get(section)
             if options is None:
                 options = data[section] = {}
-            options[option] = value
+            options[option] = value, "COMMAND_LINE_VALUE"
                 # The egg dire
 
-        self._raw = data
+        self._annotated = copy.deepcopy(data)
+        self._raw = _unannotate(data)
+        if data['buildout']['annotate'] == 'true':
+            _print_annotate(self._annotated)
         self._data = {}
         self._parts = []
         # provide some defaults before options are parsed
         # because while parsing options those attributes might be
         # used already (Gottfried Ganssauge)
         buildout_section = data.get('buildout')
-            
+
         # Try to make sure we have absolute paths for standard
         # directories. We do this before doing substitutions, in case
         # a one of these gets read by another section.  If any
@@ -155,13 +204,13 @@ class Buildout(UserDict.DictMixin):
 
         allow_hosts = buildout_section and buildout_section.get(
              'allow-hosts', '*').split('\n')
-        self._allow_hosts = tuple([host.strip() for host in allow_hosts 
+        self._allow_hosts = tuple([host.strip() for host in allow_hosts
                                    if host.strip() != ''])
 
         self._logger = logging.getLogger('zc.buildout')
         self.offline = False
         self.newest = True
-        
+
         ##################################################################
         ## WARNING!!!
         ## ALL ATTRIBUTES MUST HAVE REASONABLE DEFAULTS AT THIS POINT
@@ -173,9 +222,9 @@ class Buildout(UserDict.DictMixin):
         # now reinitialize
         links = options.get('find-links', '')
         self._links = links and links.split() or ()
-        
+
         allow_hosts = options.get('allow-hosts', '*').split('\n')
-        self._allow_hosts = tuple([host.strip() for host in allow_hosts 
+        self._allow_hosts = tuple([host.strip() for host in allow_hosts
                                    if host.strip() != ''])
 
         self._buildout_dir = options['directory']
@@ -216,7 +265,7 @@ class Buildout(UserDict.DictMixin):
             self._error('Invalid value for prefer-final option: %s',
                         prefer_final)
         zc.buildout.easy_install.prefer_final(prefer_final=='true')
-        
+
         use_dependency_links = options.get('use-dependency-links', 'true')
         if use_dependency_links not in ('true', 'false'):
             self._error('Invalid value for use-dependency-links option: %s',
@@ -243,7 +292,7 @@ class Buildout(UserDict.DictMixin):
             download_cache = os.path.join(download_cache, 'dist')
             if not os.path.isdir(download_cache):
                 os.mkdir(download_cache)
-                
+
             zc.buildout.easy_install.download_cache(download_cache)
 
         install_from_cache = options.get('install-from-cache')
@@ -335,7 +384,7 @@ class Buildout(UserDict.DictMixin):
         installed_develop_eggs = self._develop()
         installed_part_options['buildout']['installed_develop_eggs'
                                            ] = installed_develop_eggs
-        
+
         if installed_exists:
             self._update_installed(
                 installed_develop_eggs=installed_develop_eggs)
@@ -345,7 +394,7 @@ class Buildout(UserDict.DictMixin):
         conf_parts = conf_parts and conf_parts.split() or []
         installed_parts = installed_part_options['buildout']['parts']
         installed_parts = installed_parts and installed_parts.split() or []
-        
+
         if install_args:
             install_parts = install_args
             uninstall_missing = False
@@ -361,11 +410,11 @@ class Buildout(UserDict.DictMixin):
         if self._log_level < logging.DEBUG:
             sections = list(self)
             sections.sort()
-            print    
+            print
             print 'Configuration data:'
             for section in self._data:
                 _save_options(section, self[section], sys.stdout)
-            print    
+            print
 
 
         # compute new part recipe signatures
@@ -493,7 +542,7 @@ class Buildout(UserDict.DictMixin):
 
             if need_to_save_installed:
                 installed_part_options['buildout']['parts'] = (
-                    ' '.join(installed_parts))            
+                    ' '.join(installed_parts))
                 self._save_installed_options(installed_part_options)
                 installed_exists = True
             else:
@@ -581,7 +630,7 @@ class Buildout(UserDict.DictMixin):
                      if f not in old_files
                      ]))
                 raise
-                     
+
             else:
                 self._sanity_check_develop_eggs_files(dest, old_files)
                 return '\n'.join([os.path.join(dest, f)
@@ -628,7 +677,7 @@ class Buildout(UserDict.DictMixin):
                             value = value.replace(k, v)
                     options[option] = value
                 result[section] = Options(self, section, options)
-                        
+
             return result, True
         else:
             return ({'buildout': Options(self, 'buildout', {'parts': ''})},
@@ -656,8 +705,8 @@ class Buildout(UserDict.DictMixin):
                         # Sigh. This is the exectable used to run the buildout
                         # and, of course, it's in use. Leave it.
                         ):
-                        raise                    
-                
+                        raise
+
     def _install(self, part):
         options = self[part]
         recipe, entry = _recipe(options)
@@ -701,7 +750,7 @@ class Buildout(UserDict.DictMixin):
             buildout_handler.setFormatter(logging.Formatter('%(message)s'))
             self._logger.propagate = False
             self._logger.addHandler(buildout_handler)
-            
+
         handler.setFormatter(logging.Formatter(log_format))
         root_logger.addHandler(handler)
 
@@ -730,7 +779,7 @@ class Buildout(UserDict.DictMixin):
 
         if not self.newest:
             return
-        
+
         ws = zc.buildout.easy_install.install(
             [
             (spec + ' ' + self['buildout'].get(spec+'-version', '')).strip()
@@ -774,8 +823,8 @@ class Buildout(UserDict.DictMixin):
             if not __debug__:
                 args.insert(0, '-O')
             args.insert(0, zc.buildout.easy_install._safe_arg (sys.executable))
-            os.execv(sys.executable, args)            
-        
+            os.execv(sys.executable, args)
+
         self._logger.info("Upgraded:\n  %s;\nrestarting.",
                           ",\n  ".join([("%s version %s"
                                        % (dist.project_name, dist.version)
@@ -784,7 +833,7 @@ class Buildout(UserDict.DictMixin):
                                       ]
                                      ),
                           )
-                
+
         # the new dist is different, so we've upgraded.
         # Update the scripts and return True
         zc.buildout.easy_install.scripts(
@@ -854,13 +903,13 @@ class Buildout(UserDict.DictMixin):
                 ))
             if is_jython:
                 arg_list = list()
-                
+
                 for a in args:
                     add_args.append(zc.buildout.easy_install._safe_arg(a))
-                
+
                 subprocess.Popen([zc.buildout.easy_install._safe_arg(sys.executable)] + list(tsetup) +
                                 arg_list).wait()
-            
+
             else:
                 os.spawnl(os.P_WAIT, sys.executable, zc.buildout.easy_install._safe_arg (sys.executable), tsetup,
                         *[zc.buildout.easy_install._safe_arg(a)
@@ -886,7 +935,7 @@ class Buildout(UserDict.DictMixin):
         options = Options(self, section, data)
         self._data[section] = options
         options._initialize()
-        return options          
+        return options
 
     def __setitem__(self, key, value):
         raise NotImplementedError('__setitem__')
@@ -951,7 +1000,7 @@ class Options(UserDict.DictMixin):
     def _initialize(self):
         name = self.name
         __doing__ = 'Initializing section %s.', name
-        
+
         # force substitutions
         for k, v in self._raw.items():
             if '${' in v:
@@ -959,11 +1008,11 @@ class Options(UserDict.DictMixin):
 
         if self.name == 'buildout':
             return # buildout section can never be a part
-        
+
         recipe = self.get('recipe')
         if not recipe:
             return
-        
+
         reqs, entry = _recipe(self._data)
         buildout = self.buildout
         recipe_class = _install_and_load(reqs, 'zc.buildout', entry, buildout)
@@ -1035,7 +1084,7 @@ class Options(UserDict.DictMixin):
                         "The option name in substitution, %s,\n"
                         "has invalid characters."
                         % ref)
-                
+
             v = self.buildout[s[0]].get(s[1], None, seen)
             if v is None:
                 raise MissingOption("Referenced option does not exist:", *s)
@@ -1043,7 +1092,7 @@ class Options(UserDict.DictMixin):
         subs.append('')
 
         return ''.join([''.join(v) for v in zip(value[::2], subs)])
-        
+
     def __getitem__(self, key):
         try:
             return self._data[key]
@@ -1147,7 +1196,7 @@ def _save_option(option, value, f):
     if value.endswith('\n\t'):
         value = value[:-2] + '%(__buildout_space_n__)s'
     print >>f, option, '=', value
-    
+
 def _save_options(section, options, f):
     print >>f, '[%s]' % section
     items = options.items()
@@ -1195,6 +1244,8 @@ def _open(base, filename, seen):
             extended_by = options.pop('extended-by', extended_by)
         result[section] = options
 
+    result = _annotate(result, filename)
+
     if extends:
         extends = extends.split()
         extends.reverse()
@@ -1210,7 +1261,7 @@ def _open(base, filename, seen):
 
     seen.pop()
     return result
-    
+
 
 ignore_directories = '.svn', 'CVS'
 def _dir_hash(dir):
@@ -1226,7 +1277,7 @@ def _dir_hash(dir):
         for name in filenames:
             hash.update(open(os.path.join(dirpath, name)).read())
     return hash.digest().encode('base64').strip()
-    
+
 def _dists_sig(dists):
     result = []
     for dist in dists:
@@ -1239,16 +1290,23 @@ def _dists_sig(dists):
 
 def _update_section(s1, s2):
     for k, v in s2.items():
+        v2, note2 = v
         if k.endswith('+'):
             key = k.rstrip(' +')
-            s2[key] = "\n".join(s1.get(key, "").split('\n') + s2[k].split('\n'))
+            v1, note1 = s1.get(key, ("", ""))
+            newnote = ' +'.join((note1, note2)).strip()
+            s2[key] = "\n".join((v1).split('\n') +
+                v2.split('\n')), newnote
             del s2[k]
         elif k.endswith('-'):
             key = k.rstrip(' -')
-            s2[key] = "\n".join([v for v in s1.get(key, "").split('\n')
-                                 if v not in s2[k].split('\n')])
+            v1, note1 = s1.get(key, ("", ""))
+            newnote = ' -'.join((note1, note2)).strip()
+            s2[key] = ("\n".join(
+                [v for v in v1.split('\n')
+                   if v not in v2.split('\n')]), newnote)
             del s2[k]
-                
+
     s1.update(s2)
     return s1
 
@@ -1278,7 +1336,7 @@ def _doing():
         if d:
             doing.append(d)
         tb = tb.tb_next
-        
+
     if doing:
         sys.stderr.write('While:\n')
         for d in doing:
@@ -1335,13 +1393,13 @@ Options:
      Don't read user defaults.
 
   -o
-  
-    Run in off-line mode.  This is equivalent to the assignment 
+
+    Run in off-line mode.  This is equivalent to the assignment
     buildout:offline=true.
 
   -O
 
-    Run in non-off-line mode.  This is equivalent to the assignment 
+    Run in non-off-line mode.  This is equivalent to the assignment
     buildout:offline=false.  This is the default buildout mode.  The
     -O option would normally be used to override a true offline
     setting in a configuration file.
@@ -1355,16 +1413,21 @@ Options:
 
   -N
 
-    Run in non-newest mode.  This is equivalent to the assignment 
+    Run in non-newest mode.  This is equivalent to the assignment
     buildout:newest=false.  With this setting, buildout will not seek
     new distributions if installed distributions satisfy it's
-    requirements. 
+    requirements.
 
   -D
 
     Debug errors.  If an error occurs, then the post-mortem debugger
     will be started. This is especially useful for debuging recipe
     problems.
+
+  -A
+
+    Display annotated sections. Each key-value pair is displayed along
+    with its value origin.
 
 Assignments are of the form: section:option=value and are used to
 provide configuration options that override those given in the
@@ -1408,7 +1471,7 @@ Commands:
 
     The script can be given either as a script path or a path to a
     directory containing a setup.py script.
-    
+
 """
 def _help():
     print _usage
@@ -1428,7 +1491,7 @@ def main(args=None):
         if args[0][0] == '-':
             op = orig_op = args.pop(0)
             op = op[1:]
-            while op and op[0] in 'vqhWUoOnND':
+            while op and op[0] in 'vqhWUoOnNDA':
                 if op[0] == 'v':
                     verbosity += 10
                 elif op[0] == 'q':
@@ -1447,10 +1510,12 @@ def main(args=None):
                     options.append(('buildout', 'newest', 'false'))
                 elif op[0] == 'D':
                     debug = True
+                elif op[0] == 'A':
+                    options.append(('buildout', 'annotate', 'true'))
                 else:
                     _help()
                 op = op[1:]
-                
+
             if op[:1] in  ('c', 't'):
                 op_ = op[:1]
                 op = op[1:]
@@ -1527,10 +1592,10 @@ def main(args=None):
                     sys.stderr.write(_internal_error_template)
                     traceback.print_exception(*exc_info)
                     sys.exit(1)
-    
-            
+
+
     finally:
-            logging.shutdown()
+        logging.shutdown()
 
 if sys.version_info[:2] < (2, 4):
     def reversed(iterable):
