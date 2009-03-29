@@ -1426,8 +1426,10 @@ Options:
 
   -A
 
-    Display annotated sections. Each key-value pair is displayed along
-    with its value origin.
+    Display annotated sections. All sections are displayed, sorted
+    alphabetically. For each section, all key-value pairs are displayed,
+    sorted alphabetically, along with the origin of the value (file name or
+    COMPUTED_VALUE, DEFAULT_VALUE, COMMAND_LINE_VALUE).
 
 Assignments are of the form: section:option=value and are used to
 provide configuration options that override those given in the
