@@ -3067,6 +3067,7 @@ def test_suite():
         
         doctest.DocFileSuite(
             'easy_install.txt', 'downloadcache.txt', 'dependencylinks.txt',
+            'allowhosts.txt',
             setUp=easy_install_SetUp,
             tearDown=zc.buildout.testing.buildoutTearDown,
 

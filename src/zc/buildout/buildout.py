@@ -134,6 +134,10 @@ class Buildout(UserDict.DictMixin):
 
         links = options.get('find-links', '')
         self._links = links and links.split() or ()
+        
+        allow_hosts = options.get('allow-hosts', '*').split('\n')
+        self._allow_hosts = tuple([host.strip() for host in allow_hosts 
+                                   if host.strip() != ''])
 
         self._buildout_dir = options['directory']
         for name in ('bin', 'parts', 'eggs', 'develop-eggs'):
@@ -664,7 +668,8 @@ class Buildout(UserDict.DictMixin):
             self['buildout']['eggs-directory'],
             links = self['buildout'].get('find-links', '').split(),
             index = self['buildout'].get('index'),
-            path = [self['buildout']['develop-eggs-directory']]
+            path = [self['buildout']['develop-eggs-directory']],
+            allow_hosts = self._allow_hosts
             )
 
         upgraded = []
@@ -742,7 +747,7 @@ class Buildout(UserDict.DictMixin):
                 working_set=pkg_resources.working_set,
                 links = self['buildout'].get('find-links', '').split(),
                 index = self['buildout'].get('index'),
-                newest=self.newest)
+                newest=self.newest, allow_hosts=self._allow_hosts)
 
             # Clear cache because extensions might now let us read pages we
             # couldn't read before.
@@ -923,6 +928,7 @@ def _install_and_load(spec, group, entry, buildout):
                 path=path,
                 working_set=pkg_resources.working_set,
                 newest=buildout.newest,
+                allow_hosts=buildout._allow_hosts
                 )
 
         __doing__ = 'Loading %s recipe entry %s:%s.', group, spec, entry
