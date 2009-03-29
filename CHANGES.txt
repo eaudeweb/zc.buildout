@@ -4,6 +4,9 @@ Status
 Change History
 **************
 
+- Added option -A for annotated sections. Displays sections key-value pairs
+  along with the value origin.
+
 1.2.1 (2009-03-18)
 ==================
 
