@@ -24,6 +24,13 @@ import urllib
 import urlparse
 
 
+class URLOpener(urllib.FancyURLopener):
+    http_error_default = urllib.URLopener.http_error_default
+
+
+url_opener = URLOpener()
+
+
 class Download(object):
     """Configurable download utility.
 
@@ -98,6 +105,7 @@ class Download(object):
         See __call__.
 
         """
+        urllib._urlopener = url_opener
         path, headers = urllib.urlretrieve(url, path)
         if not check_md5sum(path, md5sum):
             raise ValueError('MD5 checksum mismatch downloading %r' % url)

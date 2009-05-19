@@ -1,0 +1,52 @@
+==========================
+Using the download utility
+==========================
+
+The ``zc.buildout.download`` module provides a download utility that handles
+the details of downloading files needed for a buildout run from the internet.
+It downloads files to the local file system, using the download cache if
+desired and optionally checking the downloaded files' MD5 checksum.
+
+We setup an HTTP server that provides a few files:
+
+>>> root = tmpdir('sample_files')
+>>> write(join(root, 'foo.txt'), 'This is a foo text.')
+>>> write(join(root, 'bar.cfg'), '[DEFAULTS]\nbar=baz\n')
+>>> server = start_server(root)
+
+Downloading without using the cache
+===================================
+
+If no download cache should be used, the download utility is instantiated
+given buildout's options and switching off the cache, and called to download
+from a URL:
+
+>>> from zc.buildout.download import Download
+>>> download = Download({}, use_cache=False)
+>>> path = download(server+'foo.txt')
+>>> print open(path).read()
+This is a foo text.
+
+As we aren't using the download cache and haven't specified a target path
+either, the download has ended up in a temporary file:
+
+>>> import tempfile
+>>> path.startswith(tempfile.gettempdir())
+True
+
+When trying to access a file that doesn't exist, we'll get an exception:
+
+>>> download(server+'not-there')
+Traceback (most recent call last):
+IOError: ('http error', 404, 'Not Found',
+          <httplib.HTTPMessage instance at 0xa0ffd2c>)
+
+We can also have the downloaded file's MD5 sum checked:
+
+>>> try: from hashlib import md5
+... except ImportError: from md5 import new as md5
+
+>>> path = download(server+'foo.txt', md5('This is a foo text.').hexdigest())
+>>> path = download(server+'foo.txt', md5('The wrong text.').hexdigest())
+Traceback (most recent call last):
+ValueError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
