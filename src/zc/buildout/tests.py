@@ -2817,6 +2817,8 @@ def test_suite():
                (re.compile('0x[0-9a-f]+'), '<MEM ADDRESS>'),
                (re.compile('http://localhost:[0-9]{4,5}/'),
                 'http://localhost/'),
+               (re.compile('[0-9a-f]{32}'), '<MD5 CHECKSUM>'),
+               zc.buildout.testing.normalize_path,
                ]),
             ),
 

@@ -7,24 +7,29 @@ the details of downloading files needed for a buildout run from the internet.
 It downloads files to the local file system, using the download cache if
 desired and optionally checking the downloaded files' MD5 checksum.
 
-We setup an HTTP server that provides a few files:
+We setup an HTTP server that provides a file we want to download:
 
 >>> root = tmpdir('sample_files')
 >>> write(join(root, 'foo.txt'), 'This is a foo text.')
->>> write(join(root, 'bar.cfg'), '[DEFAULTS]\nbar=baz\n')
 >>> server = start_server(root)
+
 
 Downloading without using the cache
 ===================================
 
 If no download cache should be used, the download utility is instantiated
-given buildout's options and switching off the cache, and called to download
-from a URL:
+given buildout's options and switching off the cache:
 
 >>> from zc.buildout.download import Download
 >>> download = Download({}, use_cache=False)
+>>> print download.cache
+None
+
+Downloading a file is achieved by calling the utility with the URL as an
+argument:
+
 >>> path = download(server+'foo.txt')
->>> print open(path).read()
+>>> cat(path)
 This is a foo text.
 
 As we aren't using the download cache and haven't specified a target path
@@ -50,3 +55,229 @@ We can also have the downloaded file's MD5 sum checked:
 >>> path = download(server+'foo.txt', md5('The wrong text.').hexdigest())
 Traceback (most recent call last):
 ValueError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
+
+Finally, we can download the file to a specified place in the file system:
+
+>>> target_dir = tmpdir('download-target')
+>>> path = download(server+'foo.txt', path=join(target_dir, 'downloaded.txt'))
+>>> print path
+/download-target/downloaded.txt
+>>> cat(path)
+This is a foo text.
+
+>>> remove(path)
+
+Downloading using the download cache
+====================================
+
+In order to make use of the download cache, we need to configure the download
+utility differently. In the simplest case, we don't turn off using the cache
+and provide a ``download-cache`` buildout option:
+
+>>> cache = tmpdir('download-cache')
+>>> download = Download({'download-cache': cache})
+>>> print download.cache
+/download-cache/
+
+If either the ``use_cache`` parameter is set to False or no download cache is
+specified for the buildout, the utility will not have a cache associated:
+
+>>> download = Download({})
+>>> print download.cache
+None
+
+>>> download = Download({'download-cache': cache}, use_cache=False)
+>>> print download.cache
+None
+
+We can turn on the download cache of an existing download utility using the
+``set_cache`` method:
+
+>>> download.set_cache(use_cache=True)
+>>> print download.cache
+/download-cache/
+
+Simple usage
+------------
+
+When using the cache, a file will be stored in the cache directory when it is
+first downloaded. The file system path returned by the download utility points
+to the cached copy:
+
+>>> ls(cache)
+>>> path = download(server+'foo.txt')
+>>> print path
+/download-cache/foo.txt
+>>> cat(path)
+This is a foo text.
+
+Whenever the file is downloaded again, the cached copy is used. Let's change
+the file on the server to see this:
+
+>>> write(join(root, 'foo.txt'), 'The wrong text.')
+>>> path = download(server+'foo.txt')
+>>> print path
+/download-cache/foo.txt
+>>> cat(path)
+This is a foo text.
+
+If we specify an MD5 checksum for a file that is already in the cache, the
+cached copy's checksum will be verified:
+
+>>> path = download(server+'foo.txt', md5('The wrong text.').hexdigest())
+Traceback (most recent call last):
+ValueError: MD5 checksum mismatch for cached download
+            from 'http://localhost/foo.txt' at '/download-cache/foo.txt'
+
+Trying to access another file at a different URL which has the same base name
+will result in the cached copy being used:
+
+>>> mkdir(join(root, 'other'))
+>>> write(join(root, 'other', 'foo.txt'), 'The wrong text.')
+>>> path = download(server+'other/foo.txt')
+>>> print path
+/download-cache/foo.txt
+>>> cat(path)
+This is a foo text.
+
+Given a target path for the download, the utility will provide a copy of the
+file at that location both when first downloading the file and when using a
+cached copy:
+
+>>> remove(join(cache, 'foo.txt'))
+>>> ls(cache)
+>>> write(join(root, 'foo.txt'), 'This is a foo text.')
+
+>>> path = download(server+'foo.txt', path=join(target_dir, 'downloaded.txt'))
+>>> print path
+/download-target/downloaded.txt
+>>> cat(path)
+This is a foo text.
+>>> ls(cache)
+- foo.txt
+
+>>> remove(path)
+>>> write(join(root, 'foo.txt'), 'The wrong text.')
+
+>>> path = download(server+'foo.txt', path=join(target_dir, 'downloaded.txt'))
+>>> print path
+/download-target/downloaded.txt
+>>> cat(path)
+This is a foo text.
+
+>>> remove(path)
+>>> remove(join(cache, 'foo.txt'))
+>>> write(join(root, 'foo.txt'), 'This is a foo text.')
+
+Using namespace sub-directories of the download cache
+-----------------------------------------------------
+
+It is common to store cached copies of downloaded files within sub-directories
+of the download cache to keep some degree of order. For example, zc.buildout
+stores downloaded distributions in a sub-directory named "dist". Those
+sub-directories are also known as namespaces. So far, we haven't specified any
+namespaces to use, so the download utility stored files directly inside the
+download cache. Let's use a namespace "test" instead:
+
+>>> download.set_cache(namespace='test')
+>>> print download.cache
+/download-cache/test
+
+The namespace parameter can also be passed to the utility's constructor:
+
+>>> download = Download({'download-cache': cache}, namespace='test')
+>>> print download.cache
+/download-cache/test
+
+The namespace sub-directory hasn't been created yet:
+
+>>> ls(cache)
+
+Downloading a file now creates the namespace sub-directory and places a copy
+of the file inside it:
+
+>>> path = download(server+'foo.txt')
+>>> print path
+/download-cache/test/foo.txt
+>>> ls(cache)
+d test
+>>> ls(join(cache, 'test'))
+- foo.txt
+>>> cat(path)
+This is a foo text.
+
+The next time we want to download that file, the copy from inside the cache
+namespace is used. To see this clearly, we put a file with the same name but
+different content both on the server and in the cache's root directory:
+
+>>> write(join(root, 'foo.txt'), 'The wrong text.')
+>>> write(join(cache, 'foo.txt'), 'The wrong text.')
+
+>>> path = download(server+'foo.txt')
+>>> print path
+/download-cache/test/foo.txt
+>>> cat(path)
+This is a foo text.
+
+>>> rmdir(join(cache, 'test'))
+>>> remove(join(cache, 'foo.txt'))
+>>> write(join(root, 'foo.txt'), 'This is a foo text.')
+
+Using a hash of the URL as the filename in the cache
+----------------------------------------------------
+
+So far, the base name of the downloaded file read from the URL has been used
+for the name of the cached copy of the file. This may not be desirable in some
+cases, for example when downloading files from different locations that have
+the same base name due to some naming convention, or if the file content
+depends on URL parameters. In such cases, an MD5 hash of the complete URL may
+be used as the filename in the cache:
+
+>>> download = Download({'download-cache': cache}, hash_name=True)
+>>> download.hash_name
+True
+
+>>> path = download(server+'foo.txt')
+>>> print path
+/download-cache/09f5793fcdc1716727f72d49519c688d
+>>> cat(path)
+This is a foo text.
+>>> ls(cache)
+- 09f5793fcdc1716727f72d49519c688d
+
+The path was printed just to illustrate matters; we cannot know the real
+checksum since we don't know which port the server happens to listen at when
+the test is run, so we don't actually know the full URL of the file. Let's
+check that the checksum actually belongs to the particular URL used:
+
+>>> path == join(cache, md5(server+'foo.txt').hexdigest())
+True
+
+The cached copy is used when downloading the file again:
+
+>>> write(join(root, 'foo.txt'), 'The wrong text.')
+>>> path == download(server+'foo.txt')
+True
+>>> cat(path)
+This is a foo text.
+>>> ls(cache)
+- 09f5793fcdc1716727f72d49519c688d
+
+If we change the URL, even in such a way that it keeps the base name of the
+file the same, the file will be downloaded again this time and put in the
+cache under a different name:
+
+>>> path2 = download(server+'other/foo.txt')
+>>> print path2
+/download-cache/537b6d73267f8f4447586989af8c470e
+>>> path == path2
+False
+>>> path2 == join(cache, md5(server+'other/foo.txt').hexdigest())
+True
+>>> cat(path)
+This is a foo text.
+>>> cat(path2)
+The wrong text.
+>>> ls(cache)
+- 09f5793fcdc1716727f72d49519c688d
+- 537b6d73267f8f4447586989af8c470e

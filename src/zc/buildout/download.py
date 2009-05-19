@@ -36,24 +36,29 @@ class Download(object):
 
     Handles the download cache and offline mode.
 
+    Download(buildout, use_cache=True, namespace=None, hash_name=False)
+
+    buildout: mapping of buildout options (the ``buildout`` config section)
+    use_cache: whether to use the cache at all
+    namespace: namespace directory to use inside the cache
+    hash_name: whether to use a hash of the URL as cache file name
+
     """
 
     def __init__(self, buildout,
                  use_cache=True, namespace=None, hash_name=False):
         self.buildout = buildout
-        self.set_cache(use_cache, namespace, hash_name)
+        self.set_cache(use_cache, namespace)
+        self.hash_name = hash_name
 
-    def set_cache(self, use_cache=True, namespace=None, hash_name=False):
+    def set_cache(self, use_cache=True, namespace=None):
         """Configure the caching properties.
 
-        use_cache: whether to use the cache at all
-        namespace: namespace directory to use inside the cache
-        hash_name: whether to use a hash of the URL as cache file name
+        See __init__.
 
         """
         self.use_cache = use_cache
         self.namespace = namespace
-        self.hash_name = hash_name
         if use_cache and 'download-cache' in self.buildout:
             self.cache = os.path.join(self.buildout['download-cache'],
                                       namespace or '')
@@ -95,7 +100,11 @@ class Download(object):
             if not check_md5sum(cached_path, md5sum):
                 raise ValueError('MD5 checksum mismatch for cached download '
                                  'from %r at %r' % (url, cached_path))
-        return self.download(url, md5sum, cached_path)
+        else:
+            if not os.path.exists(self.cache):
+                os.makedirs(self.cache)
+            self.download(url, md5sum, cached_path)
+        return cached_path
 
     def download(self, url, md5sum=None, path=None):
         """Download a file to a given path.
