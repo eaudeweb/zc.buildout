@@ -99,8 +99,9 @@ class Download(object):
         cached_path = os.path.join(self.cache, self.filename(url))
         if os.path.isfile(cached_path):
             if not check_md5sum(cached_path, md5sum):
-                raise ValueError('MD5 checksum mismatch for cached download '
-                                 'from %r at %r' % (url, cached_path))
+                raise zc.buildout.UserError(
+                    'MD5 checksum mismatch for cached download '
+                    'from %r at %r' % (url, cached_path))
         else:
             if not os.path.exists(self.cache):
                 os.makedirs(self.cache)
@@ -123,7 +124,8 @@ class Download(object):
         urllib._urlopener = url_opener
         path, headers = urllib.urlretrieve(url, path)
         if not check_md5sum(path, md5sum):
-            raise ValueError('MD5 checksum mismatch downloading %r' % url)
+            raise zc.buildout.UserError(
+                'MD5 checksum mismatch downloading %r' % url)
         return path
 
     def filename(self, url):

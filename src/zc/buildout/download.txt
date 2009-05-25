@@ -54,7 +54,7 @@ We can also have the downloaded file's MD5 sum checked:
 >>> path = download(server+'foo.txt', md5('This is a foo text.').hexdigest())
 >>> path = download(server+'foo.txt', md5('The wrong text.').hexdigest())
 Traceback (most recent call last):
-ValueError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
+UserError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
 
 Finally, we can download the file to a specified place in the file system:
 
@@ -138,8 +138,8 @@ cached copy's checksum will be verified:
 
 >>> path = download(server+'foo.txt', md5('The wrong text.').hexdigest())
 Traceback (most recent call last):
-ValueError: MD5 checksum mismatch for cached download
-            from 'http://localhost/foo.txt' at '/download-cache/foo.txt'
+UserError: MD5 checksum mismatch for cached download
+           from 'http://localhost/foo.txt' at '/download-cache/foo.txt'
 
 Trying to access another file at a different URL which has the same base name
 will result in the cached copy being used:
