@@ -65,6 +65,18 @@ Finally, we can download the file to a specified place in the file system:
 >>> cat(path)
 This is a foo text.
 
+Trying to download a file in offline mode will result in an error:
+
+>>> download = Download({'offline': True}, use_cache=False)
+>>> download(server+'foo.txt')
+Traceback (most recent call last):
+UserError: Couldn't download 'http://localhost/foo.txt' in offline mode.
+
+As an exception to this rule, URLs in the ``file`` scheme will still work:
+
+>>> cat(download('file://%s/foo.txt' % root))
+This is a foo text.
+
 >>> remove(path)
 
 Downloading using the download cache
@@ -163,6 +175,13 @@ This is a foo text.
 >>> print path
 /download-target/downloaded.txt
 >>> cat(path)
+This is a foo text.
+
+In offline mode, downloads from any URL will be successful if the file is
+found in the cache:
+
+>>> download = Download({'download-cache': cache, 'offline': True})
+>>> cat(download(server+'foo.txt'))
 This is a foo text.
 
 >>> remove(path)

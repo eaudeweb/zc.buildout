@@ -22,6 +22,7 @@ import os.path
 import shutil
 import urllib
 import urlparse
+import zc.buildout
 
 
 class URLOpener(urllib.FancyURLopener):
@@ -114,6 +115,11 @@ class Download(object):
         See __call__.
 
         """
+        if (self.buildout.get('offline')
+            and urlparse.urlparse(url).scheme != 'file'):
+            raise zc.buildout.UserError(
+                "Couldn't download %r in offline mode." % url)
+
         urllib._urlopener = url_opener
         path, headers = urllib.urlretrieve(url, path)
         if not check_md5sum(path, md5sum):
