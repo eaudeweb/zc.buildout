@@ -29,7 +29,14 @@ class URLOpener(urllib.FancyURLopener):
     http_error_default = urllib.URLopener.http_error_default
 
 
+class ChecksumError(zc.buildout.UserError):
+    pass
+
+
 url_opener = URLOpener()
+
+
+FALLBACK = object()
 
 
 class Download(object):
@@ -96,16 +103,26 @@ class Download(object):
         See __call__.
 
         """
+        if not os.path.exists(self.cache):
+            os.makedirs(self.cache)
         cached_path = os.path.join(self.cache, self.filename(url))
+
         if os.path.isfile(cached_path):
+            if self.use_cache is FALLBACK:
+                try:
+                    self.download(url, md5sum, cached_path)
+                except ChecksumError:
+                    raise
+                except Exception:
+                    pass
+
             if not check_md5sum(cached_path, md5sum):
-                raise zc.buildout.UserError(
+                raise ChecksumError(
                     'MD5 checksum mismatch for cached download '
                     'from %r at %r' % (url, cached_path))
         else:
-            if not os.path.exists(self.cache):
-                os.makedirs(self.cache)
             self.download(url, md5sum, cached_path)
+
         return cached_path
 
     def download(self, url, md5sum=None, path=None):
@@ -124,7 +141,7 @@ class Download(object):
         urllib._urlopener = url_opener
         path, headers = urllib.urlretrieve(url, path)
         if not check_md5sum(path, md5sum):
-            raise zc.buildout.UserError(
+            raise ChecksumError(
                 'MD5 checksum mismatch downloading %r' % url)
         return path
 

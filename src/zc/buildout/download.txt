@@ -54,7 +54,7 @@ We can also have the downloaded file's MD5 sum checked:
 >>> path = download(server+'foo.txt', md5('This is a foo text.').hexdigest())
 >>> path = download(server+'foo.txt', md5('The wrong text.').hexdigest())
 Traceback (most recent call last):
-UserError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
+ChecksumError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
 
 Finally, we can download the file to a specified place in the file system:
 
@@ -138,8 +138,8 @@ cached copy's checksum will be verified:
 
 >>> path = download(server+'foo.txt', md5('The wrong text.').hexdigest())
 Traceback (most recent call last):
-UserError: MD5 checksum mismatch for cached download
-           from 'http://localhost/foo.txt' at '/download-cache/foo.txt'
+ChecksumError: MD5 checksum mismatch for cached download
+               from 'http://localhost/foo.txt' at '/download-cache/foo.txt'
 
 Trying to access another file at a different URL which has the same base name
 will result in the cached copy being used:
@@ -300,3 +300,67 @@ The wrong text.
 >>> ls(cache)
 - 09f5793fcdc1716727f72d49519c688d
 - 537b6d73267f8f4447586989af8c470e
+
+>>> remove(path)
+>>> remove(path2)
+>>> write(join(root, 'foo.txt'), 'This is a foo text.')
+
+
+Downloading with the cache being used when offline
+==================================================
+
+Another way the download cache can be used is purely as a fall-back option in
+the case that a file cannot be accessed on the net, such as when a server is
+down or if we are in offline mode. This mode is only in effect if a download
+cache is configured in the first place:
+
+>>> from zc.buildout.download import FALLBACK
+>>> download = Download({}, use_cache=FALLBACK)
+>>> print download.cache
+None
+
+>>> download = Download({'download-cache': cache}, use_cache=FALLBACK)
+>>> print download.cache
+/download-cache/
+
+A downloaded file will be cached:
+
+>>> ls(cache)
+>>> path = download(server+'foo.txt')
+>>> ls(cache)
+- foo.txt
+>>> cat(join(cache, 'foo.txt'))
+This is a foo text.
+
+If the file cannot be served, the cached copy will be used:
+
+>>> remove(join(root, 'foo.txt'))
+>>> Download({})(server+'foo.txt')
+Traceback (most recent call last):
+IOError: ('http error', 404, 'Not Found',
+          <httplib.HTTPMessage instance at 0xa35d36c>)
+>>> path = download(server+'foo.txt')
+>>> cat(path)
+This is a foo text.
+
+Similarly, if the file is served but we're in offline mode, we'll fall back to
+using the cache:
+
+>>> write(join(root, 'foo.txt'), 'The wrong text.')
+>>> cat(Download({})(server+'foo.txt'))
+The wrong text.
+>>> offline_download = Download({'download-cache': cache, 'offline': True},
+...                             use_cache=FALLBACK)
+>>> path = offline_download(server+'foo.txt')
+>>> cat(path)
+This is a foo text.
+
+However, when downloading the file normally with the cache being used in
+fall-back mode, the file will be downloaded from the net and the cached copy
+will be replaced with the new content:
+
+>>> path = download(server+'foo.txt')
+>>> cat(path)
+The wrong text.
+>>> cat(join(cache, 'foo.txt'))
+The wrong text.
