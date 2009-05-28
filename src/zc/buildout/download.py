@@ -67,7 +67,7 @@ class Download(object):
         """
         self.use_cache = use_cache
         self.namespace = namespace
-        if use_cache and 'download-cache' in self.buildout:
+        if use_cache and self.buildout.get('download-cache'):
             self.cache = os.path.join(self.buildout['download-cache'],
                                       namespace or '')
         else:

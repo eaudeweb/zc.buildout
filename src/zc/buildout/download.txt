@@ -98,6 +98,14 @@ specified for the buildout, the utility will not have a cache associated:
 >>> print download.cache
 None
 
+>>> download = Download({'download-cache': None})
+>>> print download.cache
+None
+
+>>> download = Download({'download-cache': ''})
+>>> print download.cache
+None
+
 >>> download = Download({'download-cache': cache}, use_cache=False)
 >>> print download.cache
 None
