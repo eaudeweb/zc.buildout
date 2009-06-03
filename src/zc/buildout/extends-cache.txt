@@ -1,0 +1,115 @@
+Caching extended configuration
+==============================
+
+As mentioned in the general buildout documentation, configuration files can
+extend each other, including the ability to download configuration being
+extended from a URL. If desired, zc.buildout caches downloaded configuration
+in order to be able to use it when run offline.
+
+As we're going to talk about downloading things, let's start an HTTP server.
+Also, all of the following will take place inside the sample buildout.
+
+>>> server_data = tmpdir('server_data')
+>>> server_url = start_server(server_data)
+>>> cd(sample_buildout)
+
+
+Basic use of the extends cache
+------------------------------
+
+We put some base configuration on a server and reference it from a sample
+buildout:
+
+>>> write(server_data, 'base.cfg', """\
+... [buildout]
+... parts =
+... foo = bar
+... """)
+
+>>> write('buildout.cfg', """\
+... [buildout]
+... extends = %sbase.cfg
+... """ % server_url)
+
+When trying to run this buildout offline, we'll find that we cannot read all
+of the required configuration:
+
+>>> print system(buildout + ' -o')
+While:
+  Initializing.
+Error: Couldn't download 'http://localhost/base.cfg' in offline mode.
+
+Trying the same online, we can:
+
+>>> print system(buildout)
+Unused options for buildout: 'foo'.
+
+As long as we haven't said anything about caching downloaded configuration,
+nothing gets cached. Offline mode will still cause the buildout to fail:
+
+>>> print system(buildout + ' -o')
+While:
+  Initializing.
+Error: Couldn't download 'http://localhost/base.cfg' in offline mode.
+
+Let's now specify a cache for base configuration files. This cache is
+different from the download cache used by recipes for caching distributions
+and other files; one might, however, use a namespace subdirectory of the
+download cache for it. The configuration cache we specify will be created when
+running buildout and the base.cfg file will be put in it (with the file name
+being a hash of the complete URL):
+
+>>> write('buildout.cfg', """\
+... [buildout]
+... extends = %sbase.cfg
+... extends-cache = cache
+... """ % server_url)
+
+>>> print system(buildout)
+Unused options for buildout: 'foo'.
+
+>>> cache = join(sample_buildout, 'cache')
+>>> ls(cache)
+-  5aedc98d7e769290a29d654a591a3a45
+
+>>> import os
+>>> cat(cache, os.listdir(cache)[0])
+[buildout]
+parts =
+foo = bar
+
+We can now run buildout offline as it will read base.cfg from the cache:
+
+>>> print system(buildout + ' -o')
+Unused options for buildout: 'foo'.
+
+The cache is being used purely as a fall-back in case we are offline or don't
+have access to a configuration file to be downloaded. As long as we are
+online, buildout attempts to download a fresh copy of each file even if a
+cached copy of the file exists. To see this, we put different configuration in
+the same place on the server and run buildout in offline mode so it takes
+base.cfg from the cache:
+
+>>> write(server_data, 'base.cfg', """\
+... [buildout]
+... parts =
+... bar = baz
+... """)
+
+>>> print system(buildout + ' -o')
+Unused options for buildout: 'foo'.
+
+In online mode, buildout will download and use the modified version:
+
+>>> print system(buildout)
+Unused options for buildout: 'bar'.
+
+Trying offline mode again, the new version will be used as it has been put in
+the cache now:
+
+>>> print system(buildout + ' -o')
+Unused options for buildout: 'bar'.
+
+
+Specifying extends cache and offline mode
+-----------------------------------------

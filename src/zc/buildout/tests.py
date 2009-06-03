@@ -2807,12 +2807,11 @@ def test_suite():
                ]),
             ),
 
-
         doctest.DocFileSuite(
-            'download.txt',
+            'download.txt', 'extends-cache.txt',
             setUp=easy_install_SetUp,
             tearDown=zc.buildout.testing.buildoutTearDown,
-            optionflags=doctest.NORMALIZE_WHITESPACE,
+            optionflags=doctest.NORMALIZE_WHITESPACE | doctest.ELLIPSIS,
             checker=renormalizing.RENormalizing([
                (re.compile('0x[0-9a-f]+'), '<MEM ADDRESS>'),
                (re.compile('http://localhost:[0-9]{4,5}/'),
