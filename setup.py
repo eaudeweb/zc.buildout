@@ -32,7 +32,11 @@ long_description=(
         + '\n' +
         read('src', 'zc', 'buildout', 'repeatable.txt')
         + '\n' +
+        read('src', 'zc', 'buildout', 'download.txt')
+        + '\n' +
         read('src', 'zc', 'buildout', 'downloadcache.txt')
+        + '\n' +
+        read('src', 'zc', 'buildout', 'extends-cache.txt')
         + '\n' +
         read('src', 'zc', 'buildout', 'setup.txt')
         + '\n' +

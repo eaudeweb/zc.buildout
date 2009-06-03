@@ -1,7 +1,7 @@
 Change History
 **************
 
-1.2.2 (unreleased)
+1.3.0 (unreleased)
 ==================
 
 - Better Windows compatibility in test infrastructure.
@@ -14,6 +14,11 @@ Change History
   tear down as it might disturb other packages reusing buildout's
   testing infrastructure.
 
+- Added a download API that handles the download cache, offline mode etc and
+  is meant to be reused by recipes.
+
+- Used the download API to allow caching of base configurations (specified by
+  the buildout section's 'extends' option).
 
 1.2.1 (2009-03-18)
 ==================
