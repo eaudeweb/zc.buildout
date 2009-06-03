@@ -9,9 +9,9 @@ desired and optionally checking the downloaded files' MD5 checksum.
 
 We setup an HTTP server that provides a file we want to download:
 
->>> root = tmpdir('sample_files')
->>> write(join(root, 'foo.txt'), 'This is a foo text.')
->>> server = start_server(root)
+>>> server_data = tmpdir('sample_files')
+>>> write(server_data, 'foo.txt', 'This is a foo text.')
+>>> server_url = start_server(server_data)
 
 
 Downloading without using the cache
@@ -28,7 +28,7 @@ None
 Downloading a file is achieved by calling the utility with the URL as an
 argument:
 
->>> path = download(server+'foo.txt')
+>>> path = download(server_url+'foo.txt')
 >>> cat(path)
 This is a foo text.
 
@@ -41,7 +41,7 @@ True
 
 When trying to access a file that doesn't exist, we'll get an exception:
 
->>> download(server+'not-there')
+>>> download(server_url+'not-there')
 Traceback (most recent call last):
 IOError: ('http error', 404, 'Not Found',
           <httplib.HTTPMessage instance at 0xa0ffd2c>)
@@ -51,15 +51,19 @@ We can also have the downloaded file's MD5 sum checked:
 >>> try: from hashlib import md5
 ... except ImportError: from md5 import new as md5
 
->>> path = download(server+'foo.txt', md5('This is a foo text.').hexdigest())
->>> path = download(server+'foo.txt', md5('The wrong text.').hexdigest())
+>>> path = download(server_url+'foo.txt',
+...                 md5('This is a foo text.').hexdigest())
+
+>>> path = download(server_url+'foo.txt',
+...                 md5('The wrong text.').hexdigest())
 Traceback (most recent call last):
 ChecksumError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
 
 Finally, we can download the file to a specified place in the file system:
 
 >>> target_dir = tmpdir('download-target')
->>> path = download(server+'foo.txt', path=join(target_dir, 'downloaded.txt'))
+>>> path = download(server_url+'foo.txt',
+...                 path=join(target_dir, 'downloaded.txt'))
 >>> print path
 /download-target/downloaded.txt
 >>> cat(path)
@@ -68,13 +72,13 @@ This is a foo text.
 Trying to download a file in offline mode will result in an error:
 
 >>> download = Download({'offline': True}, use_cache=False)
->>> download(server+'foo.txt')
+>>> download(server_url+'foo.txt')
 Traceback (most recent call last):
 UserError: Couldn't download 'http://localhost/foo.txt' in offline mode.
 
 As an exception to this rule, URLs in the ``file`` scheme will still work:
 
->>> cat(download('file://%s/foo.txt' % root))
+>>> cat(download('file://%s/foo.txt' % server_data))
 This is a foo text.
 
 >>> remove(path)
@@ -125,7 +129,7 @@ first downloaded. The file system path returned by the download utility points
 to the cached copy:
 
 >>> ls(cache)
->>> path = download(server+'foo.txt')
+>>> path = download(server_url+'foo.txt')
 >>> print path
 /download-cache/foo.txt
 >>> cat(path)
@@ -134,8 +138,8 @@ This is a foo text.
 Whenever the file is downloaded again, the cached copy is used. Let's change
 the file on the server to see this:
 
->>> write(join(root, 'foo.txt'), 'The wrong text.')
->>> path = download(server+'foo.txt')
+>>> write(server_data, 'foo.txt', 'The wrong text.')
+>>> path = download(server_url+'foo.txt')
 >>> print path
 /download-cache/foo.txt
 >>> cat(path)
@@ -144,7 +148,7 @@ This is a foo text.
 If we specify an MD5 checksum for a file that is already in the cache, the
 cached copy's checksum will be verified:
 
->>> path = download(server+'foo.txt', md5('The wrong text.').hexdigest())
+>>> path = download(server_url+'foo.txt', md5('The wrong text.').hexdigest())
 Traceback (most recent call last):
 ChecksumError: MD5 checksum mismatch for cached download
                from 'http://localhost/foo.txt' at '/download-cache/foo.txt'
@@ -152,9 +156,9 @@ ChecksumError: MD5 checksum mismatch for cached download
 Trying to access another file at a different URL which has the same base name
 will result in the cached copy being used:
 
->>> mkdir(join(root, 'other'))
->>> write(join(root, 'other', 'foo.txt'), 'The wrong text.')
->>> path = download(server+'other/foo.txt')
+>>> mkdir(server_data, 'other')
+>>> write(server_data, 'other', 'foo.txt', 'The wrong text.')
+>>> path = download(server_url+'other/foo.txt')
 >>> print path
 /download-cache/foo.txt
 >>> cat(path)
@@ -164,11 +168,12 @@ Given a target path for the download, the utility will provide a copy of the
 file at that location both when first downloading the file and when using a
 cached copy:
 
->>> remove(join(cache, 'foo.txt'))
+>>> remove(cache, 'foo.txt')
 >>> ls(cache)
->>> write(join(root, 'foo.txt'), 'This is a foo text.')
+>>> write(server_data, 'foo.txt', 'This is a foo text.')
 
->>> path = download(server+'foo.txt', path=join(target_dir, 'downloaded.txt'))
+>>> path = download(server_url+'foo.txt',
+...                 path=join(target_dir, 'downloaded.txt'))
 >>> print path
 /download-target/downloaded.txt
 >>> cat(path)
@@ -177,9 +182,10 @@ This is a foo text.
 - foo.txt
 
 >>> remove(path)
->>> write(join(root, 'foo.txt'), 'The wrong text.')
+>>> write(server_data, 'foo.txt', 'The wrong text.')
 
->>> path = download(server+'foo.txt', path=join(target_dir, 'downloaded.txt'))
+>>> path = download(server_url+'foo.txt',
+...                 path=join(target_dir, 'downloaded.txt'))
 >>> print path
 /download-target/downloaded.txt
 >>> cat(path)
@@ -189,12 +195,12 @@ In offline mode, downloads from any URL will be successful if the file is
 found in the cache:
 
 >>> download = Download({'download-cache': cache, 'offline': True})
->>> cat(download(server+'foo.txt'))
+>>> cat(download(server_url+'foo.txt'))
 This is a foo text.
 
 >>> remove(path)
->>> remove(join(cache, 'foo.txt'))
->>> write(join(root, 'foo.txt'), 'This is a foo text.')
+>>> remove(cache, 'foo.txt')
+>>> write(server_data, 'foo.txt', 'This is a foo text.')
 
 Using namespace sub-directories of the download cache
 -----------------------------------------------------
@@ -223,12 +229,12 @@ The namespace sub-directory hasn't been created yet:
 Downloading a file now creates the namespace sub-directory and places a copy
 of the file inside it:
 
->>> path = download(server+'foo.txt')
+>>> path = download(server_url+'foo.txt')
 >>> print path
 /download-cache/test/foo.txt
 >>> ls(cache)
 d test
->>> ls(join(cache, 'test'))
+>>> ls(cache, 'test')
 - foo.txt
 >>> cat(path)
 This is a foo text.
@@ -237,18 +243,18 @@ The next time we want to download that file, the copy from inside the cache
 namespace is used. To see this clearly, we put a file with the same name but
 different content both on the server and in the cache's root directory:
 
->>> write(join(root, 'foo.txt'), 'The wrong text.')
->>> write(join(cache, 'foo.txt'), 'The wrong text.')
+>>> write(server_data, 'foo.txt', 'The wrong text.')
+>>> write(cache, 'foo.txt', 'The wrong text.')
 
->>> path = download(server+'foo.txt')
+>>> path = download(server_url+'foo.txt')
 >>> print path
 /download-cache/test/foo.txt
 >>> cat(path)
 This is a foo text.
 
->>> rmdir(join(cache, 'test'))
->>> remove(join(cache, 'foo.txt'))
->>> write(join(root, 'foo.txt'), 'This is a foo text.')
+>>> rmdir(cache, 'test')
+>>> remove(cache, 'foo.txt')
+>>> write(server_data, 'foo.txt', 'This is a foo text.')
 
 Using a hash of the URL as the filename in the cache
 ----------------------------------------------------
@@ -264,7 +270,7 @@ be used as the filename in the cache:
 >>> download.hash_name
 True
 
->>> path = download(server+'foo.txt')
+>>> path = download(server_url+'foo.txt')
 >>> print path
 /download-cache/09f5793fcdc1716727f72d49519c688d
 >>> cat(path)
@@ -277,13 +283,13 @@ checksum since we don't know which port the server happens to listen at when
 the test is run, so we don't actually know the full URL of the file. Let's
 check that the checksum actually belongs to the particular URL used:
 
->>> path == join(cache, md5(server+'foo.txt').hexdigest())
+>>> path == join(cache, md5(server_url+'foo.txt').hexdigest())
 True
 
 The cached copy is used when downloading the file again:
 
->>> write(join(root, 'foo.txt'), 'The wrong text.')
->>> path == download(server+'foo.txt')
+>>> write(server_data, 'foo.txt', 'The wrong text.')
+>>> path == download(server_url+'foo.txt')
 True
 >>> cat(path)
 This is a foo text.
@@ -294,12 +300,12 @@ If we change the URL, even in such a way that it keeps the base name of the
 file the same, the file will be downloaded again this time and put in the
 cache under a different name:
 
->>> path2 = download(server+'other/foo.txt')
+>>> path2 = download(server_url+'other/foo.txt')
 >>> print path2
 /download-cache/537b6d73267f8f4447586989af8c470e
 >>> path == path2
 False
->>> path2 == join(cache, md5(server+'other/foo.txt').hexdigest())
+>>> path2 == join(cache, md5(server_url+'other/foo.txt').hexdigest())
 True
 >>> cat(path)
 This is a foo text.
@@ -311,7 +317,7 @@ The wrong text.
 
 >>> remove(path)
 >>> remove(path2)
->>> write(join(root, 'foo.txt'), 'This is a foo text.')
+>>> write(server_data, 'foo.txt', 'This is a foo text.')
 
 
 Downloading with the cache being used when offline
@@ -334,32 +340,32 @@ None
 A downloaded file will be cached:
 
 >>> ls(cache)
->>> path = download(server+'foo.txt')
+>>> path = download(server_url+'foo.txt')
 >>> ls(cache)
 - foo.txt
->>> cat(join(cache, 'foo.txt'))
+>>> cat(cache, 'foo.txt')
 This is a foo text.
 
 If the file cannot be served, the cached copy will be used:
 
->>> remove(join(root, 'foo.txt'))
->>> Download({})(server+'foo.txt')
+>>> remove(server_data, 'foo.txt')
+>>> Download({})(server_url+'foo.txt')
 Traceback (most recent call last):
 IOError: ('http error', 404, 'Not Found',
           <httplib.HTTPMessage instance at 0xa35d36c>)
->>> path = download(server+'foo.txt')
+>>> path = download(server_url+'foo.txt')
 >>> cat(path)
 This is a foo text.
 
 Similarly, if the file is served but we're in offline mode, we'll fall back to
 using the cache:
 
->>> write(join(root, 'foo.txt'), 'The wrong text.')
->>> cat(Download({})(server+'foo.txt'))
+>>> write(server_data, 'foo.txt', 'The wrong text.')
+>>> cat(Download({})(server_url+'foo.txt'))
 The wrong text.
 >>> offline_download = Download({'download-cache': cache, 'offline': True},
 ...                             use_cache=FALLBACK)
->>> path = offline_download(server+'foo.txt')
+>>> path = offline_download(server_url+'foo.txt')
 >>> cat(path)
 This is a foo text.
 
@@ -367,8 +373,8 @@ However, when downloading the file normally with the cache being used in
 fall-back mode, the file will be downloaded from the net and the cached copy
 will be replaced with the new content:
 
->>> path = download(server+'foo.txt')
+>>> path = download(server_url+'foo.txt')
 >>> cat(path)
 The wrong text.
->>> cat(join(cache, 'foo.txt'))
+>>> cat(cache, 'foo.txt')
 The wrong text.
