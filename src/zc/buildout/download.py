@@ -134,7 +134,7 @@ class Download(object):
 
         """
         if (self.buildout.get('offline')
-            and urlparse.urlparse(url).scheme != 'file'):
+            and urlparse.urlparse(url, 'file').scheme != 'file'):
             raise zc.buildout.UserError(
                 "Couldn't download %r in offline mode." % url)
 

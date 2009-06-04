@@ -75,8 +75,11 @@ Trying to download a file in offline mode will result in an error:
 Traceback (most recent call last):
 UserError: Couldn't download 'http://localhost/foo.txt' in offline mode.
 
-As an exception to this rule, URLs in the ``file`` scheme will still work:
+As an exception to this rule, file system paths and URLs in the ``file``
+scheme will still work:
 
+>>> cat(download(join(server_data, 'foo.txt')))
+This is a foo text.
 >>> cat(download('file://%s/foo.txt' % server_data))
 This is a foo text.
 
