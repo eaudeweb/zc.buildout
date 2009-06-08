@@ -83,7 +83,8 @@ class Download(object):
         Returns the path to the downloaded file.
 
         """
-        if self.cache is None:
+        if (self.cache is None
+            or urlparse.urlparse(url, 'file').scheme == 'file'):
             return self.download(url, md5sum, path)
 
         cached_path = self.download_cached(url, md5sum)

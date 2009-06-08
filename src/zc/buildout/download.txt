@@ -200,9 +200,23 @@ found in the cache:
 >>> cat(download(server_url+'foo.txt'))
 This is a foo text.
 
->>> remove(path)
+On the other hand, local resources will never be cached:
+
 >>> remove(cache, 'foo.txt')
+>>> ls(cache)
+
 >>> write(server_data, 'foo.txt', 'This is a foo text.')
+>>> download = Download({'download-cache': cache})
+
+>>> cat(download('file://' + join(server_data, 'foo.txt'), path=path))
+This is a foo text.
+>>> ls(cache)
+
+>>> cat(download(join(server_data, 'foo.txt'), path=path))
+This is a foo text.
+>>> ls(cache)
+
+>>> remove(path)
 
 Using namespace sub-directories of the download cache
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
