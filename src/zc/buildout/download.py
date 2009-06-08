@@ -83,19 +83,33 @@ class Download(object):
         Returns the path to the downloaded file.
 
         """
-        if (self.cache is None
-            or urlparse.urlparse(url, 'file').scheme == 'file'):
-            return self.download(url, md5sum, path)
+        if urlparse.urlparse(url, 'file').scheme == 'file':
+            local_path = self.use_local(url, md5sum)
+        elif self.cache:
+            local_path = self.download_cached(url, md5sum)
+        else:
+            local_path = self.download(url, md5sum, path)
 
-        cached_path = self.download_cached(url, md5sum)
         if (path is None
-            or os.path.abspath(path) == os.path.abspath(cached_path)):
-            return cached_path
+            or os.path.abspath(path) == os.path.abspath(local_path)):
+            return local_path
 
         try:
-            os.link(cached_path, path)
+            os.link(local_path, path)
         except (AttributeError, OSError):
-            shutil.copyfile(cached_path, path)
+            shutil.copyfile(local_path, path)
+        return path
+
+    def use_local(self, url, md5sum=None):
+        """Locate and verify the MD5 checksum of a local resource.
+
+        See __call__.
+
+        """
+        path = urlparse.urlparse(url).path
+        if not check_md5sum(path, md5sum):
+            raise ChecksumError(
+                'MD5 checksum mismatch for local resource at %r.' % path)
         return path
 
     def download_cached(self, url, md5sum=None):
@@ -129,6 +143,9 @@ class Download(object):
     def download(self, url, md5sum=None, path=None):
         """Download a file to a given path.
 
+        Note: The url is assumed to point to an online resource; this method
+        would try to move local resources if a destination path is given.
+
         The resource is always downloaded to a temporary file and moved to the
         specified path only after the download is complete and the checksum
         (if given) matches. If path is None, the temporary file is returned.
@@ -136,21 +153,18 @@ class Download(object):
         See __call__.
 
         """
-        local = urlparse.urlparse(url, 'file').scheme == 'file'
-
-        if self.buildout.get('offline') and not local:
+        if self.buildout.get('offline'):
             raise zc.buildout.UserError(
                 "Couldn't download %r in offline mode." % url)
 
         urllib._urlopener = url_opener
         tmp_path, headers = urllib.urlretrieve(url)
         if not check_md5sum(tmp_path, md5sum):
-            if not local:
-                os.remove(tmp_path)
+            os.remove(tmp_path)
             raise ChecksumError(
                 'MD5 checksum mismatch downloading %r' % url)
 
-        if path and not local:
+        if path:
             shutil.move(tmp_path, path)
             return path
         else:
