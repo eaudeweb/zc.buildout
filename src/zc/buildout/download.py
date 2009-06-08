@@ -129,22 +129,32 @@ class Download(object):
     def download(self, url, md5sum=None, path=None):
         """Download a file to a given path.
 
-        If path is None, download to a temporary file.
+        The resource is always downloaded to a temporary file and moved to the
+        specified path only after the download is complete and the checksum
+        (if given) matches. If path is None, the temporary file is returned.
 
         See __call__.
 
         """
-        if (self.buildout.get('offline')
-            and urlparse.urlparse(url, 'file').scheme != 'file'):
+        local = urlparse.urlparse(url, 'file').scheme == 'file'
+
+        if self.buildout.get('offline') and not local:
             raise zc.buildout.UserError(
                 "Couldn't download %r in offline mode." % url)
 
         urllib._urlopener = url_opener
-        path, headers = urllib.urlretrieve(url, path)
-        if not check_md5sum(path, md5sum):
+        tmp_path, headers = urllib.urlretrieve(url)
+        if not check_md5sum(tmp_path, md5sum):
+            if not local:
+                os.remove(tmp_path)
             raise ChecksumError(
                 'MD5 checksum mismatch downloading %r' % url)
-        return path
+
+        if path and not local:
+            shutil.move(tmp_path, path)
+            return path
+        else:
+            return tmp_path
 
     def filename(self, url):
         """Determine a file name from a URL according to the configuration.

@@ -216,6 +216,13 @@ This is a foo text.
 This is a foo text.
 >>> ls(cache)
 
+Neither will a cached copy of a resource with a checksum mismatch be created:
+
+>>> download(server_url+'foo.txt', md5('The wrong text.').hexdigest())
+Traceback (most recent call last):
+ChecksumError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
+>>> ls(cache)
+
 >>> remove(path)
 
 Using namespace sub-directories of the download cache
@@ -392,5 +399,15 @@ will be replaced with the new content:
 >>> path = download(server_url+'foo.txt')
 >>> cat(path)
 The wrong text.
+>>> cat(cache, 'foo.txt')
+The wrong text.
+
+When trying to download a resource whose checksum does not match, the cached
+copy will neither be used nor overwritten:
+
+>>> write(server_data, 'foo.txt', 'This is a foo text.')
+>>> download(server_url+'foo.txt', md5('The wrong text.').hexdigest())
+Traceback (most recent call last):
+ChecksumError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
 >>> cat(cache, 'foo.txt')
 The wrong text.
