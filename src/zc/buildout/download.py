@@ -17,6 +17,7 @@ try:
     from hashlib import md5
 except ImportError:
     from md5 import new as md5
+from zc.buildout.easy_install import realpath
 import atexit
 import os
 import os.path
@@ -69,8 +70,8 @@ class Download(object):
         self.use_cache = use_cache
         self.namespace = namespace
         if use_cache and self.buildout.get('download-cache'):
-            self.cache = os.path.join(self.buildout['download-cache'],
-                                      namespace or '')
+            self.cache = os.path.join(
+                realpath(self.buildout['download-cache']), namespace or '')
         else:
             self.cache = None
 
@@ -91,8 +92,7 @@ class Download(object):
         else:
             local_path = self.download(url, md5sum, path)
 
-        if (path is None
-            or os.path.abspath(path) == os.path.abspath(local_path)):
+        if path is None or realpath(path) == realpath(local_path):
             return local_path
 
         try:
@@ -177,11 +177,12 @@ class Download(object):
         if self.hash_name:
             return md5(url).hexdigest()
         else:
-            for name in reversed(urlparse.urlparse(url).path.split('/')):
+            parsed = urlparse.urlparse(url)
+            for name in reversed(parsed.path.split('/')):
                 if name:
                     return name
             else:
-                return 'default'
+                return '%s:%s' % (parsed.host, parsed.port)
 
 
 def check_md5sum(path, md5sum):
