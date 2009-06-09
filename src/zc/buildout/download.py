@@ -17,6 +17,7 @@ try:
     from hashlib import md5
 except ImportError:
     from md5 import new as md5
+import atexit
 import os
 import os.path
 import shutil
@@ -102,9 +103,6 @@ class Download(object):
 
     def use_local(self, url, md5sum=None):
         """Locate and verify the MD5 checksum of a local resource.
-
-        See __call__.
-
         """
         path = urlparse.urlparse(url).path
         if not check_md5sum(path, md5sum):
@@ -113,9 +111,11 @@ class Download(object):
         return path
 
     def download_cached(self, url, md5sum=None):
-        """Download a file to the cache, assuming the cache was configured.
+        """Download a file from a URL using the cache.
 
-        See __call__.
+        This method assumes that the cache has been configured. Optionally, it
+        raises a ChecksumError if a cached copy of a file has an MD5 mismatch,
+        but will not remove the copy in that case.
 
         """
         if not os.path.exists(self.cache):
@@ -141,16 +141,15 @@ class Download(object):
         return cached_path
 
     def download(self, url, md5sum=None, path=None):
-        """Download a file to a given path.
+        """Download a file from a URL to a given or temporary path.
 
         Note: The url is assumed to point to an online resource; this method
-        would try to move local resources if a destination path is given.
+        might try to move or remove local resources.
 
         The resource is always downloaded to a temporary file and moved to the
         specified path only after the download is complete and the checksum
-        (if given) matches. If path is None, the temporary file is returned.
-
-        See __call__.
+        (if given) matches. If path is None, the temporary file is returned
+        and scheduled for deletion at process exit.
 
         """
         if self.buildout.get('offline'):
@@ -168,6 +167,7 @@ class Download(object):
             shutil.move(tmp_path, path)
             return path
         else:
+            atexit.register(remove, tmp_path)
             return tmp_path
 
     def filename(self, url):
@@ -203,3 +203,8 @@ def check_md5sum(path, md5sum):
         return checksum.hexdigest() == md5sum
     finally:
         f.close()
+
+
+def remove(path):
+    if os.path.exists(path):
+        os.remove(path)
