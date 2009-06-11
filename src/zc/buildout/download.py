@@ -152,7 +152,7 @@ class Download(object):
         and scheduled for deletion at process exit.
 
         """
-        if self.buildout.get('offline'):
+        if self.buildout.get('offline') == 'true':
             raise zc.buildout.UserError(
                 "Couldn't download %r in offline mode." % url)
 

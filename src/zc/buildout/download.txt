@@ -70,7 +70,7 @@ This is a foo text.
 
 Trying to download a file in offline mode will result in an error:
 
->>> download = Download({'offline': True}, use_cache=False)
+>>> download = Download({'offline': 'true'}, use_cache=False)
 >>> download(server_url+'foo.txt')
 Traceback (most recent call last):
 UserError: Couldn't download 'http://localhost/foo.txt' in offline mode.
@@ -196,7 +196,7 @@ This is a foo text.
 In offline mode, downloads from any URL will be successful if the file is
 found in the cache:
 
->>> download = Download({'download-cache': cache, 'offline': True})
+>>> download = Download({'download-cache': cache, 'offline': 'true'})
 >>> cat(download(server_url+'foo.txt'))
 This is a foo text.
 
@@ -386,7 +386,7 @@ using the cache:
 >>> write(server_data, 'foo.txt', 'The wrong text.')
 >>> cat(Download({})(server_url+'foo.txt'))
 The wrong text.
->>> offline_download = Download({'download-cache': cache, 'offline': True},
+>>> offline_download = Download({'download-cache': cache, 'offline': 'true'},
 ...                             use_cache=FALLBACK)
 >>> path = offline_download(server_url+'foo.txt')
 >>> cat(path)
@@ -411,3 +411,15 @@ Traceback (most recent call last):
 ChecksumError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
 >>> cat(cache, 'foo.txt')
 The wrong text.
+
+
+Specifying offline mode
+-----------------------
+
+As usual with zc.buildout, the offline option must assume one of the values
+'true' and 'false'. Turning offline mode on with 'true' has been shown above;
+setting the option to 'false' turns offline mode off explicitly:
+
+>>> download = Download({'offline': 'false'})
+>>> cat(download(server_url+'foo.txt'))
+This is a foo text.

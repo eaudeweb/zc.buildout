@@ -113,7 +113,7 @@ class Buildout(UserDict.DictMixin):
 
         for section, option, value in cloptions:
             if (section, option) == ('buildout', 'offline'):
-                offline = value
+                offline = value == 'true'
                 break
         else:
             offline = False
@@ -127,7 +127,7 @@ class Buildout(UserDict.DictMixin):
                                     [], None, offline))
 
         extends_cache = data['buildout'].get('extends-cache')
-        offline = offline or data['buildout'].get('offline', False)
+        offline = offline or data['buildout'].get('offline') == 'true'
 
         # load configuration files
         if config_file:
@@ -1175,9 +1175,12 @@ def _open(base, filename, seen, cache, offline):
 
     Recursively open other files based on buildout options found.
     """
-
+    if offline:
+        offline_option = 'true'
+    else:
+        offline_option = 'false'
     download = zc.buildout.download.Download(
-        {'download-cache': cache, 'offline': offline},
+        {'download-cache': cache, 'offline': offline_option},
         use_cache=zc.buildout.download.FALLBACK, hash_name=True)
     if _isurl(filename):
         fp = open(download(filename))
@@ -1216,7 +1219,7 @@ def _open(base, filename, seen, cache, offline):
 
     if root_config_file and 'buildout' in result:
         cache = result['buildout'].get('extends-cache', cache)
-        offline = offline or result['buildout'].get('offline', False)
+        offline = offline or result['buildout'].get('offline') == 'true'
 
     if extends:
         extends = extends.split()

@@ -172,6 +172,7 @@ bases, using different caches:
 >>> write(server_data, 'base_default.cfg', """\
 ... [buildout]
 ... foo = bar
+... offline = false
 ... """)
 
 >>> write('buildout.cfg', """\
@@ -186,6 +187,7 @@ bases, using different caches:
 >>> write(server_data, 'base.cfg', """\
 ... [buildout]
 ... parts =
+... offline = false
 ... """)
 
 Buildout will now assemble its configuration from all of these 6 files,
@@ -199,12 +201,14 @@ Unused options for buildout: 'foo'.
 >>> cat('user-cache', os.listdir('user-cache')[0])
 [buildout]
 foo = bar
+offline = false
 
 >>> ls('cache')
 -  c72213127e6eb2208a3e1fc1dba771a7
 >>> cat('cache', os.listdir('cache')[0])
 [buildout]
 parts =
+offline = false
 
 If, on the other hand, the extends caches are specified in files that get
 extended themselves, they won't be used for assembling the configuration they
@@ -243,6 +247,7 @@ Unused options for buildout: 'foo'.
 >>> cat('user-cache', os.listdir('user-cache')[0])
 [buildout]
 parts =
+offline = false
 
 >>> ls('cache')
 
