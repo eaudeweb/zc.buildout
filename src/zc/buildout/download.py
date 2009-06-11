@@ -152,7 +152,8 @@ class Download(object):
         and scheduled for deletion at process exit.
 
         """
-        if self.buildout.get('offline') == 'true':
+        if (self.buildout.get('offline') == 'true'
+            or self.buildout.get('install-from-cache') == 'true'):
             raise zc.buildout.UserError(
                 "Couldn't download %r in offline mode." % url)
 

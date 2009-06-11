@@ -127,7 +127,8 @@ class Buildout(UserDict.DictMixin):
                                     [], None, offline))
 
         extends_cache = data['buildout'].get('extends-cache')
-        offline = offline or data['buildout'].get('offline') == 'true'
+        offline = (offline or data['buildout'].get('offline') == 'true'
+                    or data['buildout'].get('install-from-cache') == 'true')
 
         # load configuration files
         if config_file:
@@ -1219,7 +1220,8 @@ def _open(base, filename, seen, cache, offline):
 
     if root_config_file and 'buildout' in result:
         cache = result['buildout'].get('extends-cache', cache)
-        offline = offline or result['buildout'].get('offline') == 'true'
+        offline = (offline or result['buildout'].get('offline') == 'true'
+                   or result['buildout'].get('install-from-cache') == 'true')
 
     if extends:
         extends = extends.split()

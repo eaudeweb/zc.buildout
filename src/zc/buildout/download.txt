@@ -413,8 +413,8 @@ ChecksumError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
 The wrong text.
 
 
-Specifying offline mode
------------------------
+Specifying offline mode and installation from cache
+---------------------------------------------------
 
 As usual with zc.buildout, the offline option must assume one of the values
 'true' and 'false'. Turning offline mode on with 'true' has been shown above;
@@ -423,3 +423,27 @@ setting the option to 'false' turns offline mode off explicitly:
 >>> download = Download({'offline': 'false'})
 >>> cat(download(server_url+'foo.txt'))
 This is a foo text.
+
+Another way to determine offline mode is the ``install-from-cache`` option. It
+accepts the same values as the offline option:
+
+>>> download = Download({'install-from-cache': 'false'})
+>>> cat(download(server_url+'foo.txt'))
+This is a foo text.
+
+>>> download = Download({'install-from-cache': 'true'})
+>>> cat(download(server_url+'foo.txt'))
+Traceback (most recent call last):
+UserError: Couldn't download 'http://localhost/foo.txt' in offline mode.
+
+These two options are combined using logical 'or':
+
+>>> download = Download({'install-from-cache': 'true', 'offline': 'false'})
+>>> cat(download(server_url+'foo.txt'))
+Traceback (most recent call last):
+UserError: Couldn't download 'http://localhost/foo.txt' in offline mode.
+
+>>> download = Download({'install-from-cache': 'false', 'offline': 'true'})
+>>> cat(download(server_url+'foo.txt'))
+Traceback (most recent call last):
+UserError: Couldn't download 'http://localhost/foo.txt' in offline mode.

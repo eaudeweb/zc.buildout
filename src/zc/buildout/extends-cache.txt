@@ -256,8 +256,8 @@ Clean up:
 >>> rmdir('user-cache')
 >>> rmdir('cache')
 
-Offline mode
-~~~~~~~~~~~~
+Offline mode and installation from cache
+----------------------------~~~~~~~~~~~~
 
 If we run buildout in offline mode now, it will fail because it cannot get at
 the remote configuration file needed by the user's defaults:
@@ -319,3 +319,59 @@ Error: Couldn't download 'http://localhost/base.cfg' in offline mode.
 ... """ % server_url)
 >>> print system(buildout)
 Unused options for buildout: 'foo'.
+
+The ``install-from-cache`` option is treated accordingly:
+
+>>> write('home', '.buildout', 'default.cfg', """\
+... [buildout]
+... extends = fancy_default.cfg
+... install-from-cache = true
+... """)
+>>> print system(buildout)
+While:
+  Initializing.
+Error: Couldn't download 'http://localhost/base_default.cfg' in offline mode.
+
+>>> write('home', '.buildout', 'default.cfg', """\
+... [buildout]
+... extends = fancy_default.cfg
+... """)
+>>> write('home', '.buildout', 'fancy_default.cfg', """\
+... [buildout]
+... extends = %sbase_default.cfg
+... install-from-cache = true
+... """ % server_url)
+>>> print system(buildout)
+While:
+  Initializing.
+Error: Couldn't download 'http://localhost/base.cfg' in offline mode.
+
+>>> write('home', '.buildout', 'fancy_default.cfg', """\
+... [buildout]
+... extends = %sbase_default.cfg
+... """ % server_url)
+>>> write('buildout.cfg', """\
+... [buildout]
+... extends = fancy.cfg
+... install-from-cache = true
+... """)
+>>> print system(buildout)
+While:
+  Initializing.
+Error: Couldn't download 'http://localhost/base.cfg' in offline mode.
+
+>>> write('buildout.cfg', """\
+... [buildout]
+... extends = fancy.cfg
+... """)
+>>> write('fancy.cfg', """\
+... [buildout]
+... extends = %sbase.cfg
+... install-from-cache = true
+... """ % server_url)
+>>> print system(buildout)
+While:
+  Installing.
+  Checking for upgrades.
+An internal error occured ...
+ValueError: install_from_cache set to true with no download cache
