@@ -200,7 +200,8 @@ found in the cache:
 >>> cat(download(server_url+'foo.txt'))
 This is a foo text.
 
-On the other hand, local resources will never be cached:
+Local resources will be cached just like any others since download caches are
+sometimes used to create source distributions:
 
 >>> remove(cache, 'foo.txt')
 >>> ls(cache)
@@ -211,12 +212,18 @@ On the other hand, local resources will never be cached:
 >>> cat(download('file://' + join(server_data, 'foo.txt'), path=path))
 This is a foo text.
 >>> ls(cache)
+- foo.txt
+
+>>> remove(cache, 'foo.txt')
 
 >>> cat(download(join(server_data, 'foo.txt'), path=path))
 This is a foo text.
 >>> ls(cache)
+- foo.txt
 
-Neither will a cached copy of a resource with a checksum mismatch be created:
+>>> remove(cache, 'foo.txt')
+
+However, resources with checksum mismatches will not be copied to the cache:
 
 >>> download(server_url+'foo.txt', md5('The wrong text.').hexdigest())
 Traceback (most recent call last):

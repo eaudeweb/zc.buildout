@@ -85,30 +85,12 @@ class Download(object):
         Returns the path to the downloaded file.
 
         """
-        if urlparse.urlparse(url, 'file').scheme == 'file':
-            local_path = self.use_local(url, md5sum)
-        elif self.cache:
+        if self.cache:
             local_path = self.download_cached(url, md5sum)
         else:
             local_path = self.download(url, md5sum, path)
 
-        if path is None or realpath(path) == realpath(local_path):
-            return local_path
-
-        try:
-            os.link(local_path, path)
-        except (AttributeError, OSError):
-            shutil.copyfile(local_path, path)
-        return path
-
-    def use_local(self, url, md5sum=None):
-        """Locate and verify the MD5 checksum of a local resource.
-        """
-        path = urlparse.urlparse(url).path
-        if not check_md5sum(path, md5sum):
-            raise ChecksumError(
-                'MD5 checksum mismatch for local resource at %r.' % path)
-        return path
+        return locate_at(local_path, path)
 
     def download_cached(self, url, md5sum=None):
         """Download a file from a URL using the cache.
@@ -143,15 +125,20 @@ class Download(object):
     def download(self, url, md5sum=None, path=None):
         """Download a file from a URL to a given or temporary path.
 
-        Note: The url is assumed to point to an online resource; this method
-        might try to move or remove local resources.
-
-        The resource is always downloaded to a temporary file and moved to the
-        specified path only after the download is complete and the checksum
-        (if given) matches. If path is None, the temporary file is returned
-        and scheduled for deletion at process exit.
+        An online resource is always downloaded to a temporary file and moved
+        to the specified path only after the download is complete and the
+        checksum (if given) matches. If path is None, the temporary file is
+        returned and scheduled for deletion at process exit.
 
         """
+        parsed_url = urlparse.urlparse(url, 'file')
+        if parsed_url.scheme == 'file':
+            if not check_md5sum(path, md5sum):
+                raise ChecksumError(
+                    'MD5 checksum mismatch for local resource at %r.' %
+                    parsed_url.path)
+            return locate_at(parsed_url.path, path)
+
         if (self.buildout.get('offline') == 'true'
             or self.buildout.get('install-from-cache') == 'true'):
             raise zc.buildout.UserError(
@@ -210,3 +197,14 @@ def check_md5sum(path, md5sum):
 def remove(path):
     if os.path.exists(path):
         os.remove(path)
+
+
+def locate_at(source, dest):
+    if dest is None or realpath(dest) == realpath(source):
+        return source
+
+    try:
+        os.link(source, dest)
+    except (AttributeError, OSError):
+        shutil.copyfile(source, dest)
+    return dest
