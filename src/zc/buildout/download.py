@@ -19,6 +19,7 @@ except ImportError:
     from md5 import new as md5
 from zc.buildout.easy_install import realpath
 import atexit
+import logging
 import os
 import os.path
 import shutil
@@ -52,14 +53,17 @@ class Download(object):
     use_cache: whether to use the cache at all
     namespace: namespace directory to use inside the cache
     hash_name: whether to use a hash of the URL as cache file name
+    logger: an optional logger to receive download-related log messages
 
     """
 
     def __init__(self, buildout,
-                 use_cache=True, namespace=None, hash_name=False):
+                 use_cache=True, namespace=None, hash_name=False,
+                 logger=None):
         self.buildout = buildout
         self.set_cache(use_cache, namespace)
         self.hash_name = hash_name
+        self.logger = logger or logging.getLogger('zc.buildout')
 
     def set_cache(self, use_cache=True, namespace=None):
         """Configure the caching properties.
@@ -102,8 +106,10 @@ class Download(object):
         """
         if not os.path.exists(self.cache):
             os.makedirs(self.cache)
-        cached_path = os.path.join(self.cache, self.filename(url))
+        cache_key = self.filename(url)
+        cached_path = os.path.join(self.cache, cache_key)
 
+        self.logger.debug('Searching cache at %s' % self.cache)
         if os.path.isfile(cached_path):
             if self.use_cache is FALLBACK:
                 try:
@@ -117,7 +123,10 @@ class Download(object):
                 raise ChecksumError(
                     'MD5 checksum mismatch for cached download '
                     'from %r at %r' % (url, cached_path))
+            self.logger.debug('Using cache file %s' % cached_path)
         else:
+            self.logger.debug('Cache miss; will cache %s as %s' %
+                              (url, cached_path))
             self.download(url, md5sum, cached_path)
 
         return cached_path
@@ -133,6 +142,7 @@ class Download(object):
         """
         parsed_url = urlparse.urlparse(url, 'file')
         if parsed_url.scheme == 'file':
+            self.logger.debug('Using local resource %s' % url)
             if not check_md5sum(path, md5sum):
                 raise ChecksumError(
                     'MD5 checksum mismatch for local resource at %r.' %
@@ -144,6 +154,7 @@ class Download(object):
             raise zc.buildout.UserError(
                 "Couldn't download %r in offline mode." % url)
 
+        self.logger.info('Downloading %s' % url)
         urllib._urlopener = url_opener
         tmp_path, headers = urllib.urlretrieve(url)
         if not check_md5sum(tmp_path, md5sum):
