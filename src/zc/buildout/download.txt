@@ -60,6 +60,17 @@ We can also have the downloaded file's MD5 sum checked:
 Traceback (most recent call last):
 ChecksumError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
 
+The error message in the event of an MD5 checksum mismatch for a local file
+reads somewhat differently:
+
+>>> path = download(join(server_data, 'foo.txt'),
+...                 md5('This is a foo text.').hexdigest())
+
+>>> path = download(join(server_data, 'foo.txt'),
+...                 md5('The wrong text.').hexdigest())
+Traceback (most recent call last):
+ChecksumError: MD5 checksum mismatch for local resource at '/sample_files/foo.txt'.
+
 Finally, we can download the file to a specified place in the file system:
 
 >>> target_dir = tmpdir('download-target')

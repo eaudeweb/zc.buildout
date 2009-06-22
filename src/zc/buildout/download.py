@@ -144,7 +144,7 @@ class Download(object):
         parsed_url = urlparse.urlparse(url, 'file')
         if parsed_url.scheme == 'file':
             self.logger.debug('Using local resource %s' % url)
-            if not check_md5sum(path, md5sum):
+            if not check_md5sum(parsed_url.path, md5sum):
                 raise ChecksumError(
                     'MD5 checksum mismatch for local resource at %r.' %
                     parsed_url.path)
