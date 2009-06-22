@@ -2738,6 +2738,7 @@ def test_suite():
             tearDown=zc.buildout.testing.buildoutTearDown,
             checker=renormalizing.RENormalizing([
                zc.buildout.testing.normalize_path,
+               zc.buildout.testing.normalize_endings,
                zc.buildout.testing.normalize_script,
                zc.buildout.testing.normalize_egg_py,
                (re.compile('__buildout_signature__ = recipes-\S+'),
@@ -2767,6 +2768,7 @@ def test_suite():
             tearDown=zc.buildout.testing.buildoutTearDown,
             checker=renormalizing.RENormalizing([
                zc.buildout.testing.normalize_path,
+               zc.buildout.testing.normalize_endings,
                (re.compile(r'\S+buildout.py'), 'buildout.py'),
                (re.compile(r'line \d+'), 'line NNN'),
                (re.compile(r'py\(\d+\)'), 'py(NNN)'),
@@ -2779,6 +2781,7 @@ def test_suite():
             tearDown=zc.buildout.testing.buildoutTearDown,
             checker=renormalizing.RENormalizing([
                zc.buildout.testing.normalize_path,
+               zc.buildout.testing.normalize_endings,
                zc.buildout.testing.normalize_script,
                zc.buildout.testing.normalize_egg_py,
                normalize_bang,
@@ -2799,11 +2802,13 @@ def test_suite():
             tearDown=zc.buildout.testing.buildoutTearDown,
             checker=renormalizing.RENormalizing([
                zc.buildout.testing.normalize_path,
+               zc.buildout.testing.normalize_endings,
                zc.buildout.testing.normalize_script,
                zc.buildout.testing.normalize_egg_py,
                normalize_bang,
                (re.compile('extdemo[.]pyd'), 'extdemo.so'),
                (re.compile('[-d]  setuptools-\S+[.]egg'), 'setuptools.egg'),
+               (re.compile(r'\\[\\]?'), '/'),
                ]),
             ),
 
@@ -2826,6 +2831,7 @@ def test_suite():
             tearDown=zc.buildout.testing.buildoutTearDown,
             checker=renormalizing.RENormalizing([
                zc.buildout.testing.normalize_path,
+               zc.buildout.testing.normalize_endings,
                zc.buildout.testing.normalize_script,
                zc.buildout.testing.normalize_egg_py,
                (re.compile("buildout: Running \S*setup.py"),
@@ -2856,6 +2862,7 @@ def test_suite():
             tearDown=zc.buildout.testing.buildoutTearDown,
             checker=renormalizing.RENormalizing([
                zc.buildout.testing.normalize_path,
+               zc.buildout.testing.normalize_endings,
                zc.buildout.testing.normalize_script,
                zc.buildout.testing.normalize_egg_py,
                (re.compile('__buildout_signature__ = recipes-\S+'),
@@ -2900,12 +2907,11 @@ def test_suite():
             tearDown=zc.buildout.testing.buildoutTearDown,
             checker=renormalizing.RENormalizing([
                zc.buildout.testing.normalize_path,
+               zc.buildout.testing.normalize_endings,
                zc.buildout.testing.normalize_script,
                normalize_bang,
+               (re.compile('Downloading.*setuptools.*egg\n'), ''),
                ]),
             ))
 
     return unittest.TestSuite(test_suite)
-
-
-
