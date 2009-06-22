@@ -23,6 +23,7 @@ import logging
 import os
 import os.path
 import shutil
+import tempfile
 import urllib
 import urlparse
 import zc.buildout
@@ -156,7 +157,8 @@ class Download(object):
 
         self.logger.info('Downloading %s' % url)
         urllib._urlopener = url_opener
-        tmp_path, headers = urllib.urlretrieve(url)
+        handle, tmp_path = tempfile.mkstemp(prefix='buildout-')
+        tmp_path, headers = urllib.urlretrieve(url, tmp_path)
         if not check_md5sum(tmp_path, md5sum):
             os.remove(tmp_path)
             raise ChecksumError(

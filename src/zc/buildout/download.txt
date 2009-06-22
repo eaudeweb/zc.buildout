@@ -28,6 +28,8 @@ Downloading a file is achieved by calling the utility with the URL as an
 argument:
 
 >>> path = download(server_url+'foo.txt')
+>>> print path
+/.../buildout-...
 >>> cat(path)
 This is a foo text.
 
