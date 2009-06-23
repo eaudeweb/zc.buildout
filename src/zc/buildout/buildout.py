@@ -1186,13 +1186,8 @@ def _open(base, filename, seen, cache, offline):
 
     Recursively open other files based on buildout options found.
     """
-    if offline:
-        offline_option = 'true'
-    else:
-        offline_option = 'false'
     download = zc.buildout.download.Download(
-        {'download-cache': cache, 'offline': offline_option},
-        use_cache=zc.buildout.download.FALLBACK, hash_name=True)
+        cache=cache, offline=offline, fallback=True, hash_name=True)
     if _isurl(filename):
         fp = open(download(filename))
         base = filename[:filename.rfind('/')]

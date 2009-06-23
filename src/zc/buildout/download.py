@@ -40,45 +40,39 @@ class ChecksumError(zc.buildout.UserError):
 url_opener = URLOpener()
 
 
-FALLBACK = object()
-
-
 class Download(object):
     """Configurable download utility.
 
     Handles the download cache and offline mode.
 
-    Download(buildout, use_cache=True, namespace=None, hash_name=False)
+    Download(options=None, cache=None, namespace=None, hash_name=False)
 
-    buildout: mapping of buildout options (the ``buildout`` config section)
-    use_cache: whether to use the cache at all
+    options: mapping of buildout options (e.g. a ``buildout`` config section)
+    cache: path to the download cache (excluding namespaces)
     namespace: namespace directory to use inside the cache
     hash_name: whether to use a hash of the URL as cache file name
     logger: an optional logger to receive download-related log messages
 
     """
 
-    def __init__(self, buildout,
-                 use_cache=True, namespace=None, hash_name=False,
-                 logger=None):
-        self.buildout = buildout
-        self.set_cache(use_cache, namespace)
+    def __init__(self, options={}, cache=-1, namespace=None,
+                 offline=-1, fallback=False, hash_name=False, logger=None):
+        self.cache = cache
+        if cache == -1:
+            self.cache = options.get('download-cache')
+        self.namespace = namespace
+        self.offline = offline
+        if offline == -1:
+            self.offline = (options.get('offline') == 'true'
+                            or options.get('install-from-cache') == 'true')
+        self.fallback = fallback
         self.hash_name = hash_name
         self.logger = logger or logging.getLogger('zc.buildout')
 
-    def set_cache(self, use_cache=True, namespace=None):
-        """Configure the caching properties.
-
-        See __init__.
-
-        """
-        self.use_cache = use_cache
-        self.namespace = namespace
-        if use_cache and self.buildout.get('download-cache'):
-            self.cache = os.path.join(
-                realpath(self.buildout['download-cache']), namespace or '')
-        else:
-            self.cache = None
+    @property
+    def cache_dir(self):
+        if self.cache is not None:
+            return os.path.join(realpath(self.cache), self.namespace or '')
 
     def __call__(self, url, md5sum=None, path=None):
         """Download a file according to the utility's configuration.
@@ -105,14 +99,15 @@ class Download(object):
         but will not remove the copy in that case.
 
         """
-        if not os.path.exists(self.cache):
-            os.makedirs(self.cache)
+        cache_dir = self.cache_dir
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir)
         cache_key = self.filename(url)
-        cached_path = os.path.join(self.cache, cache_key)
+        cached_path = os.path.join(cache_dir, cache_key)
 
-        self.logger.debug('Searching cache at %s' % self.cache)
+        self.logger.debug('Searching cache at %s' % cache_dir)
         if os.path.isfile(cached_path):
-            if self.use_cache is FALLBACK:
+            if self.fallback:
                 try:
                     self.download(url, md5sum, cached_path)
                 except ChecksumError:
@@ -150,8 +145,7 @@ class Download(object):
                     parsed_url.path)
             return locate_at(parsed_url.path, path)
 
-        if (self.buildout.get('offline') == 'true'
-            or self.buildout.get('install-from-cache') == 'true'):
+        if self.offline:
             raise zc.buildout.UserError(
                 "Couldn't download %r in offline mode." % url)
 

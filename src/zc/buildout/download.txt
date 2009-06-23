@@ -17,11 +17,11 @@ Downloading without using the cache
 -----------------------------------
 
 If no download cache should be used, the download utility is instantiated
-given buildout's options and switching off the cache:
+without any arguments:
 
 >>> from zc.buildout.download import Download
->>> download = Download({}, use_cache=False)
->>> print download.cache
+>>> download = Download()
+>>> print download.cache_dir
 None
 
 Downloading a file is achieved by calling the utility with the URL as an
@@ -83,7 +83,7 @@ This is a foo text.
 
 Trying to download a file in offline mode will result in an error:
 
->>> download = Download({'offline': 'true'}, use_cache=False)
+>>> download = Download(cache=None, offline=True)
 >>> download(server_url+'foo.txt')
 Traceback (most recent call last):
 UserError: Couldn't download 'http://localhost/foo.txt' in offline mode.
@@ -102,38 +102,12 @@ Downloading using the download cache
 ------------------------------------
 
 In order to make use of the download cache, we need to configure the download
-utility differently. In the simplest case, we don't turn off using the cache
-and provide a ``download-cache`` buildout option:
+utility differently. To do this, we pass a directory path as the ``cache``
+attribute upon instantiation:
 
 >>> cache = tmpdir('download-cache')
->>> download = Download({'download-cache': cache})
->>> print download.cache
-/download-cache/
-
-If either the ``use_cache`` parameter is set to False or no download cache is
-specified for the buildout, the utility will not have a cache associated:
-
->>> download = Download({})
->>> print download.cache
-None
-
->>> download = Download({'download-cache': None})
->>> print download.cache
-None
-
->>> download = Download({'download-cache': ''})
->>> print download.cache
-None
-
->>> download = Download({'download-cache': cache}, use_cache=False)
->>> print download.cache
-None
-
-We can turn on the download cache of an existing download utility using the
-``set_cache`` method:
-
->>> download.set_cache(use_cache=True)
->>> print download.cache
+>>> download = Download(cache=cache)
+>>> print download.cache_dir
 /download-cache/
 
 Simple usage
@@ -209,7 +183,7 @@ This is a foo text.
 In offline mode, downloads from any URL will be successful if the file is
 found in the cache:
 
->>> download = Download({'download-cache': cache, 'offline': 'true'})
+>>> download = Download(cache=cache, offline=True)
 >>> cat(download(server_url+'foo.txt'))
 This is a foo text.
 
@@ -220,7 +194,7 @@ sometimes used to create source distributions:
 >>> ls(cache)
 
 >>> write(server_data, 'foo.txt', 'This is a foo text.')
->>> download = Download({'download-cache': cache})
+>>> download = Download(cache=cache)
 
 >>> cat(download('file://' + join(server_data, 'foo.txt'), path=path))
 This is a foo text.
@@ -255,14 +229,8 @@ sub-directories are also known as namespaces. So far, we haven't specified any
 namespaces to use, so the download utility stored files directly inside the
 download cache. Let's use a namespace "test" instead:
 
->>> download.set_cache(namespace='test')
->>> print download.cache
-/download-cache/test
-
-The namespace parameter can also be passed to the utility's constructor:
-
->>> download = Download({'download-cache': cache}, namespace='test')
->>> print download.cache
+>>> download = Download(cache=cache, namespace='test')
+>>> print download.cache_dir
 /download-cache/test
 
 The namespace sub-directory hasn't been created yet:
@@ -309,10 +277,7 @@ the same base name due to some naming convention, or if the file content
 depends on URL parameters. In such cases, an MD5 hash of the complete URL may
 be used as the filename in the cache:
 
->>> download = Download({'download-cache': cache}, hash_name=True)
->>> download.hash_name
-True
-
+>>> download = Download(cache=cache, hash_name=True)
 >>> path = download(server_url+'foo.txt')
 >>> print path
 /download-cache/09f5793fcdc1716727f72d49519c688d
@@ -363,21 +328,16 @@ The wrong text.
 >>> write(server_data, 'foo.txt', 'This is a foo text.')
 
 
-Downloading with the cache being used when offline
---------------------------------------------------
+Using the cache purely as a fall-back
+-------------------------------------
 
-Another way the download cache can be used is purely as a fall-back option in
-the case that a file cannot be accessed on the net, such as when a server is
+Sometimes it is desirable to try downloading a file from the net if at all
+possible, and use the cache purely as a fall-back option when a server is
 down or if we are in offline mode. This mode is only in effect if a download
 cache is configured in the first place:
 
->>> from zc.buildout.download import FALLBACK
->>> download = Download({}, use_cache=FALLBACK)
->>> print download.cache
-None
-
->>> download = Download({'download-cache': cache}, use_cache=FALLBACK)
->>> print download.cache
+>>> download = Download(cache=cache, fallback=True)
+>>> print download.cache_dir
 /download-cache/
 
 A downloaded file will be cached:
@@ -392,7 +352,7 @@ This is a foo text.
 If the file cannot be served, the cached copy will be used:
 
 >>> remove(server_data, 'foo.txt')
->>> Download({})(server_url+'foo.txt')
+>>> Download()(server_url+'foo.txt')
 Traceback (most recent call last):
 IOError: ('http error', 404, 'Not Found',
           <httplib.HTTPMessage instance at 0xa35d36c>)
@@ -404,10 +364,9 @@ Similarly, if the file is served but we're in offline mode, we'll fall back to
 using the cache:
 
 >>> write(server_data, 'foo.txt', 'The wrong text.')
->>> cat(Download({})(server_url+'foo.txt'))
+>>> cat(Download()(server_url+'foo.txt'))
 The wrong text.
->>> offline_download = Download({'download-cache': cache, 'offline': 'true'},
-...                             use_cache=FALLBACK)
+>>> offline_download = Download(cache=cache, offline=True, fallback=True)
 >>> path = offline_download(server_url+'foo.txt')
 >>> cat(path)
 This is a foo text.
@@ -433,37 +392,65 @@ ChecksumError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
 The wrong text.
 
 
-Specifying offline mode and installation from cache
----------------------------------------------------
+Configuring the download utility from buildout options
+------------------------------------------------------
 
-As usual with zc.buildout, the offline option must assume one of the values
-'true' and 'false'. Turning offline mode on with 'true' has been shown above;
-setting the option to 'false' turns offline mode off explicitly:
+Some aspects of how a download utility is configured are determined by the use
+cache that the calling code covers while others depend on options read from
+the buildout configuration. The latter can be evaluated in a simple and
+uniform way by configuring the download utility with a dictionary of options.
+
+The location of the download cache is specified by the ``download-cache``
+option:
+
+>>> download = Download({'download-cache': '/var/cache/buildout'},
+...                     namespace='cmmi')
+>>> print download.cache_dir
+/var/cache/buildout/cmmi
+
+Keyword parameters take precedence over the corresponding options:
+
+>>> download = Download({'download-cache': '/var/cache/buildout'}, cache=None)
+>>> print download.cache_dir
+None
+
+Whether to assume offline mode can be inferred from either the ``offline`` or
+the ``install-from-cache`` option. As usual with zc.buildout, these options
+must assume one of the values 'true' and 'false':
+
+>>> download = Download({'offline': 'true'})
+>>> download.offline
+True
 
 >>> download = Download({'offline': 'false'})
->>> cat(download(server_url+'foo.txt'))
-This is a foo text.
-
-Another way to determine offline mode is the ``install-from-cache`` option. It
-accepts the same values as the offline option:
-
->>> download = Download({'install-from-cache': 'false'})
->>> cat(download(server_url+'foo.txt'))
-This is a foo text.
+>>> download.offline
+False
 
 >>> download = Download({'install-from-cache': 'true'})
->>> cat(download(server_url+'foo.txt'))
-Traceback (most recent call last):
-UserError: Couldn't download 'http://localhost/foo.txt' in offline mode.
+>>> download.offline
+True
+
+>>> download = Download({'install-from-cache': 'false'})
+>>> download.offline
+False
 
 These two options are combined using logical 'or':
 
->>> download = Download({'install-from-cache': 'true', 'offline': 'false'})
->>> cat(download(server_url+'foo.txt'))
-Traceback (most recent call last):
-UserError: Couldn't download 'http://localhost/foo.txt' in offline mode.
+>>> download = Download({'offline': 'true', 'install-from-cache': 'false'})
+>>> download.offline
+True
 
->>> download = Download({'install-from-cache': 'false', 'offline': 'true'})
->>> cat(download(server_url+'foo.txt'))
-Traceback (most recent call last):
-UserError: Couldn't download 'http://localhost/foo.txt' in offline mode.
+>>> download = Download({'offline': 'false', 'install-from-cache': 'true'})
+>>> download.offline
+True
+
+The ``offline`` keyword parameter takes precedence over both the ``offline``
+and ``install-from-cache`` options:
+
+>>> download = Download({'offline': 'true'}, offline=False)
+>>> download.offline
+False
+
+>>> download = Download({'install-from-cache': 'false'}, offline=True)
+>>> download.offline
+True
