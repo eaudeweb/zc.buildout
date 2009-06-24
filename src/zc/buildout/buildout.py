@@ -111,12 +111,9 @@ class Buildout(UserDict.DictMixin):
         else:
             base = None
 
-        for section, option, value in cloptions:
-            if (section, option) == ('buildout', 'offline'):
-                offline = value == 'true'
-                break
-        else:
-            offline = False
+        override = dict((option, value)
+                        for section, option, value in cloptions
+                        if section == 'buildout')
 
         # load user defaults, which override defaults
         if user_defaults:
@@ -124,16 +121,12 @@ class Buildout(UserDict.DictMixin):
                                        '.buildout', 'default.cfg')
             if os.path.exists(user_config):
                 _update(data, _open(os.path.dirname(user_config), user_config,
-                                    [], None, offline))
-
-        extends_cache = data['buildout'].get('extends-cache')
-        offline = (offline or data['buildout'].get('offline') == 'true'
-                    or data['buildout'].get('install-from-cache') == 'true')
+                                    [], data['buildout'].copy(), override))
 
         # load configuration files
         if config_file:
             _update(data, _open(os.path.dirname(config_file), config_file, [],
-                                extends_cache, offline))
+                                data['buildout'].copy(), override))
 
         # apply command-line options
         for (section, option, value) in cloptions:
@@ -1181,13 +1174,15 @@ def _save_options(section, options, f):
     for option, value in items:
         _save_option(option, value, f)
 
-def _open(base, filename, seen, cache, offline):
+def _open(base, filename, seen, dl_options, override):
     """Open a configuration file and return the result as a dictionary,
 
     Recursively open other files based on buildout options found.
     """
+    _update_section(dl_options, override)
     download = zc.buildout.download.Download(
-        cache=cache, offline=offline, fallback=True, hash_name=True)
+        dl_options, cache=dl_options.get('extends-cache'), fallback=True,
+        hash_name=True)
     if _isurl(filename):
         fp = open(download(filename))
         base = filename[:filename.rfind('/')]
@@ -1224,22 +1219,22 @@ def _open(base, filename, seen, cache, offline):
         result[section] = options
 
     if root_config_file and 'buildout' in result:
-        cache = result['buildout'].get('extends-cache', cache)
-        offline = (offline or result['buildout'].get('offline') == 'true'
-                   or result['buildout'].get('install-from-cache') == 'true')
+        dl_options = _update_section(dl_options, result['buildout'])
 
     if extends:
         extends = extends.split()
         extends.reverse()
         for fname in extends:
-            result = _update(_open(base, fname, seen, cache, offline), result)
+            result = _update(_open(base, fname, seen, dl_options, override),
+                             result)
 
     if extended_by:
         self._logger.warn(
             "The extendedBy option is deprecated.  Stop using it."
             )
         for fname in extended_by.split():
-            result = _update(result, _open(base, fname, seen, cache, offline))
+            result = _update(result,
+                             _open(base, fname, seen, dl_options, override))
 
     seen.pop()
     return result
