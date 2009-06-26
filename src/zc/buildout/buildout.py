@@ -217,6 +217,12 @@ class Buildout(UserDict.DictMixin):
                         prefer_final)
         zc.buildout.easy_install.prefer_final(prefer_final=='true')
 
+        use_site_packages = options.get('use-site-packages', 'true')
+        if use_site_packages not in ('true', 'false'):
+            self._error('Invalid value for use-site-packages option: %s',
+                        use_site_packages)
+        zc.buildout.easy_install.use_site_packages(use_site_packages=='true')
+
         use_dependency_links = options.get('use-dependency-links', 'true')
         if use_dependency_links not in ('true', 'false'):
             self._error('Invalid value for use-dependency-links option: %s',

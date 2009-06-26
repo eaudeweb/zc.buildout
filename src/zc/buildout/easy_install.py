@@ -64,12 +64,48 @@ setuptools_loc = pkg_resources.working_set.find(
     pkg_resources.Requirement.parse('setuptools')
     ).location
 
-# Include buildout and setuptools eggs in paths
-buildout_and_setuptools_path = [
-    setuptools_loc,
-    pkg_resources.working_set.find(
-        pkg_resources.Requirement.parse('zc.buildout')).location,
-    ]
+# Include buildout and setuptools eggs in paths.  We prevent dupes just to
+# keep from duplicating any log messages about them.
+buildout_loc = pkg_resources.working_set.find(
+    pkg_resources.Requirement.parse('zc.buildout')).location
+buildout_and_setuptools_path = [setuptools_loc]
+if os.path.normpath(setuptools_loc) != os.path.normpath(buildout_loc):
+    buildout_and_setuptools_path.append(buildout_loc)
+
+def _get_system_packages(executable):
+    """return a pair of the standard lib and site packages for the executable.
+    """
+    # We want to get a list of the site packages, which is not easy.  The
+    # canonical way to do this is to use distutils.sysconfig.get_python_lib(),
+    # but that only returns a single path, which does not reflect reality for
+    # many system Pythons, which have multiple additions.  Instead, we start
+    # Python with -S, which does not import site.py and set up the extra paths
+    # like site-packages or (Ubuntu/Debian) dist-packages and python-support. 
+    # We then compare that sys.path with ours.  The set of ours minus the set
+    # of the ones in ``python -S`` is the set of packages that are effectively
+    # site-packages.
+    def get_sys_path(clean=False):
+        cmd = [executable, "-c",
+               "import sys, os;"
+               "print repr([os.path.normpath(p) for p in sys.path])"]
+        if clean:
+            cmd.insert(1, '-S')
+        _proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        _proc.wait();
+        res = eval(_proc.stdout.read())
+        try:
+            res.remove('.')
+        except ValueError:
+            pass
+        return res
+    # This code might be run in the context of code that has manipulated the
+    # sys.path--for instance, to add local zc.buildout or setuptools eggs.
+    # Therefore, even if the executable is the current executable, we want to
+    # get our Python's "standard" sys.path, we need to go out to a subprocess,
+    # just as we do for the "-S" variant.
+    stdlib = get_sys_path(clean=True)
+    site_packages = [p for p in get_sys_path() if p not in stdlib]
+    return (stdlib, site_packages)
 
 class IncompatibleVersionError(zc.buildout.UserError):
     """A specified version is incompatible with a given requirement.
@@ -152,6 +188,7 @@ class Installer:
     _use_dependency_links = True
     _allow_picked_versions = True
     _always_unzip = False
+    _use_site_packages = True
 
     def __init__(self,
                  dest=None,
@@ -163,6 +200,7 @@ class Installer:
                  newest=True,
                  versions=None,
                  use_dependency_links=None,
+                 use_site_packages=None,
                  allow_hosts=('*',)
                  ):
         self._dest = dest
@@ -185,7 +223,24 @@ class Installer:
         self._executable = executable
         if always_unzip is not None:
             self._always_unzip = always_unzip
-        path = (path and path[:] or []) + buildout_and_setuptools_path
+        path = (path and path[:] or [])
+        if use_site_packages is not None:
+            self._use_site_packages = use_site_packages
+        stdlib, site_packages = _get_system_packages(executable)
+        if not self._use_site_packages:
+            for p in buildout_and_setuptools_path:
+                if os.path.normpath(p) not in site_packages:
+                    logger.debug(
+                        'We normally include our own buildout and setuptools '
+                        'paths, but this one comes from site '
+                        'packages, which does not satisfy the requested '
+                        'installation constraints:'
+                        '%s', p)
+                else:
+                    path.append(p)
+        else:
+            path.extend(buildout_and_setuptools_path)
+            path.extend(site_packages)
         if dest is not None and dest not in path:
             path.insert(0, dest)
         self._path = path
@@ -773,6 +828,12 @@ def prefer_final(setting=None):
         Installer._prefer_final = bool(setting)
     return old
 
+def use_site_packages(setting=None):
+    old = Installer._use_site_packages
+    if setting is not None:
+        Installer._use_site_packages = bool(setting)
+    return old
+
 def use_dependency_links(setting=None):
     old = Installer._use_dependency_links
     if setting is not None:
@@ -795,19 +856,21 @@ def install(specs, dest,
             links=(), index=None,
             executable=sys.executable, always_unzip=None,
             path=None, working_set=None, newest=True, versions=None,
-            use_dependency_links=None, allow_hosts=('*',)):
+            use_dependency_links=None, use_site_packages=None,
+            allow_hosts=('*',)):
     installer = Installer(dest, links, index, executable, always_unzip, path,
                           newest, versions, use_dependency_links,
-                          allow_hosts=allow_hosts)
+                          use_site_packages, allow_hosts=allow_hosts)
     return installer.install(specs, working_set)
 
 
 def build(spec, dest, build_ext,
           links=(), index=None,
           executable=sys.executable,
-          path=None, newest=True, versions=None, allow_hosts=('*',)):
+          path=None, newest=True, versions=None, use_site_packages,
+          allow_hosts=('*',)):
     installer = Installer(dest, links, index, executable, True, path, newest,
-                          versions, allow_hosts=allow_hosts)
+                          versions, use_site_packages, allow_hosts=allow_hosts)
     return installer.build(spec, build_ext)
 
 
@@ -903,8 +966,45 @@ def develop(setup, dest,
         [f() for f in undo]
 
 
-def working_set(specs, executable, path):
-    return install(specs, None, executable=executable, path=path)
+def working_set(specs, executable, path, use_site_packages=None):
+    return install(
+        specs, None, executable=executable, path=path, use_site_packages)
+
+def get_path(working_set, executable, use_site_packages=True):
+    """Given working set and path to executable, return value for sys.path.
+    
+    Distribution locations from the working set come first in the list.  Within
+    that collection, this function pushes site-packages-based distribution
+    locations to the end of the list, so that they don't mask eggs.
+    
+    This expects that the working_set has already been created to honor a
+    use_site_packages setting.  That is, if use_site_packages is False, this
+    function does *not* verify that the working_set's distributions are not in
+    site packages.
+    
+    However, it does explicitly include site packages if use_site_packages is
+    True.
+    
+    The standard library (defined as what the given Python executable has on
+    the path before its site.py is run) is always included.
+    """
+    stdlib, site_packages = _get_system_packages(executable)
+    postponed = []
+    path = []
+    for dist in working_set:
+        location = os.path.normpath(dist.location)
+        if location in site_packages:
+            postponed.append(location)
+        else:
+            path.append(location)
+    path.extend(postponed)
+    path.extend(extra_paths)
+    path = map(realpath, path)
+    # now we add in all paths
+    if use_site_packages:
+        path.extend(site_packages)
+    path.extend(stdlib)
+    return path
 
 def scripts(reqs, working_set, executable, dest,
             scripts=None,
@@ -912,13 +1012,10 @@ def scripts(reqs, working_set, executable, dest,
             arguments='',
             interpreter=None,
             initialization='',
-            relative_paths=False,
+            use_site_packages=True,
+            relative_paths=False
             ):
-
-    path = [dist.location for dist in working_set]
-    path.extend(extra_paths)
-    path = map(realpath, path)
-
+    path = get_path(working_set, executable, use_site_packages)
     generated = []
 
     if isinstance(reqs, str):
@@ -955,7 +1052,7 @@ def scripts(reqs, working_set, executable, dest,
 
         generated.extend(
             _script(module_name, attrs, spath, sname, executable, arguments,
-                    initialization, rpsetup)
+                    initialization, rpsetup, exclude_site_packages)
             )
 
     if interpreter:
@@ -1075,7 +1172,7 @@ script_template = script_header + '''\
 
 %(relative_paths_setup)s
 import sys
-sys.path[0:0] = [
+sys.path[:] = [
   %(path)s,
   ]
 %(initialization)s
