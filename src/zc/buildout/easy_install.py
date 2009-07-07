@@ -94,10 +94,7 @@ def _get_system_packages(executable):
         _proc.wait();
         raw = _proc.stdout.read()
         _proc.stdout.close()
-        try:
-            res = eval(raw)
-        except SyntaxError:
-            import pdb; pdb.set_trace()
+        res = eval(raw)
         try:
             res.remove('.')
         except ValueError:
