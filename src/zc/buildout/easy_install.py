@@ -197,7 +197,7 @@ class Installer:
     _use_dependency_links = True
     _allow_picked_versions = True
     _always_unzip = False
-    _include_site_packages = False
+    _include_site_packages = True
 
     def __init__(self,
                  dest=None,
@@ -974,7 +974,7 @@ def working_set(specs, executable, path, include_site_packages=None):
         include_site_packages=include_site_packages)
 
 def get_path(working_set, executable, extra_paths=(),
-             include_site_packages=False):
+             include_site_packages=True):
     """Given working set and path to executable, return value for sys.path.
     
     Distribution locations from the working set come first in the list.  Within
@@ -1008,7 +1008,11 @@ def get_path(working_set, executable, extra_paths=(),
     path.extend(extra_paths)
     # now we add in all paths
     if include_site_packages:
-        path.extend(site_packages)
+        # err a bit on the side of cleanliness, avoiding dupes just to look
+        # pretty.
+        for location in site_packages:
+            if location not in path:
+                path.append(location)
     path.extend(stdlib)
     path = map(realpath, path)
     return path
@@ -1019,7 +1023,7 @@ def scripts(reqs, working_set, executable, dest,
             arguments='',
             interpreter=None,
             initialization='',
-            include_site_packages=False,
+            include_site_packages=True,
             relative_paths=False
             ):
     path = get_path(
@@ -1074,7 +1078,7 @@ def _relative_path_and_setup(sname, path, relative_paths):
     if relative_paths:
         relative_paths = os.path.normcase(relative_paths)
         sname = os.path.normcase(os.path.abspath(sname))
-        spath = ',\n  '.join(
+        spath = ',\n    '.join(
             [_relativitize(os.path.normcase(path_item), sname, relative_paths)
              for path_item in path]
             )
@@ -1082,7 +1086,7 @@ def _relative_path_and_setup(sname, path, relative_paths):
         for i in range(_relative_depth(relative_paths, sname)):
             rpsetup += "base = os.path.dirname(base)\n"
     else:
-        spath = repr(path)[1:-1].replace(', ', ',\n  ')
+        spath = repr(path)[1:-1].replace(', ', ',\n    ')
         rpsetup = ''
     return spath, rpsetup
 
@@ -1181,8 +1185,8 @@ script_template = script_header + '''\
 %(relative_paths_setup)s
 import sys
 sys.path[:] = [
-  %(path)s,
-  ]
+    %(path)s,
+    ]
 %(initialization)s
 import %(module_name)s
 
@@ -1231,24 +1235,32 @@ import sys
 _set_path = _interactive = True
 _force_interactive = False
 
-_commands = []
-_args = None
+_command = None
+_args = sys.argv[1:]
 
-if len(sys.argv) > 1:
-    import getopt
-    _options, _args = getopt.getopt(sys.argv[1:], 'VSic:')
-    for (_opt, _val) in _options:
-        if _opt == '-i':
-            _force_interactive = True
-        elif _opt == '-c':
-            _interactive = False
-            _commands.append(_val)
-        elif _opt == '-S':
-            # We'll approximate this.  It is mostly convenient for tests.
-            _set_path = False
-        elif _opt == '-V':
-            print 'Python ' + sys.version.split()[0]
-            _interactive = False
+while _args:
+    if _args[0].startswith('-'):
+        _arg = _args.pop(0)
+        for _ix, _opt in enumerate(_arg[1:]):
+            if _opt == 'i':
+                _force_interactive = True
+            elif _opt == 'c':
+                _interactive = False
+                _command = _args.pop(0) # Argument expected for the -c option
+                _args.insert(0, '-c')
+                break
+            elif _opt == 'S':
+                # We'll approximate this.  It is mostly convenient for tests.
+                _set_path = False
+            elif _opt == 'V':
+                print 'Python ' + sys.version.split()[0]
+                _interactive = False
+                break
+        else:
+            continue
+        break
+    else:
+        break
 
 if _set_path:
     sys.path[:] = [
@@ -1256,12 +1268,12 @@ if _set_path:
     ]
 sys.path.insert(0, '.')
 
-for _command in _commands:
-    exec _command
+sys.argv[:] = _args
 
-if _args:
+if _command:
+    exec _command
+elif _args:
     _interactive = False
-    sys.argv[:] = _args
     execfile(sys.argv[0])
 
 if _interactive or _force_interactive:

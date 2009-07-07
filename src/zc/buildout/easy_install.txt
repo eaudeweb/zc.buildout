@@ -93,6 +93,10 @@ include_site_packages
     A flag indicating whether Python's non-standard-library packages should
     be available for finding dependencies.  Defaults to true.
 
+    Paths outside of Python's standard library--or more precisely, those that
+    are not included when Python is started with the -S argument--are loosely
+    referred to as "site-packages" here.
+
 relative_paths
    Adjust egg paths so they are relative to the script path.  This
    allows scripts to work when scripts and eggs are moved, as long as
@@ -406,10 +410,12 @@ dictionary:
 Dependencies in Site Packages
 -----------------------------
 
-Setuptools includes packages found in the Python executable's system path
-(sys.path) when searching for dependencies.  This can be disabled, so that
-a system Python can be used with buildout, cleaned of any packages installed
-by a user or system package manager.
+Paths outside of Python's standard library--or more precisely, those that are
+not included when Python is started with the -S argument--are loosely referred
+to as "site-packages" here.  These site-packages are searched by default for
+distributions.  This can be disabled, so that, for instance, a system Python
+can be used with buildout, cleaned of any packages installed by a user or
+system package manager.
 
 The default behavior can be controlled and introspected using
 zc.buildout.easy_install.include_site_packages.
@@ -419,14 +425,17 @@ zc.buildout.easy_install.include_site_packages.
 
 Here's an example of using a Python executable that includes our dependencies.
 
+Our "primed_executable" has the "demoneeded," "other," and "setuptools"
+packages available.  We'll simply be asking for "other" here.
+
     >>> primed_executable = get_executable_with_site_packages()
 
     >>> example_dest = tmpdir('site-packages-example-install')
     >>> workingset = zc.buildout.easy_install.install(
-    ...     ['demo'], example_dest, links=[], executable=primed_executable,
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
     ...     index=None)
     >>> [dist.project_name for dist in workingset]
-    ['demo', 'demoneeded']
+    ['other']
 
 That worked fine.  Let's try again with site packages not allowed.  We'll
 change the policy by changing the default.  Notice that the function for
@@ -442,11 +451,12 @@ changing the default value returns the previous value.
     >>> rmdir(example_dest)
     >>> example_dest = tmpdir('site-packages-example-install')
     >>> workingset = zc.buildout.easy_install.install(
-    ...     ['demo'], example_dest, links=[], executable=primed_executable,
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
     ...     index=None)
     Traceback (most recent call last):
         ...
-    MissingDistribution: Couldn't find a distribution for 'demo'.
+    MissingDistribution: Couldn't find a distribution for 'other'.
+    >>> zc.buildout.easy_install.clear_index_cache()
 
 Now we'll reset the default.
 
@@ -455,12 +465,6 @@ Now we'll reset the default.
 
     >>> zc.buildout.easy_install.include_site_packages()
     True
-
-We'll also reset a value expected by the rest of the test.
-
-    >>> # get_executable_with_site_packages resets the Installer
-    >>> zc.buildout.easy_install.prefer_final(True)
-    False
 
 Dependency links
 ----------------
@@ -648,10 +652,10 @@ The demo script run the entry point defined in the demo egg:
     <BLANKLINE>
     import sys
     sys.path[:] = [
-      '/sample-install/demo-0.3-py2.4.egg',
-      '/sample-install/demoneeded-1.1-py2.4.egg',
-      ...
-      ]
+        '/sample-install/demo-0.3-py2.4.egg',
+        '/sample-install/demoneeded-1.1-py2.4.egg',
+        ...
+        ]
     <BLANKLINE>
     import eggrecipedemo
     <BLANKLINE>
@@ -687,10 +691,10 @@ rather than passing a requirement:
     <BLANKLINE>
     import sys
     sys.path[:] = [
-      '/sample-install/demo-0.3-py2.4.egg',
-      '/sample-install/demoneeded-1.1-py2.4.egg',
-      ...
-      ]
+        '/sample-install/demo-0.3-py2.4.egg',
+        '/sample-install/demoneeded-1.1-py2.4.egg',
+        ...
+        ]
     <BLANKLINE>
     import eggrecipedemo
     <BLANKLINE>
@@ -735,39 +739,47 @@ the path set:
     _set_path = _interactive = True
     _force_interactive = False
     <BLANKLINE>
-    _commands = []
-    _args = None
+    _command = None
+    _args = sys.argv[1:]
     <BLANKLINE>
-    if len(sys.argv) > 1:
-        import getopt
-        _options, _args = getopt.getopt(sys.argv[1:], 'VSic:')
-        for (_opt, _val) in _options:
-            if _opt == '-i':
-                _force_interactive = True
-            elif _opt == '-c':
-                _interactive = False
-                _commands.append(_val)
-            elif _opt == '-S':
-                # We'll approximate this.  It is mostly convenient for tests.
-                _set_path = False
-            elif _opt == '-V':
-                print 'Python ' + sys.version.split()[0]
-                _interactive = False
+    while _args:
+        if _args[0].startswith('-'):
+            _arg = _args.pop(0)
+            for _ix, _opt in enumerate(_arg[1:]):
+                if _opt == 'i':
+                    _force_interactive = True
+                elif _opt == 'c':
+                    _interactive = False
+                    _command = _args.pop(0) # Argument expected for the -c option
+                    _args.insert(0, '-c')
+                    break
+                elif _opt == 'S':
+                    # We'll approximate this.  It is mostly convenient for tests.
+                    _set_path = False
+                elif _opt == 'V':
+                    print 'Python ' + sys.version.split()[0]
+                    _interactive = False
+                    break
+            else:
+                continue
+            break
+        else:
+            break
     <BLANKLINE>
     if _set_path:
         sys.path[:] = [
         '/sample-install/demo-0.3-pyN.N.egg',
-      '/sample-install/demoneeded-1.1-pyN.N.egg',
-      ...
+        '/sample-install/demoneeded-1.1-pyN.N.egg',
+        ...
         ]
     sys.path.insert(0, '.')
     <BLANKLINE>
-    for _command in _commands:
-        exec _command
+    sys.argv[:] = _args
     <BLANKLINE>
-    if _args:
+    if _command:
+        exec _command
+    elif _args:
         _interactive = False
-        sys.argv[:] = _args
         execfile(sys.argv[0])
     <BLANKLINE>
     if _interactive or _force_interactive:
@@ -823,6 +835,68 @@ to be included in the a generated script:
     if __name__ == '__main__':
         eggrecipedemo.main()
 
+Ordering paths
+--------------
+
+We have already seen that we have a precise definition for a loose term:
+"site-packages".   Paths outside of Python's standard library--or more
+precisely, those that are not included when Python is started with the -S
+argument--are loosely referred to as "site-packages" here.
+
+When generating scripts, paths that come from the site-packages are ordered 
+after the other specific dependencies generated from the working set.  This
+is so that directories such as "site-packages" that can contain multiple
+dependencies come after the more specific distributions found by setuptools,
+reducing the chance of the distributions being masked by the system folders.
+
+This is controlled by the ``get_path`` function, which is available for
+other script recipes to use.
+
+As a demonstration, we will have create a working set that has dependencies
+on "bigdemo" and "other".  In our first case, we will use a clean Python
+without any of these dependencies installed.
+
+    >>> dest1 = tmpdir('path-install-1')
+    >>> ws1 = zc.buildout.easy_install.install(
+    ...     ['other', 'bigdemo'], dest1,
+    ...     links=[link_server], index=link_server+'index/')
+    >>> path1 = zc.buildout.easy_install.get_path(ws1, sys.executable)
+
+    >>> import pprint
+    >>> pprint.pprint(path1) # doctest: +ELLIPSIS
+    ['.../path-install-1/other-1.0-py...egg',
+     '.../path-install-1/bigdemo-0.1-py...egg',
+     '.../path-install-1/demo-0.3-py...egg',
+     '.../path-install-1/demoneeded-1.1-py...egg',
+     ...]
+
+We will now compare the results using a Python that has bigdemo's indirect
+dependency available, "demoneeded," and "other," but not "demo" or "bigdemo".
+
+    >>> dest2 = tmpdir('path-install-2')
+    >>> ws2 = zc.buildout.easy_install.install(
+    ...     ['other', 'bigdemo'], dest2,
+    ...     links=[link_server], index=link_server+'index/',
+    ...     executable=primed_executable)
+    >>> path2 = zc.buildout.easy_install.get_path(ws2, primed_executable)
+    >>> pprint.pprint(path2) # doctest: +ELLIPSIS
+    ['.../path-install-2/bigdemo-0.1-py...egg',
+     '.../path-install-2/demo-0.3-py...egg',
+     '.../executable/eggs/other-1.0-py...egg',
+     '.../executable/eggs/demoneeded-1.1-py...egg',
+     '.../executable/eggs/setuptools-0.6c9-py...egg',
+     '.../executable/bin',
+     ...]
+    >>> zc.buildout.easy_install.clear_index_cache() # clean up
+
+Notice that the paths from the executable come after the ones for this
+buildout.  This is most evident in the change of order for the "other" egg.
+
+In fact, this ordering is not important in this example, because the
+executable's paths all are individual packages; but if a path were a directory
+that shared many packages, like a classic "site-packages" directory, its shared
+packages would not mask those selected by the buildout.
+
 Providing script arguments
 --------------------------
 
@@ -862,10 +936,10 @@ You can also pass script initialization code:
     #!/usr/local/bin/python2.4
     import sys
     sys.path[:] = [
-      '/sample-install/demo-0.3-py2.4.egg',
-      '/sample-install/demoneeded-1.1-py2.4.egg',
-      ...
-      ]
+        '/sample-install/demo-0.3-py2.4.egg',
+        '/sample-install/demoneeded-1.1-py2.4.egg',
+        ...
+        ]
     <BLANKLINE>
     import os
     os.chdir("foo")
@@ -910,12 +984,12 @@ to pass a common base directory of the scripts and eggs:
     <BLANKLINE>
     import sys
     sys.path[:] = [
-      join(base, 'eggs/demo-0.3-pyN.N.egg'),
-      join(base, 'eggs/demoneeded-1.1-pyN.N.egg'),
-      '/ba',
-      join(base, 'bar'),
-      ...
-      ]
+        join(base, 'eggs/demo-0.3-pyN.N.egg'),
+        join(base, 'eggs/demoneeded-1.1-pyN.N.egg'),
+        '/ba',
+        join(base, 'bar'),
+        ...
+        ]
     <BLANKLINE>
     import eggrecipedemo
     <BLANKLINE>
@@ -946,41 +1020,49 @@ We specified an interpreter and its paths are adjusted too:
     _set_path = _interactive = True
     _force_interactive = False
     <BLANKLINE>
-    _commands = []
-    _args = None
+    _command = None
+    _args = sys.argv[1:]
     <BLANKLINE>
-    if len(sys.argv) > 1:
-        import getopt
-        _options, _args = getopt.getopt(sys.argv[1:], 'VSic:')
-        for (_opt, _val) in _options:
-            if _opt == '-i':
-                _force_interactive = True
-            elif _opt == '-c':
-                _interactive = False
-                _commands.append(_val)
-            elif _opt == '-S':
-                # We'll approximate this.  It is mostly convenient for tests.
-                _set_path = False
-            elif _opt == '-V':
-                print 'Python ' + sys.version.split()[0]
-                _interactive = False
+    while _args:
+        if _args[0].startswith('-'):
+            _arg = _args.pop(0)
+            for _ix, _opt in enumerate(_arg[1:]):
+                if _opt == 'i':
+                    _force_interactive = True
+                elif _opt == 'c':
+                    _interactive = False
+                    _command = _args.pop(0) # Argument expected for the -c option
+                    _args.insert(0, '-c')
+                    break
+                elif _opt == 'S':
+                    # We'll approximate this.  It is mostly convenient for tests.
+                    _set_path = False
+                elif _opt == 'V':
+                    print 'Python ' + sys.version.split()[0]
+                    _interactive = False
+                    break
+            else:
+                continue
+            break
+        else:
+            break
     <BLANKLINE>
     if _set_path:
         sys.path[:] = [
         join(base, 'eggs/demo-0.3-pyN.N.egg'),
-      join(base, 'eggs/demoneeded-1.1-pyN.N.egg'),
-      '/ba',
-      join(base, 'bar'),
-      ...
+        join(base, 'eggs/demoneeded-1.1-pyN.N.egg'),
+        '/ba',
+        join(base, 'bar'),
+        ...,
         ]
     sys.path.insert(0, '.')
     <BLANKLINE>
-    for _command in _commands:
-        exec _command
+    sys.argv[:] = _args
     <BLANKLINE>
-    if _args:
+    if _command:
+        exec _command
+    elif _args:
         _interactive = False
-        sys.argv[:] = _args
         execfile(sys.argv[0])
     <BLANKLINE>
     if _interactive or _force_interactive:

@@ -61,7 +61,7 @@ tmpeggs = None
 
 while args:
     val = args[0]
-    elif val in configuration:
+    if val in configuration:
         del args[0]
         if not args or args[0].startswith('-'):
             print "ERROR: %s requires an argument."

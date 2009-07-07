@@ -2344,16 +2344,19 @@ def isolated_include_site_packages():
 This is an isolated test of the include_site_packages functionality, passing
 the argument directly to install, overriding a default.
 
+Our "primed_executable" has the "demoneeded," "other," and "setuptools"
+packages available.  We'll simply be asking for "other" here.
+
     >>> primed_executable = get_executable_with_site_packages()
     >>> zc.buildout.easy_install.include_site_packages(False)
     True
 
     >>> example_dest = tmpdir('site-packages-example-install')
     >>> workingset = zc.buildout.easy_install.install(
-    ...     ['demo'], example_dest, links=[], executable=primed_executable,
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
     ...     index=None, include_site_packages=True)
     >>> [dist.project_name for dist in workingset]
-    ['demo', 'demoneeded']
+    ['other']
 
 That worked fine.  Let's try again with site packages not allowed (and
 reversing the default).
@@ -2365,11 +2368,11 @@ reversing the default).
     >>> rmdir(example_dest)
     >>> example_dest = tmpdir('site-packages-example-install')
     >>> workingset = zc.buildout.easy_install.install(
-    ...     ['demo'], example_dest, links=[], executable=primed_executable,
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
     ...     index=None, include_site_packages=False)
     Traceback (most recent call last):
         ...
-    MissingDistribution: Couldn't find a distribution for 'demo'.
+    MissingDistribution: Couldn't find a distribution for 'other'.
 
 That's a failure, as expected.
 
@@ -2384,6 +2387,9 @@ The default is include-site-packages = true.  As a demonstration, notice we do
 not set find-links, but the eggs are still found because they are in the
 executable's path.
 
+Our "primed_executable" has the "demoneeded," "other," and "setuptools"
+packages available.  We'll simply be asking for "other" here.
+
     >>> primed_executable = get_executable_with_site_packages()
     >>> write('buildout.cfg',
     ... '''
@@ -2396,7 +2402,7 @@ executable's path.
     ... [eggs]
     ... recipe = zc.recipe.egg:eggs
     ... python = primed_python
-    ... eggs = demo
+    ... eggs = other
     ... ''' % globals())
 
     >>> print system(primed_executable+" "+buildout)
@@ -2419,17 +2425,17 @@ obtained from the executable's site packages.
     ...
     ... [eggs]
     ... recipe = zc.recipe.egg:eggs
-    ... eggs = demo
+    ... eggs = other
     ... ''' % globals())
     >>> print system(primed_executable+" "+buildout)
     Uninstalling eggs.
     Installing eggs.
-    Couldn't find index page for 'demo' (maybe misspelled?)
-    Getting distribution for 'demo'.
+    Couldn't find index page for 'other' (maybe misspelled?)
+    Getting distribution for 'other'.
     While:
       Installing eggs.
-      Getting distribution for 'demo'.
-    Error: Couldn't find a distribution for 'demo'.
+      Getting distribution for 'other'.
+    Error: Couldn't find a distribution for 'other'.
     <BLANKLINE>
 
 We get an error if we specify anything but true or false:
@@ -2443,7 +2449,7 @@ We get an error if we specify anything but true or false:
     ...
     ... [eggs]
     ... recipe = zc.recipe.egg:eggs
-    ... eggs = demo
+    ... eggs = other
     ... ''' % globals())
 
     >>> print system(primed_executable+" "+buildout)
@@ -2779,11 +2785,14 @@ def easy_install_SetUp(test):
             [buildout]
             parts = interpreter
             find-links = %(link_server)s
+            prefer-final = true
 
             [interpreter]
             recipe = zc.recipe.egg
             interpreter = py
-            eggs = demo
+            eggs = demoneeded
+                   setuptools
+                   other
             ''' % test.globs))
         zc.buildout.buildout.Buildout(
             'buildout.cfg',
