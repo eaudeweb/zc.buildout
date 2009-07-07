@@ -217,12 +217,12 @@ class Buildout(UserDict.DictMixin):
                         prefer_final)
         zc.buildout.easy_install.prefer_final(prefer_final=='true')
 
-        exclude_site_packages = options.get('exclude-site-packages', 'false')
-        if exclude_site_packages not in ('true', 'false'):
-            self._error('Invalid value for exclude-site-packages option: %s',
-                        exclude_site_packages)
-        zc.buildout.easy_install.exclude_site_packages(
-            exclude_site_packages=='true')
+        include_site_packages = options.get('include-site-packages', 'true')
+        if include_site_packages not in ('true', 'false'):
+            self._error('Invalid value for include-site-packages option: %s',
+                        include_site_packages)
+        zc.buildout.easy_install.include_site_packages(
+            include_site_packages=='true')
 
         use_dependency_links = options.get('use-dependency-links', 'true')
         if use_dependency_links not in ('true', 'false'):

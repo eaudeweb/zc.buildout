@@ -92,7 +92,12 @@ def _get_system_packages(executable):
             cmd.insert(1, '-S')
         _proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         _proc.wait();
-        res = eval(_proc.stdout.read())
+        raw = _proc.stdout.read()
+        _proc.stdout.close()
+        try:
+            res = eval(raw)
+        except SyntaxError:
+            import pdb; pdb.set_trace()
         try:
             res.remove('.')
         except ValueError:
@@ -148,7 +153,12 @@ class AllowHostsPackageIndex(setuptools.package_index.PackageIndex):
 
 
 _indexes = {}
-def _get_index(executable, index_url, find_links, allow_hosts=('*',)):
+def _get_index(executable, index_url, find_links, allow_hosts=('*',),
+               path=None):
+    # If path is None, the index will use sys.path.  If you provide an empty
+    # path ([]), it will complain uselessly about missing index pages for
+    # packages found in the paths that you expect to use.  Therefore, this path
+    # is always the same as the _env path in the Installer.
     key = executable, index_url, tuple(find_links)
     index = _indexes.get(key)
     if index is not None:
@@ -156,11 +166,8 @@ def _get_index(executable, index_url, find_links, allow_hosts=('*',)):
 
     if index_url is None:
         index_url = default_index_url
-    # Specifying an empty search_path, rather than the default None, indicates
-    # that we do not want to include the sys.path in the index.  If we do want
-    # to include the sys.path, that is done in the Installer's _env.
     index = AllowHostsPackageIndex(
-        index_url, hosts=allow_hosts, search_path=[],
+        index_url, hosts=allow_hosts, search_path=path,
         python=_get_version(executable)
         )
 
@@ -193,7 +200,7 @@ class Installer:
     _use_dependency_links = True
     _allow_picked_versions = True
     _always_unzip = False
-    _exclude_site_packages = False
+    _include_site_packages = False
 
     def __init__(self,
                  dest=None,
@@ -205,7 +212,7 @@ class Installer:
                  newest=True,
                  versions=None,
                  use_dependency_links=None,
-                 exclude_site_packages=None,
+                 include_site_packages=None,
                  allow_hosts=('*',)
                  ):
         self._dest = dest
@@ -229,10 +236,10 @@ class Installer:
         if always_unzip is not None:
             self._always_unzip = always_unzip
         path = (path and path[:] or [])
-        if exclude_site_packages is not None:
-            self._exclude_site_packages = exclude_site_packages
+        if include_site_packages is not None:
+            self._include_site_packages = include_site_packages
         stdlib, site_packages = _get_system_packages(executable)
-        if not self._exclude_site_packages:
+        if self._include_site_packages:
             path.extend(buildout_and_setuptools_path)
             path.extend(site_packages)
         # else we could try to still include the buildout_and_setuptools_path
@@ -246,7 +253,8 @@ class Installer:
         self._newest = newest
         self._env = pkg_resources.Environment(path,
                                               python=_get_version(executable))
-        self._index = _get_index(executable, index, links, self._allow_hosts)
+        self._index = _get_index(executable, index, links, self._allow_hosts,
+                                 self._path)
 
         if versions is not None:
             self._versions = versions
@@ -623,7 +631,7 @@ class Installer:
                         self._links.append(link)
                         self._index = _get_index(self._executable,
                                                  self._index_url, self._links,
-                                                 self._allow_hosts)
+                                                 self._allow_hosts, self._path)
 
         for dist in dists:
             # Check whether we picked a version and, if we did, report it:
@@ -825,10 +833,10 @@ def prefer_final(setting=None):
         Installer._prefer_final = bool(setting)
     return old
 
-def exclude_site_packages(setting=None):
-    old = Installer._exclude_site_packages
+def include_site_packages(setting=None):
+    old = Installer._include_site_packages
     if setting is not None:
-        Installer._exclude_site_packages = bool(setting)
+        Installer._include_site_packages = bool(setting)
     return old
 
 def use_dependency_links(setting=None):
@@ -853,21 +861,21 @@ def install(specs, dest,
             links=(), index=None,
             executable=sys.executable, always_unzip=None,
             path=None, working_set=None, newest=True, versions=None,
-            use_dependency_links=None, exclude_site_packages=None,
+            use_dependency_links=None, include_site_packages=None,
             allow_hosts=('*',)):
     installer = Installer(dest, links, index, executable, always_unzip, path,
                           newest, versions, use_dependency_links,
-                          exclude_site_packages, allow_hosts=allow_hosts)
+                          include_site_packages, allow_hosts=allow_hosts)
     return installer.install(specs, working_set)
 
 
 def build(spec, dest, build_ext,
           links=(), index=None,
           executable=sys.executable,
-          path=None, newest=True, versions=None, exclude_site_packages,
+          path=None, newest=True, versions=None, include_site_packages=None,
           allow_hosts=('*',)):
     installer = Installer(dest, links, index, executable, True, path, newest,
-                          versions, exclude_site_packages, allow_hosts=allow_hosts)
+                          versions, include_site_packages, allow_hosts=allow_hosts)
     return installer.build(spec, build_ext)
 
 
@@ -963,12 +971,13 @@ def develop(setup, dest,
         [f() for f in undo]
 
 
-def working_set(specs, executable, path, exclude_site_packages=None):
+def working_set(specs, executable, path, include_site_packages=None):
     return install(
         specs, None, executable=executable, path=path,
-        exclude_site_packages=exclude_site_packages)
+        include_site_packages=include_site_packages)
 
-def get_path(working_set, executable, exclude_site_packages=True):
+def get_path(working_set, executable, extra_paths=(),
+             include_site_packages=False):
     """Given working set and path to executable, return value for sys.path.
     
     Distribution locations from the working set come first in the list.  Within
@@ -976,12 +985,12 @@ def get_path(working_set, executable, exclude_site_packages=True):
     locations to the end of the list, so that they don't mask eggs.
     
     This expects that the working_set has already been created to honor a
-    exclude_site_packages setting.  That is, if exclude_site_packages is True,
+    include_site_packages setting.  That is, if include_site_packages is False,
     this function does *not* verify that the working_set's distributions are
     not in site packages.
     
-    However, it does explicitly include site packages if exclude_site_packages
-    is False.
+    However, it does explicitly include site packages if include_site_packages
+    is True.
     
     The standard library (defined as what the given Python executable has on
     the path before its site.py is run) is always included.
@@ -1001,7 +1010,7 @@ def get_path(working_set, executable, exclude_site_packages=True):
     path.extend(postponed)
     path.extend(extra_paths)
     # now we add in all paths
-    if not exclude_site_packages:
+    if include_site_packages:
         path.extend(site_packages)
     path.extend(stdlib)
     path = map(realpath, path)
@@ -1013,10 +1022,11 @@ def scripts(reqs, working_set, executable, dest,
             arguments='',
             interpreter=None,
             initialization='',
-            exclude_site_packages=False,
+            include_site_packages=False,
             relative_paths=False
             ):
-    path = get_path(working_set, executable, exclude_site_packages)
+    path = get_path(
+        working_set, executable, extra_paths, include_site_packages)
     generated = []
 
     if isinstance(reqs, str):
@@ -1053,7 +1063,7 @@ def scripts(reqs, working_set, executable, dest,
 
         generated.extend(
             _script(module_name, attrs, spath, sname, executable, arguments,
-                    initialization, rpsetup, exclude_site_packages)
+                    initialization, rpsetup)
             )
 
     if interpreter:
@@ -1217,30 +1227,47 @@ def _pyscript(path, dest, executable, rsetup):
     return generated
 
 py_script_template = script_header + '''\
-
 %(relative_paths_setup)s
+
 import sys
 
-sys.path[0:0] = [
-  %(path)s,
-  ]
+_set_path = _interactive = True
+_force_interactive = False
 
-_interactive = True
+_commands = []
+_args = None
+
 if len(sys.argv) > 1:
     import getopt
-    _options, _args = getopt.getopt(sys.argv[1:], 'ic:')
-    _interactive = False
+    _options, _args = getopt.getopt(sys.argv[1:], 'VSic:')
     for (_opt, _val) in _options:
         if _opt == '-i':
-            _interactive = True
+            _force_interactive = True
         elif _opt == '-c':
-            exec _val
+            _interactive = False
+            _commands.append(_val)
+        elif _opt == '-S':
+            # We'll approximate this.  It is mostly convenient for tests.
+            _set_path = False
+        elif _opt == '-V':
+            print 'Python ' + sys.version.split()[0]
+            _interactive = False
 
-    if _args:
-        sys.argv[:] = _args
-        execfile(sys.argv[0])
+if _set_path:
+    sys.path[:] = [
+    %(path)s,
+    ]
+sys.path.insert(0, '.')
 
-if _interactive:
+for _command in _commands:
+    exec _command
+
+if _args:
+    _interactive = False
+    sys.argv[:] = _args
+    execfile(sys.argv[0])
+
+if _interactive or _force_interactive:
     import code
     code.interact(banner="", local=globals())
 '''

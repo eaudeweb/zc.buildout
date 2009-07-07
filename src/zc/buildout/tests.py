@@ -16,7 +16,7 @@
 $Id$
 """
 
-import os, re, shutil, sys, tempfile, unittest, zipfile
+import os, re, shutil, sys, tempfile, textwrap, unittest, zipfile
 from zope.testing import doctest, renormalizing
 import pkg_resources
 import zc.buildout.testing, zc.buildout.easy_install
@@ -2156,7 +2156,7 @@ def prefer_final():
     """
 This test tests several permutations:
 
-Using different version numbers to work around zip impporter cache problems. :(
+Using different version numbers to work around zip importer cache problems. :(
 
 - With prefer final:
 
@@ -2335,6 +2335,122 @@ We get an error if we specify anything but true or false:
     While:
       Initializing.
     Error: Invalid value for prefer-final option: no
+
+    """
+
+def isolated_include_site_packages():
+    """
+
+This is an isolated test of the include_site_packages functionality, passing
+the argument directly to install, overriding a default.
+
+    >>> primed_executable = get_executable_with_site_packages()
+    >>> zc.buildout.easy_install.include_site_packages(False)
+    True
+
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['demo'], example_dest, links=[], executable=primed_executable,
+    ...     index=None, include_site_packages=True)
+    >>> [dist.project_name for dist in workingset]
+    ['demo', 'demoneeded']
+
+That worked fine.  Let's try again with site packages not allowed (and
+reversing the default).
+
+    >>> zc.buildout.easy_install.include_site_packages(True)
+    False
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['demo'], example_dest, links=[], executable=primed_executable,
+    ...     index=None, include_site_packages=False)
+    Traceback (most recent call last):
+        ...
+    MissingDistribution: Couldn't find a distribution for 'demo'.
+
+That's a failure, as expected.
+
+    """
+
+def buildout_include_site_packages_option():
+    """
+The include-site-packages buildout option can be used to override the default
+behavior of using site packages.
+
+The default is include-site-packages = true.  As a demonstration, notice we do
+not set find-links, but the eggs are still found because they are in the
+executable's path.
+
+    >>> primed_executable = get_executable_with_site_packages()
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ...
+    ... [primed_python]
+    ... executable = %(primed_executable)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... python = primed_python
+    ... eggs = demo
+    ... ''' % globals())
+
+    >>> print system(primed_executable+" "+buildout)
+    Installing eggs.
+    <BLANKLINE>
+
+However, if we set include-site-packages to false, we get an error, because
+the packages are not available in any links, and they are not allowed to be
+obtained from the executable's site packages.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... include-site-packages = false
+    ...
+    ... [primed_python]
+    ... executable = %(primed_executable)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... eggs = demo
+    ... ''' % globals())
+    >>> print system(primed_executable+" "+buildout)
+    Uninstalling eggs.
+    Installing eggs.
+    Couldn't find index page for 'demo' (maybe misspelled?)
+    Getting distribution for 'demo'.
+    While:
+      Installing eggs.
+      Getting distribution for 'demo'.
+    Error: Couldn't find a distribution for 'demo'.
+    <BLANKLINE>
+
+We get an error if we specify anything but true or false:
+
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links = %(link_server)s
+    ... include-site-packages = no
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... eggs = demo
+    ... ''' % globals())
+
+    >>> print system(primed_executable+" "+buildout)
+    While:
+      Initializing.
+    Error: Invalid value for include-site-packages option: no
+    <BLANKLINE>
 
     """
 
@@ -2652,6 +2768,41 @@ def easy_install_SetUp(test):
         test.globs['sample_eggs'])
     test.globs['update_extdemo'] = lambda : add_source_dist(test, 1.5)
     zc.buildout.testing.install_develop('zc.recipe.egg', test)
+    # most tests don't need this set up, and it takes some time, so we just
+    # make it available as a convenience.
+    def get_executable_with_site_packages():
+        executable_buildout = test.globs['tmpdir']('executable')
+        old_wd = os.getcwd()
+        os.chdir(executable_buildout)
+        test.globs['write']('buildout.cfg', textwrap.dedent(
+            '''
+            [buildout]
+            parts = interpreter
+            find-links = %(link_server)s
+
+            [interpreter]
+            recipe = zc.recipe.egg
+            interpreter = py
+            eggs = demo
+            ''' % test.globs))
+        zc.buildout.buildout.Buildout(
+            'buildout.cfg',
+            [('buildout', 'log-level', 'WARNING'),
+             # trick bootstrap into putting the buildout develop egg
+             # in the eggs dir.
+             ('buildout', 'develop-eggs-directory', 'eggs'),
+            ]
+            ).bootstrap([])
+        os.mkdir('develop-eggs')
+        zc.buildout.testing.install_develop(
+            'zc.recipe.egg',
+            os.path.join(executable_buildout, 'develop-eggs'))
+        test.globs['system'](
+            os.path.join(executable_buildout, 'bin', 'buildout'))
+        os.chdir(old_wd)
+        return os.path.join(executable_buildout, 'bin', 'py')
+    test.globs['get_executable_with_site_packages'] = (
+        get_executable_with_site_packages)
 
 egg_parse = re.compile('([0-9a-zA-Z_.]+)-([0-9a-zA-Z_.]+)-py(\d[.]\d).egg$'
                        ).match

@@ -89,6 +89,10 @@ use_dependency_links
    for using dependency_links in preference to other
    locations. Defaults to true.
 
+include_site_packages
+    A flag indicating whether Python's non-standard-library packages should
+    be available for finding dependencies.  Defaults to true.
+
 relative_paths
    Adjust egg paths so they are relative to the script path.  This
    allows scripts to work when scripts and eggs are moved, as long as
@@ -399,6 +403,65 @@ dictionary:
     >>> [d.version for d in ws]
     ['0.3', '1.1']
 
+Dependencies in Site Packages
+-----------------------------
+
+Setuptools includes packages found in the Python executable's system path
+(sys.path) when searching for dependencies.  This can be disabled, so that
+a system Python can be used with buildout, cleaned of any packages installed
+by a user or system package manager.
+
+The default behavior can be controlled and introspected using
+zc.buildout.easy_install.include_site_packages.
+
+    >>> zc.buildout.easy_install.include_site_packages()
+    True
+
+Here's an example of using a Python executable that includes our dependencies.
+
+    >>> primed_executable = get_executable_with_site_packages()
+
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['demo'], example_dest, links=[], executable=primed_executable,
+    ...     index=None)
+    >>> [dist.project_name for dist in workingset]
+    ['demo', 'demoneeded']
+
+That worked fine.  Let's try again with site packages not allowed.  We'll
+change the policy by changing the default.  Notice that the function for
+changing the default value returns the previous value.
+
+    >>> zc.buildout.easy_install.include_site_packages(False)
+    True
+
+    >>> zc.buildout.easy_install.include_site_packages()
+    False
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['demo'], example_dest, links=[], executable=primed_executable,
+    ...     index=None)
+    Traceback (most recent call last):
+        ...
+    MissingDistribution: Couldn't find a distribution for 'demo'.
+
+Now we'll reset the default.
+
+    >>> zc.buildout.easy_install.include_site_packages(True)
+    False
+
+    >>> zc.buildout.easy_install.include_site_packages()
+    True
+
+We'll also reset a value expected by the rest of the test.
+
+    >>> # get_executable_with_site_packages resets the Installer
+    >>> zc.buildout.easy_install.prefer_final(True)
+    False
+
 Dependency links
 ----------------
 
@@ -580,13 +643,14 @@ interpreter and without having to provide a '.py' suffix.
 
 The demo script run the entry point defined in the demo egg:
 
-    >>> cat(bin, 'demo') # doctest: +NORMALIZE_WHITESPACE
+    >>> cat(bin, 'demo') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
     import sys
-    sys.path[0:0] = [
+    sys.path[:] = [
       '/sample-install/demo-0.3-py2.4.egg',
       '/sample-install/demoneeded-1.1-py2.4.egg',
+      ...
       ]
     <BLANKLINE>
     import eggrecipedemo
@@ -596,7 +660,8 @@ The demo script run the entry point defined in the demo egg:
 
 Some things to note:
 
-- The demo and demoneeded eggs are added to the beginning of sys.path.
+- The demo and demoneeded eggs are at the beginning of sys.path.  The script
+  controls the entire path.
 
 - The module for the script entry point is imported and the entry
   point, in this case, 'main', is run.
@@ -617,13 +682,14 @@ rather than passing a requirement:
     ...     [('demo', 'eggrecipedemo', 'main')],
     ...     ws, sys.executable, bin)
 
-    >>> cat(bin, 'demo') # doctest: +NORMALIZE_WHITESPACE
+    >>> cat(bin, 'demo') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
     import sys
-    sys.path[0:0] = [
+    sys.path[:] = [
       '/sample-install/demo-0.3-py2.4.egg',
       '/sample-install/demoneeded-1.1-py2.4.egg',
+      ...
       ]
     <BLANKLINE>
     import eggrecipedemo
@@ -661,31 +727,50 @@ run other scripts with the path set on the working set:
 The py script simply runs the Python interactive interpreter with
 the path set:
 
-    >>> cat(bin, 'py') # doctest: +NORMALIZE_WHITESPACE
+    >>> cat(bin, 'py') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
+    <BLANKLINE>
     import sys
     <BLANKLINE>
-    sys.path[0:0] = [
-      '/sample-install/demo-0.3-py2.4.egg',
-      '/sample-install/demoneeded-1.1-py2.4.egg',
-      ]
+    _set_path = _interactive = True
+    _force_interactive = False
     <BLANKLINE>
-    _interactive = True
+    _commands = []
+    _args = None
+    <BLANKLINE>
     if len(sys.argv) > 1:
         import getopt
-        _options, _args = getopt.getopt(sys.argv[1:], 'ic:')
-        _interactive = False
+        _options, _args = getopt.getopt(sys.argv[1:], 'VSic:')
         for (_opt, _val) in _options:
             if _opt == '-i':
-                _interactive = True
+                _force_interactive = True
             elif _opt == '-c':
-                exec _val
+                _interactive = False
+                _commands.append(_val)
+            elif _opt == '-S':
+                # We'll approximate this.  It is mostly convenient for tests.
+                _set_path = False
+            elif _opt == '-V':
+                print 'Python ' + sys.version.split()[0]
+                _interactive = False
     <BLANKLINE>
-        if _args:
-            sys.argv[:] = _args
-            execfile(sys.argv[0])
+    if _set_path:
+        sys.path[:] = [
+        '/sample-install/demo-0.3-pyN.N.egg',
+      '/sample-install/demoneeded-1.1-pyN.N.egg',
+      ...
+        ]
+    sys.path.insert(0, '.')
     <BLANKLINE>
-    if _interactive:
+    for _command in _commands:
+        exec _command
+    <BLANKLINE>
+    if _args:
+        _interactive = False
+        sys.argv[:] = _args
+        execfile(sys.argv[0])
+    <BLANKLINE>
+    if _interactive or _force_interactive:
         import code
         code.interact(banner="", local=globals())
 
@@ -722,14 +807,15 @@ to be included in the a generated script:
     ...    ['demo'], ws, sys.executable, bin, dict(demo='run'),
     ...    extra_paths=[foo])
 
-    >>> cat(bin, 'run') # doctest: +NORMALIZE_WHITESPACE
+    >>> cat(bin, 'run') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
     import sys
-    sys.path[0:0] = [
+    sys.path[:] = [
       '/sample-install/demo-0.3-py2.4.egg',
       '/sample-install/demoneeded-1.1-py2.4.egg',
       '/foo',
+      ...
       ]
     <BLANKLINE>
     import eggrecipedemo
@@ -748,12 +834,13 @@ parentheses in the call:
     ...    ['demo'], ws, sys.executable, bin, dict(demo='run'),
     ...    arguments='1, 2')
 
-    >>> cat(bin, 'run') # doctest: +NORMALIZE_WHITESPACE
+    >>> cat(bin, 'run') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     import sys
-    sys.path[0:0] = [
+    sys.path[:] = [
       '/sample-install/demo-0.3-py2.4.egg',
       '/sample-install/demoneeded-1.1-py2.4.egg',
+      ...
       ]
     <BLANKLINE>
     import eggrecipedemo
@@ -771,12 +858,13 @@ You can also pass script initialization code:
     ...    arguments='1, 2',
     ...    initialization='import os\nos.chdir("foo")')
 
-    >>> cat(bin, 'run') # doctest: +NORMALIZE_WHITESPACE
+    >>> cat(bin, 'run') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     import sys
-    sys.path[0:0] = [
+    sys.path[:] = [
       '/sample-install/demo-0.3-py2.4.egg',
       '/sample-install/demoneeded-1.1-py2.4.egg',
+      ...
       ]
     <BLANKLINE>
     import os
@@ -811,7 +899,7 @@ to pass a common base directory of the scripts and eggs:
     ...    interpreter='py',
     ...    relative_paths=bo)
 
-    >>> cat(bo, 'bin', 'run')
+    >>> cat(bo, 'bin', 'run') # doctest: +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
     import os
@@ -821,11 +909,12 @@ to pass a common base directory of the scripts and eggs:
     base = os.path.dirname(base)
     <BLANKLINE>
     import sys
-    sys.path[0:0] = [
+    sys.path[:] = [
       join(base, 'eggs/demo-0.3-pyN.N.egg'),
       join(base, 'eggs/demoneeded-1.1-pyN.N.egg'),
       '/ba',
       join(base, 'bar'),
+      ...
       ]
     <BLANKLINE>
     import eggrecipedemo
@@ -843,43 +932,60 @@ Of course, running the script works:
 
 We specified an interpreter and its paths are adjusted too:
 
-    >>> cat(bo, 'bin', 'py')
+    >>> cat(bo, 'bin', 'py') # doctest: +ELLIPSIS
     #!/usr/local/bin/python2.4
-    <BLANKLINE>
     import os
     <BLANKLINE>
     join = os.path.join
     base = os.path.dirname(os.path.abspath(__file__))
     base = os.path.dirname(base)
     <BLANKLINE>
+    <BLANKLINE>
     import sys
     <BLANKLINE>
-    sys.path[0:0] = [
-      join(base, 'eggs/demo-0.3-pyN.N.egg'),
+    _set_path = _interactive = True
+    _force_interactive = False
+    <BLANKLINE>
+    _commands = []
+    _args = None
+    <BLANKLINE>
+    if len(sys.argv) > 1:
+        import getopt
+        _options, _args = getopt.getopt(sys.argv[1:], 'VSic:')
+        for (_opt, _val) in _options:
+            if _opt == '-i':
+                _force_interactive = True
+            elif _opt == '-c':
+                _interactive = False
+                _commands.append(_val)
+            elif _opt == '-S':
+                # We'll approximate this.  It is mostly convenient for tests.
+                _set_path = False
+            elif _opt == '-V':
+                print 'Python ' + sys.version.split()[0]
+                _interactive = False
+    <BLANKLINE>
+    if _set_path:
+        sys.path[:] = [
+        join(base, 'eggs/demo-0.3-pyN.N.egg'),
       join(base, 'eggs/demoneeded-1.1-pyN.N.egg'),
       '/ba',
       join(base, 'bar'),
-      ]
+      ...
+        ]
+    sys.path.insert(0, '.')
     <BLANKLINE>
-    _interactive = True
-    if len(sys.argv) > 1:
-        import getopt
-        _options, _args = getopt.getopt(sys.argv[1:], 'ic:')
+    for _command in _commands:
+        exec _command
+    <BLANKLINE>
+    if _args:
         _interactive = False
-        for (_opt, _val) in _options:
-            if _opt == '-i':
-                _interactive = True
-            elif _opt == '-c':
-                exec _val
+        sys.argv[:] = _args
+        execfile(sys.argv[0])
     <BLANKLINE>
-        if _args:
-            sys.argv[:] = _args
-            execfile(sys.argv[0])
-    <BLANKLINE>
-    if _interactive:
+    if _interactive or _force_interactive:
         import code
         code.interact(banner="", local=globals())
-
 
 Handling custom build options for extensions provided in source distributions
 -----------------------------------------------------------------------------

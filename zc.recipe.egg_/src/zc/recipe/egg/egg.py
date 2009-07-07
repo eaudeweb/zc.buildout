@@ -54,13 +54,13 @@ class Eggs(object):
 
         python = options.get('python', buildout['buildout']['python'])
         options['executable'] = buildout[python]['executable']
-        exclude_site_packages = self.options.get(
-            'exclude-site-packages',
-            self.buildout['buildout'].get('exclude-site-packages', 'false')
-        if exclude_site_packages not in ('true', 'false'):
-            self._error('Invalid value for exclude-site-packages option: %s',
-                        exclude_site_packages)
-        self.exclude_site_packages = (exclude_site_packages=='true')
+        include_site_packages = self.options.get(
+            'include-site-packages',
+            self.buildout['buildout'].get('include-site-packages', 'true'))
+        if include_site_packages not in ('true', 'false'):
+            self._error('Invalid value for include-site-packages option: %s',
+                        include_site_packages)
+        self.include_site_packages = (include_site_packages=='true')
 
     def working_set(self, extra=()):
         """Separate method to just get the working set
@@ -80,7 +80,7 @@ class Eggs(object):
             ws = zc.buildout.easy_install.working_set(
                 distributions, options['executable'],
                 [options['develop-eggs-directory'], options['eggs-directory']],
-                exclude_site_packages=self.exclude_site_packages
+                include_site_packages=self.include_site_packages
                 )
         else:
             kw = {}
@@ -95,7 +95,7 @@ class Eggs(object):
                 path=[options['develop-eggs-directory']],
                 newest=self.buildout['buildout'].get('newest') == 'true',
                 allow_hosts=self.allow_hosts,
-                exclude_site_packages=self.exclude_site_packages,
+                include_site_packages=self.include_site_packages,
                 **kw)
 
         return orig_distributions, ws
@@ -175,7 +175,7 @@ class Scripts(Eggs):
                 interpreter=options.get('interpreter'),
                 initialization=options.get('initialization', ''),
                 arguments=options.get('arguments', ''),
-                exclude_site_packages=self.exclude_site_packages,
+                include_site_packages=self.include_site_packages,
                 relative_paths=self._relative_paths
                 )
 
