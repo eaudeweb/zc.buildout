@@ -211,27 +211,30 @@ class Buildout(UserDict.DictMixin):
         if versions:
             zc.buildout.easy_install.default_versions(dict(self[versions]))
 
-        prefer_final = options.get('prefer-final', 'false')
+        prefer_final = options.setdefault('prefer-final', 'false')
         if prefer_final not in ('true', 'false'):
             self._error('Invalid value for prefer-final option: %s',
                         prefer_final)
         zc.buildout.easy_install.prefer_final(prefer_final=='true')
 
-        include_site_packages = options.get('include-site-packages', 'true')
+        include_site_packages = options.setdefault(
+            'include-site-packages', 'true')
         if include_site_packages not in ('true', 'false'):
             self._error('Invalid value for include-site-packages option: %s',
                         include_site_packages)
         zc.buildout.easy_install.include_site_packages(
             include_site_packages=='true')
 
-        use_dependency_links = options.get('use-dependency-links', 'true')
+        use_dependency_links = options.setdefault(
+            'use-dependency-links', 'true')
         if use_dependency_links not in ('true', 'false'):
             self._error('Invalid value for use-dependency-links option: %s',
                         use_dependency_links)
         zc.buildout.easy_install.use_dependency_links(
-            use_dependency_links == 'true')
+            use_dependency_links=='true')
 
-        allow_picked_versions = options.get('allow-picked-versions', 'true')
+        allow_picked_versions = options.setdefault(
+            'allow-picked-versions', 'true')
         if allow_picked_versions not in ('true', 'false'):
             self._error('Invalid value for allow-picked-versions option: %s',
                         allow_picked_versions)
@@ -253,22 +256,19 @@ class Buildout(UserDict.DictMixin):
 
             zc.buildout.easy_install.download_cache(download_cache)
 
-        install_from_cache = options.get('install-from-cache')
-        if install_from_cache:
-            if install_from_cache not in ('true', 'false'):
-                self._error('Invalid value for install-from-cache option: %s',
-                            install_from_cache)
-            if install_from_cache == 'true':
-                zc.buildout.easy_install.install_from_cache(True)
+        install_from_cache = options.setdefault(
+            'install-from-cache', 'false')
+        if install_from_cache not in ('true', 'false'):
+            self._error('Invalid value for install-from-cache option: %s',
+                        install_from_cache)
+        zc.buildout.easy_install.install_from_cache(
+            install_from_cache=='true')
 
-
-        always_unzip = options.get('unzip')
-        if always_unzip:
-            if always_unzip not in ('true', 'false'):
-                self._error('Invalid value for unzip option: %s',
-                            always_unzip)
-            if always_unzip == 'true':
-                zc.buildout.easy_install.always_unzip(True)
+        always_unzip = options.setdefault('unzip', 'false')
+        if always_unzip not in ('true', 'false'):
+            self._error('Invalid value for unzip option: %s',
+                        always_unzip)
+        zc.buildout.easy_install.always_unzip(always_unzip=='true')
 
         # "Use" each of the defaults so they aren't reported as unused options.
         for name in _buildout_default_options:
