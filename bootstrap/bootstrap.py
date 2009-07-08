@@ -82,6 +82,11 @@ for name in ('--ez_setup-source', '--download-base'):
         configuration[name] = 'file://%s' % (
             urllib.pathname2url(os.path.abspath(os.path.expanduser(val))),)
 
+if (configuration['--download-base'] and
+    not configuration['--download-base'].endswith('/')):
+    # download base needs a trailing slash to make the world happy
+    configuration['--download-base'] += '/'
+
 if not configuration['--eggs']:
     configuration['--eggs'] = tmpeggs = tempfile.mkdtemp()
 else:
@@ -98,8 +103,7 @@ except ImportError:
     exec urllib2.urlopen(configuration['--ez_setup-source']).read() in ez
     setuptools_args = dict(to_dir=configuration['--eggs'], download_delay=0)
     if configuration['--download-base']:
-        setuptools_args['download_base'] = (
-            configuration['--download-base'] + '/')
+        setuptools_args['download_base'] = configuration['--download-base']
     ez['use_setuptools'](**setuptools_args)
 
     import pkg_resources
@@ -117,8 +121,13 @@ cmd = [quote(sys.executable),
        '-c',
        quote('from setuptools.command.easy_install import main; main()'),
        '-mqNxd',
-       quote(configuration['--eggs']),
-       'zc.buildout' + configuration['--version']]
+       quote(configuration['--eggs'])]
+
+if configuration['--download-base']:
+    cmd.extend(['-f', quote(configuration['--download-base'])])
+
+cmd.append('zc.buildout' + configuration['--version'])
+
 ws = pkg_resources.working_set
 env = dict(
     os.environ,
