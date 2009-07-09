@@ -59,7 +59,7 @@ class MissingOption(zc.buildout.UserError, KeyError):
     """
 
 class MissingSection(zc.buildout.UserError, KeyError):
-    """A required section is missinh
+    """A required section is missing
     """
 
     def __str__(self):
