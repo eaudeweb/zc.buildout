@@ -235,10 +235,10 @@ class Installer:
         path = (path and path[:] or [])
         if include_site_packages is not None:
             self._include_site_packages = include_site_packages
-        stdlib, site_packages = _get_system_packages(executable)
+        stdlib, self._site_packages = _get_system_packages(executable)
         if self._include_site_packages:
             path.extend(buildout_and_setuptools_path)
-            path.extend(site_packages)
+            path.extend(self._site_packages)
         # else we could try to still include the buildout_and_setuptools_path
         # if the elements are not in site_packages, but we're not bothering
         # with this optimization for now, in the name of code simplicity.
@@ -257,7 +257,19 @@ class Installer:
             self._versions = versions
 
     def _satisfied(self, req, source=None):
-        dists = [dist for dist in self._env[req.project_name] if dist in req]
+        # We get all distributions that match the given requirement.  If we
+        # are not supposed to include site-packages, we also filter those out.
+        # We need to do the filtering here even though we have exluded
+        # site packages from the _env's paths (see Installer.__init__) because
+        # an .egg-link, such as one for setuptools or zc.buildout installed
+        # by zc.buildout.buildout.Buildout.bootstrap, can indirectly include
+        # a path in our _site_packages.
+        dists = [dist for dist in self._env[req.project_name] if (
+                    dist in req and (
+                        self._include_site_packages or
+                        dist.location not in self._site_packages)
+                    )
+                ]
         if not dists:
             logger.debug('We have no distributions for %s that satisfies %r.',
                          req.project_name, str(req))
@@ -461,9 +473,18 @@ class Installer:
             # Nothing is available.
             return None
 
-        # Filter the available dists for the requirement and source flag
+        # Filter the available dists for the requirement and source flag. If we
+        # are not supposed to include site-packages, we also filter those out.
+        # We need to do the filtering here even though we have exluded site
+        # packages from the _index's paths (see Installer.__init__) because an
+        # .egg-link, such as one for setuptools or zc.buildout installed by
+        # zc.buildout.buildout.Buildout.bootstrap, can indirectly include a
+        # path in our _site_packages.
         dists = [dist for dist in index[requirement.project_name]
                  if ((dist in requirement)
+                     and
+                     (self._include_site_packages or
+                      dist.location not in self._site_packages)
                      and
                      ((not source) or
                       (dist.precedence == pkg_resources.SOURCE_DIST)

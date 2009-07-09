@@ -2376,6 +2376,53 @@ reversing the default).
 
 That's a failure, as expected.
 
+Now we explore an important edge case.
+
+Some system Pythons include setuptools (and other Python packages) in their
+site-packages (or equivalent) using a .egg-info directory.  The pkg_resources
+module (from setuptools) considers a package installed using .egg-info to be a
+develop egg.
+
+zc.buildout.buildout.Buildout.bootstrap will make setuptools and zc.buildout
+available to the buildout via the eggs directory, for normal eggs; or the
+develop-eggs directory, for develop-eggs.
+
+If setuptools or zc.buildout is found in site-packages and considered by
+pkg_resources to be a develop egg, then the bootstrap code will use a .egg-link
+in the local develop-eggs, pointing to site-packages, in its entirety.  Because
+develop-eggs must always be available for searching for distributions, this
+indirectly brings site-packages back into the search path for distributions.
+
+Because of this, we have to take special care that we still exclude
+site-packages even in this case.  See the comments about site packages in the
+Installer._satisfied and Installer._obtain methods for the implementation
+(as of this writing).
+
+In this demonstration, we insert a link to the "other" distribution in our
+develop-eggs, which would bring the package back in, except for the special
+care we have taken to exclude it.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> mkdir(example_dest, 'develop-eggs')
+    >>> stdlib, site_packages = (
+    ...     zc.buildout.easy_install._get_system_packages(primed_executable))
+    >>> path_to_other = [p for p in site_packages if 'other' in p][0]
+    >>> write(example_dest, 'develop-eggs', 'other.egg-link', path_to_other)
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, links=[],
+    ...     path=[join(example_dest, 'develop-eggs')],
+    ...     executable=primed_executable,
+    ...     index=None, include_site_packages=False)
+    Traceback (most recent call last):
+        ...
+    MissingDistribution: Couldn't find a distribution for 'other'.
+
+The MissingDistribution error shows that buildout correctly excluded the
+"site-packages" source even though it was indirectly included in the path
+via a .egg-link file.
+
     """
 
 def buildout_include_site_packages_option():
@@ -2395,6 +2442,7 @@ packages available.  We'll simply be asking for "other" here.
     ... '''
     ... [buildout]
     ... parts = eggs
+    ... find-links =
     ...
     ... [primed_python]
     ... executable = %(primed_executable)s
@@ -2418,6 +2466,7 @@ obtained from the executable's site packages.
     ... '''
     ... [buildout]
     ... parts = eggs
+    ... find-links =
     ... include-site-packages = false
     ...
     ... [primed_python]
