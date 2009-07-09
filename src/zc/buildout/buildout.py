@@ -282,7 +282,7 @@ class Buildout(UserDict.DictMixin):
         return os.path.join(self._buildout_dir, name)
 
     def bootstrap(self, args):
-        __doing__ = 'Bootstraping.'
+        __doing__ = 'Bootstrapping.'
 
         self._setup_directories()
 
