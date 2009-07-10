@@ -116,12 +116,19 @@ def _runsetup(setup, executable, *args):
     args = [zc.buildout.easy_install._safe_arg(arg)
             for arg in args]
     args.insert(0, '-q')
-    args.append(dict(os.environ, PYTHONPATH=setuptools_location))
+
+    env = dict(os.environ)
+    if executable == sys.executable:
+        env['PYTHONPATH'] = setuptools_location
+    # else pass an executable that has setuptools!  See testselectingpython.py.
+    args.append(env)
 
     here = os.getcwd()
     try:
         os.chdir(d)
-        os.spawnle(os.P_WAIT, executable, zc.buildout.easy_install._safe_arg (executable), setup, *args)
+        os.spawnle(os.P_WAIT, executable,
+                   zc.buildout.easy_install._safe_arg(executable),
+                   setup, *args)
         if os.path.exists('build'):
             rmtree('build')
     finally:
