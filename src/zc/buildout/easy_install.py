@@ -90,11 +90,13 @@ def _get_system_packages(executable):
                "print repr([os.path.normpath(p) for p in sys.path])"]
         if clean:
             cmd.insert(1, '-S')
-        _proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-        _proc.wait();
-        raw = _proc.stdout.read()
-        _proc.stdout.close()
-        res = eval(raw)
+        _proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = _proc.communicate();
+        if _proc.returncode:
+            raise RuntimeError(
+                'error trying to get system packages:\n%s' % (stderr,))
+        res = eval(stdout)
         try:
             res.remove('.')
         except ValueError:
@@ -1249,8 +1251,10 @@ def _pyscript(path, dest, executable, rsetup):
     return generated
 
 py_script_template = script_header + '''\
-%(relative_paths_setup)s
 
+globs = globals().copy() # get a clean copy early
+
+%(relative_paths_setup)s
 import sys
 
 _set_path = _interactive = True
@@ -1295,11 +1299,13 @@ if _command:
     exec _command
 elif _args:
     _interactive = False
-    execfile(sys.argv[0])
+    globs['__file__'] = sys.argv[0]
+    execfile(sys.argv[0], globs)
 
 if _interactive or _force_interactive:
     import code
-    code.interact(banner="", local=globals())
+    del globs['__file__']
+    code.interact(banner="", local=globs)
 '''
 
 runsetup_template = """

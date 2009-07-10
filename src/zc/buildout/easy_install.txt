@@ -733,6 +733,7 @@ the path set:
 
     >>> cat(bin, 'py') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
+    globs = globals().copy() # get a clean copy early
     <BLANKLINE>
     import sys
     <BLANKLINE>
@@ -780,11 +781,13 @@ the path set:
         exec _command
     elif _args:
         _interactive = False
-        execfile(sys.argv[0])
+        globs['__file__'] = sys.argv[0]
+        execfile(sys.argv[0], globs)
     <BLANKLINE>
     if _interactive or _force_interactive:
         import code
-        code.interact(banner="", local=globals())
+        del globs['__file__']
+        code.interact(banner="", local=globs)
 
 If invoked with a script name and arguments, it will run that script, instead.
 
@@ -1008,12 +1011,14 @@ We specified an interpreter and its paths are adjusted too:
 
     >>> cat(bo, 'bin', 'py') # doctest: +ELLIPSIS
     #!/usr/local/bin/python2.4
+    globs = globals().copy() # get a clean copy early
+    <BLANKLINE>
+    <BLANKLINE>
     import os
     <BLANKLINE>
     join = os.path.join
     base = os.path.dirname(os.path.abspath(__file__))
     base = os.path.dirname(base)
-    <BLANKLINE>
     <BLANKLINE>
     import sys
     <BLANKLINE>
@@ -1063,11 +1068,13 @@ We specified an interpreter and its paths are adjusted too:
         exec _command
     elif _args:
         _interactive = False
-        execfile(sys.argv[0])
+        globs['__file__'] = sys.argv[0]
+        execfile(sys.argv[0], globs)
     <BLANKLINE>
     if _interactive or _force_interactive:
         import code
-        code.interact(banner="", local=globals())
+        del globs['__file__']
+        code.interact(banner="", local=globs)
 
 Handling custom build options for extensions provided in source distributions
 -----------------------------------------------------------------------------
