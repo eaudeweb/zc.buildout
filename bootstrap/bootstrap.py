@@ -33,6 +33,12 @@ configuration = {
     '--eggs': None}
 
 helpstring = __doc__ + textwrap.dedent('''
+    This script recognizes the following options itself.  The first option it
+    encounters that is not one of these will cause the script to stop parsing
+    options and pass the rest on to buildout.  Therefore, if you want to use
+    any of the following options *and* buildout command-line options like
+    -c, first use the following options, and then use the buildout options.
+
     Options: 
       --version=ZC_BUILDOUT_VERSION
                 Specify a version number of the zc.buildout to use
@@ -48,8 +54,8 @@ helpstring = __doc__ + textwrap.dedent('''
                 directory that is deleted when the bootstrap script completes.
 
     By using --ez_setup-source and --download-base to point to local resources,
-    you can keep bootstrap from going over the network.
-    ''')
+    you can keep this script from going over the network.
+    ''' % configuration)
 match_equals = re.compile(r'(%s)=(\S*)' % ('|'.join(configuration),)).match
 args = sys.argv[1:]
 if args == ['--help']:
