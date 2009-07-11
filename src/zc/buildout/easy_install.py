@@ -112,6 +112,7 @@ def _get_system_packages(executable):
     site_packages = [p for p in get_sys_path() if p not in stdlib]
     return (stdlib, site_packages)
 
+
 class IncompatibleVersionError(zc.buildout.UserError):
     """A specified version is incompatible with a given requirement.
     """
@@ -139,6 +140,7 @@ def _get_version(executable):
         return version
 
 FILE_SCHEME = re.compile('file://', re.I).match
+
 
 class AllowHostsPackageIndex(setuptools.package_index.PackageIndex):
     """Will allow urls that are local to the system.
@@ -730,34 +732,52 @@ class Installer:
                 self._maybe_add_setuptools(ws, dist)
 
         # OK, we have the requested distributions and they're in the working
-        # set, but they may have unmet requirements.  We'll simply keep
-        # trying to resolve requirements, adding missing requirements as they
-        # are reported.
+        # set, but they may have unmet requirements.  We'll resolve these
+        # requirements. This is code modified from
+        # pkg_resources.WorkingSet.resolve.  We can't reuse that code directly
+        # because we have to constrain our requirements (see
+        # versions_section_ignored_for_dependency_in_favor_of_site_packages in
+        # zc.buildout.tests).
         #
-        # Note that we don't pass in the environment, because we want
+        requirements.reverse() # set up the stack
+        processed = {}  # set of processed requirements
+        best = {}  # key -> dist
+        #
+        # Note that we don't use the existing environment, because we want
         # to look for new eggs unless what we have is the best that
         # matches the requirement.
-        while 1:
-            try:
-                ws.resolve(requirements)
-            except pkg_resources.DistributionNotFound, err:
-                [requirement] = err
-                requirement = self._constrain(requirement)
-                if dest:
-                    logger.debug('Getting required %r', str(requirement))
-                else:
-                    logger.debug('Adding required %r', str(requirement))
-                _log_requirement(ws, requirement)
-
-                for dist in self._get_dist(requirement, ws, self._always_unzip
-                                           ):
-
-                    ws.add(dist)
-                    self._maybe_add_setuptools(ws, dist)
-            except pkg_resources.VersionConflict, err:
-                raise VersionConflict(err, ws)
-            else:
-                break
+        env = pkg_resources.Environment(ws.entries)
+        while requirements:
+            # process dependencies breadth-first
+            req = self._constrain(requirements.pop(0))
+            if req in processed:
+                # Ignore cyclic or redundant dependencies
+                continue
+            dist = best.get(req.key)
+            if dist is None:
+                # Find the best distribution and add it to the map
+                dist = ws.by_key.get(req.key)
+                if dist is None:
+                    try:
+                        dist = best[req.key] = env.best_match(req, ws)
+                    except pkg_resources.VersionConflict, err:
+                        raise VersionConflict(err, ws)
+                    if dist is None:
+                        if dest:
+                            logger.debug('Getting required %r', str(req))
+                        else:
+                            logger.debug('Adding required %r', str(req))
+                        _log_requirement(ws, req)
+                        for dist in self._get_dist(req,
+                                                   ws, self._always_unzip):
+                            ws.add(dist)
+                            self._maybe_add_setuptools(ws, dist)
+            if dist not in req:
+                # Oops, the "best" so far conflicts with a dependency
+                raise VersionConflict(
+                    pkg_resources.VersionConflict(dist, req), ws)
+            requirements.extend(dist.requires(req.extras)[::-1])
+            processed[req] = True
 
         return ws
 

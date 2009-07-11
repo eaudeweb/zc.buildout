@@ -140,6 +140,11 @@ def sdist(setup, dest):
 def bdist_egg(setup, executable, dest):
     _runsetup(setup, executable, 'bdist_egg', '-d', dest)
 
+def sys_install(setup, dest):
+    _runsetup(setup, sys.executable, 'install', '--home', dest,
+              '--single-version-externally-managed',
+              '--record', os.path.join(dest, 'added'))
+
 def find_python(version):
     e = os.environ.get('PYTHON%s' % version)
     if e is not None:

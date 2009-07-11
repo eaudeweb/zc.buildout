@@ -1768,6 +1768,91 @@ def bug_105081_Specific_egg_versions_are_ignored_when_newer_eggs_are_around():
     1 2
     """
 
+def versions_section_ignored_for_dependency_in_favor_of_site_packages():
+    r"""
+This is a test for a bugfix.
+
+The error showed itself when at least two dependencies were in a shared
+location like site-packages, and the first one met the "versions" setting.  The
+first dependency would be added, but subsequent dependencies from the same
+location (e.g., site-packages) would use the version of the package found in
+the shared location, ignoring the version setting.
+
+We begin with a Python that has demoneeded version 1.1 installed and a demo
+version 0.3, all in a site-packages-like shared directory.  We need to create
+this.
+
+    >>> executable_buildout = tmpdir('executable_buildout')
+    >>> old_wd = os.getcwd()
+    >>> os.chdir(executable_buildout)
+    >>> import textwrap
+    >>> write('buildout.cfg', textwrap.dedent(
+    ...     '''
+    ...     [buildout]
+    ...     parts = interpreter
+    ...
+    ...     [interpreter]
+    ...     recipe = zc.recipe.egg
+    ...     scripts = py
+    ...     interpreter = py
+    ...     extra-paths = %(site-packages)s
+    ...     include-site-packages = false
+    ...     eggs = setuptools
+    ...     ''') % {'site-packages': join(site_packages, 'lib', 'python')})
+    >>> zc.buildout.buildout.Buildout(
+    ...     'buildout.cfg',
+    ...     [('buildout', 'log-level', 'WARNING'),
+    ...      # trick bootstrap into putting the buildout develop egg
+    ...      # in the eggs dir.
+    ...      ('buildout', 'develop-eggs-directory', 'eggs'),
+    ...     ]
+    ...     ).bootstrap([])
+    >>> os.mkdir('develop-eggs')
+    >>> zc.buildout.testing.install_develop(
+    ...     'zc.recipe.egg',
+    ...     os.path.join(executable_buildout, 'develop-eggs'))
+    >>> print system(
+    ...     os.path.join(executable_buildout, 'bin', 'buildout'))
+    Installing interpreter.
+    Generated interpreter '/executable_buildout/bin/py'.
+    <BLANKLINE>
+    >>> os.chdir(old_wd)
+    >>> primed_executable = os.path.join(executable_buildout, 'bin', 'py')
+
+``eggrecipedemo.main()`` shows the number after the dot (that is, ``X`` in
+``1.X``), for the demo package and the demoneeded package, so this demonstrates
+that our Python does in fact have demo version 0.3 and demoneeded version 1.1.
+
+    >>> print system(primed_executable+" -c "+
+    ...              "'import eggrecipedemo; eggrecipedemo.main()'")
+    3 1
+    <BLANKLINE>
+
+Now we will install bigdemo, specifying different versions of demo
+and demoneeded in a versions section.  Before the bugfix, the demo version
+would be honored, but not the demoneeded.
+
+Now here's a setup that would expose the bug, using the
+zc.buildout.easy_install API.
+
+    >>> example_dest = tmpdir('example_dest')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['bigdemo'], example_dest, links=[sample_eggs],
+    ...     executable=primed_executable,
+    ...     index=None, include_site_packages=True,
+    ...     versions={'demoneeded': '1.2c1', 'demo': '0.3'})
+    >>> for dist in workingset:
+    ...     print dist
+    bigdemo 0.1
+    demo 0.3
+    demoneeded 1.2c1
+
+Before the bugfix, the demoneeded distribution was not included in the working
+set, and the demoneeded in site-packages (of the wrong number) would have been
+used.
+
+    """
+
 if sys.version_info > (2, 4):
     def test_exit_codes():
         """
@@ -2704,6 +2789,8 @@ def warn_users_when_expanding_shell_patterns_yields_no_results():
 def create_sample_eggs(test, executable=sys.executable):
     write = test.globs['write']
     dest = test.globs['sample_eggs']
+    site_packages = test.globs['tmpdir']('site_packages')
+    test.globs['site_packages'] = site_packages
     tmp = tempfile.mkdtemp()
     try:
         write(tmp, 'README.txt', '')
@@ -2720,6 +2807,8 @@ def create_sample_eggs(test, executable=sys.executable):
                 % (i, c1)
                 )
             zc.buildout.testing.sdist(tmp, dest)
+            if i==1:
+                zc.buildout.testing.sys_install(tmp, site_packages)
 
         write(
             tmp, 'setup.py',
@@ -2749,6 +2838,8 @@ def create_sample_eggs(test, executable=sys.executable):
                 " zip_safe=True, version='0.%s%s')\n" % (i, c1)
                 )
             zc.buildout.testing.bdist_egg(tmp, executable, dest)
+            if i==3:
+                zc.buildout.testing.sys_install(tmp, site_packages)
 
         write(tmp, 'eggrecipebigdemo.py', 'import eggrecipedemo')
         write(
@@ -2825,10 +2916,16 @@ def easy_install_SetUp(test):
     zc.buildout.testing.install_develop('zc.recipe.egg', test)
     # most tests don't need this set up, and it takes some time, so we just
     # make it available as a convenience.
-    def get_executable_with_site_packages():
+    def get_executable_with_site_packages(requirements=None):
         executable_buildout = test.globs['tmpdir']('executable')
         old_wd = os.getcwd()
         os.chdir(executable_buildout)
+        if requirements is None:
+            requirements = ['demoneeded', 'setuptools', 'other']
+        elif len([req for req in requirements
+                  if req.startswith('setuptools')]) == 0:
+            requirements.append('setuptools') # you always need that.
+        requirements = '\n       '.join(requirements)
         test.globs['write']('buildout.cfg', textwrap.dedent(
             '''
             [buildout]
@@ -2839,10 +2936,9 @@ def easy_install_SetUp(test):
             [interpreter]
             recipe = zc.recipe.egg
             interpreter = py
-            eggs = demoneeded
-                   setuptools
-                   other
-            ''' % test.globs))
+            eggs = %(requirements)s
+            ''') % {'requirements': requirements,
+                   'link_server': test.globs['link_server']})
         zc.buildout.buildout.Buildout(
             'buildout.cfg',
             [('buildout', 'log-level', 'WARNING'),
