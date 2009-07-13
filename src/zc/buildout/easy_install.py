@@ -967,9 +967,10 @@ def scripts(reqs, working_set, executable, dest,
 
 def _relative_path_and_setup(sname, path, relative_paths):
     if relative_paths:
-        sname = os.path.abspath(sname)
+        relative_paths = os.path.normcase(relative_paths)
+        sname = os.path.normcase(os.path.abspath(sname))
         spath = ',\n  '.join(
-            [_relativitize(path_item, sname, relative_paths)
+            [_relativitize(os.path.normcase(path_item), sname, relative_paths)
              for path_item in path]
             )
         rpsetup = relative_paths_setup
@@ -1022,7 +1023,7 @@ relative_paths_setup = """
 import os
 
 join = os.path.join
-base = os.path.dirname(__file__)
+base = os.path.dirname(os.path.abspath(__file__))
 """
 
 def _script(module_name, attrs, path, dest, executable, arguments,
@@ -1245,4 +1246,3 @@ def redo_pyc(egg):
                     subprocess.call([sys.executable, args])
                 else:
                     os.spawnv(os.P_WAIT, sys.executable, args)
-
