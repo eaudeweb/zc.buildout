@@ -101,13 +101,8 @@ Change History
 - added a test to verify against https://bugs.launchpad.net/zc.buildout/+bug/239212
   in allowhosts.txt (seletz)
 
-<<<<<<< HEAD:CHANGES.txt
-- further fixes for """AttributeError: Buildout instance has no 
-  attribute '_logger'""" by providing reasonable defaults 
-=======
 - further fixes for """AttributeError: Buildout instance has no
   attribute '_logger'""" by providing reasonable defaults
->>>>>>> origin/l-trunk:CHANGES.txt
   within the Buildout constructor (related to the new 'allow-hosts' option)
   (patch by Gottfried Ganssauge) (ajung)
 
@@ -122,11 +117,7 @@ Change History
 
 - Added the `allow-hosts` option (tarek)
 
-<<<<<<< HEAD:CHANGES.txt
-- Quote the 'executable' argument when trying to detect the python 
-=======
 - Quote the 'executable' argument when trying to detect the python
->>>>>>> origin/l-trunk:CHANGES.txt
   version using popen4. (sidnei)
 
 - Quote the 'spec' argument, as in the case of installing an egg from
@@ -137,11 +128,7 @@ Change History
 1.0.3 (2008-06-01)
 ==================
 
-<<<<<<< HEAD:CHANGES.txt
-- fix for """AttributeError: Buildout instance has no attribute '_logger'""" 
-=======
 - fix for """AttributeError: Buildout instance has no attribute '_logger'"""
->>>>>>> origin/l-trunk:CHANGES.txt
   by providing reasonable defaults within the Buildout constructor.
   (patch by Gottfried Ganssauge) (ajung)
 
