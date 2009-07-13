@@ -139,16 +139,17 @@ env = dict(
     os.environ,
     PYTHONPATH=ws.find(pkg_resources.Requirement.parse('setuptools')).location)
 
-try:
+is_jython = sys.platform.startswith('java')
+if is_jython:
     import subprocess
-except ImportError:
-    exitcode = os.spawnle(*([os.P_WAIT, sys.executable] + cmd + [env]))
-else:
-    # Jython can use subprocess but not spawn.  We prefer it generally.
     exitcode = subprocess.Popen(cmd, env=env).wait()
+else: # Windows needs this, apparently; otherwise we would prefer subprocess
+    exitcode = os.spawnle(*([os.P_WAIT, sys.executable] + cmd + [env]))
 if exitcode != 0:
-    # we shouldn't need an error message because a failure
-    # should have generated a visible traceback in the subprocess.
+    sys.flush()
+    print ("An error occured when trying to install zc.buildout. "
+           "Look above this message for any errors that "
+           "were output by easy_install.")
     sys.exit(exitcode)
 
 ws.add_entry(configuration['--eggs'])
