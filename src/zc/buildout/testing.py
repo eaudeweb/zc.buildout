@@ -18,6 +18,7 @@ $Id$
 
 import BaseHTTPServer
 import errno
+import logging
 import os
 import pkg_resources
 import random
@@ -85,6 +86,8 @@ def write(dir, *args):
     fsync(f.fileno())
     f.close()
 
+## FIXME - check for other platforms
+MUST_CLOSE_FDS = not sys.platform.startswith('win')
 
 def system(command, input=''):
     p = subprocess.Popen(command,
@@ -92,7 +95,7 @@ def system(command, input=''):
                          stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
-                         close_fds=not is_win32)
+                         close_fds=MUST_CLOSE_FDS)
     i, o, e = (p.stdin, p.stdout, p.stderr)
     if input:
         i.write(input)
@@ -145,7 +148,7 @@ def find_python(version):
                              stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT,
-                             close_fds=True)
+                             close_fds=MUST_CLOSE_FDS)
         i, o = (p.stdin, p.stdout)
         i.close()
         e = o.read().strip()
@@ -158,7 +161,7 @@ def find_python(version):
                              stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT,
-                             close_fds=True)
+                             close_fds=MUST_CLOSE_FDS)
         i, o = (p.stdin, p.stdout)
         i.close()
         e = o.read().strip()
@@ -170,7 +173,7 @@ def find_python(version):
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT,
-                                close_fds=True)
+                                close_fds=MUST_CLOSE_FDS)
             i, o = (p.stdin, p.stdout)
             i.close()
             e = o.read().strip()
@@ -210,8 +213,17 @@ def buildoutSetUp(test):
     here = os.getcwd()
     register_teardown(lambda: os.chdir(here))
 
+    handlers_before_set_up = logging.getLogger().handlers[:]
+    def restore_root_logger_handlers():
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+        for handler in handlers_before_set_up:
+            root_logger.addHandler(handler)
+    register_teardown(restore_root_logger_handlers)
 
     base = tempfile.mkdtemp('buildoutSetUp')
+    base = os.path.realpath(base)
     register_teardown(lambda base=base: rmtree(base))
 
     old_home = os.environ.get('HOME')
@@ -484,6 +496,8 @@ normalize_path = (
         % dict(sep=os.path.sep)),
     _normalize_path,
     )
+
+normalize_endings = re.compile('\r\n'), '\n'
 
 normalize_script = (
     re.compile('(\n?)-  ([a-zA-Z_.-]+)-script.py\n-  \\2.exe\n'),

@@ -555,6 +555,8 @@ class Buildout(UserDict.DictMixin):
         elif (not installed_parts) and installed_exists:
             os.remove(self['buildout']['installed'])
 
+        self._unload_extensions()
+
     def _update_installed(self, **buildout_options):
         installed = self['buildout']['installed']
         f = open(installed, 'a')
@@ -581,7 +583,6 @@ class Buildout(UserDict.DictMixin):
         # remove created files and directories
         self._uninstall(
             installed_part_options[part]['__buildout_installed__'])
-
 
     def _setup_directories(self):
         __doing__ = 'Setting up buildout directories'
@@ -613,7 +614,8 @@ class Buildout(UserDict.DictMixin):
                     setup = self._buildout_path(setup)
                     files = glob.glob(setup)
                     if not files:
-                        self._logger.warn("Couldn't develop %r (not found)", setup)
+                        self._logger.warn("Couldn't develop %r (not found)",
+                                          setup)
                     else:
                         files.sort()
                     for setup in files:
@@ -878,6 +880,14 @@ class Buildout(UserDict.DictMixin):
             zc.buildout.easy_install.clear_index_cache()
 
             for ep in pkg_resources.iter_entry_points('zc.buildout.extension'):
+                ep.load()(self)
+
+    def _unload_extensions(self):
+        __doing__ = 'Unloading extensions.'
+        specs = self['buildout'].get('extensions', '').split()
+        if specs:
+            for ep in pkg_resources.iter_entry_points(
+                'zc.buildout.unloadextension'):
                 ep.load()(self)
 
     def setup(self, args):
