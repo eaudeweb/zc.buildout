@@ -2787,6 +2787,13 @@ def warn_users_when_expanding_shell_patterns_yields_no_results():
 ######################################################################
 
 def create_sample_eggs(test, executable=sys.executable):
+    """Creates sample eggs, source distributions, and a faux site-packages."
+    
+    Unlike the faux site-packages created by
+    ``get_executable_with_site_packages``, this one has packages installed the
+    way distributions often install eggs in system Pythons (via
+    zc.buildout.testing.sys_install).
+    """
     write = test.globs['write']
     dest = test.globs['sample_eggs']
     site_packages = test.globs['tmpdir']('site_packages')
@@ -2914,7 +2921,7 @@ def easy_install_SetUp(test):
         test.globs['sample_eggs'])
     test.globs['update_extdemo'] = lambda : add_source_dist(test, 1.5)
     zc.buildout.testing.install_develop('zc.recipe.egg', test)
-    # most tests don't need this set up, and it takes some time, so we just
+    # Most tests don't need this set up, and it takes some time, so we just
     # make it available as a convenience.
     def get_executable_with_site_packages(requirements=None):
         executable_buildout = test.globs['tmpdir']('executable')
