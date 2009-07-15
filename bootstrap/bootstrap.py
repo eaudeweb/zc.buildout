@@ -150,7 +150,7 @@ if is_jython:
 else: # Windows needs this, apparently; otherwise we would prefer subprocess
     exitcode = os.spawnle(*([os.P_WAIT, sys.executable] + cmd + [env]))
 if exitcode != 0:
-    sys.flush()
+    sys.stdout.flush()
     print ("An error occured when trying to install zc.buildout. "
            "Look above this message for any errors that "
            "were output by easy_install.")
