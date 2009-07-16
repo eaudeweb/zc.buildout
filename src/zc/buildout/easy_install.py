@@ -974,7 +974,7 @@ def develop(setup, dest,
         undo.append(lambda: os.close(fd))
 
         os.write(fd, runsetup_template % dict(
-            setuptools=setuptools_loc,
+            sys_path=',\n    '.join(repr(p) for p in sys.path),
             setupdir=directory,
             setup=setup,
             __file__ = setup,
@@ -1330,8 +1330,10 @@ if _interactive or _force_interactive:
 
 runsetup_template = """
 import sys
-sys.path.insert(0, %(setupdir)r)
-sys.path.insert(0, %(setuptools)r)
+sys.path[:] = [
+    %(setupdir)r,
+    %(sys_path)s
+    ]
 import os, setuptools
 
 __file__ = %(__file__)r
