@@ -874,7 +874,7 @@ class Buildout(UserDict.DictMixin):
         if not args:
             raise zc.buildout.UserError(
                 "The setup command requires the path to a setup script or \n"
-                "directory containing a setup script, and it's arguments."
+                "directory containing a setup script, and its arguments."
                 )
         setup = args.pop(0)
         if os.path.isdir(setup):
@@ -886,7 +886,7 @@ class Buildout(UserDict.DictMixin):
         fd, tsetup = tempfile.mkstemp()
         try:
             os.write(fd, zc.buildout.easy_install.runsetup_template % dict(
-                setuptools=pkg_resources_loc,
+                sys_path=',\n    '.join(repr(p) for p in sys.path),
                 setupdir=os.path.dirname(setup),
                 setup=setup,
                 __file__ = setup,
