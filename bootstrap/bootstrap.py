@@ -107,6 +107,7 @@ if configuration['--version']:
     requirement += '==' + configuration['--version']
 
 try:
+    import setuptools # A flag.  Sometimes pkg_resources is installed alone.
     import pkg_resources
 except ImportError:
     ez = {}
@@ -115,8 +116,12 @@ except ImportError:
     if configuration['--download-base']:
         setuptools_args['download_base'] = configuration['--download-base']
     ez['use_setuptools'](**setuptools_args)
-
     import pkg_resources
+    # This does not (always?) update the default working set.  We will
+    # do it.
+    for path in sys.path:
+        if path not in pkg_resources.working_set.entries:
+            pkg_resources.working_set.add_entry(path)
 
 if sys.platform == 'win32':
     def quote(c):
