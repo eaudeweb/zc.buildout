@@ -395,22 +395,22 @@ The wrong text.
 Configuring the download utility from buildout options
 ------------------------------------------------------
 
-Some aspects of how a download utility is configured are determined by the use
-cache that the calling code covers while others depend on options read from
-the buildout configuration. The latter can be evaluated in a simple and
-uniform way by configuring the download utility with a dictionary of options.
+The configuration options explained so far derive from the build logic
+implemented by the calling code. Other options configure the download utility
+for use in a particular project or buildout run; they are read from the
+``buildout`` configuration section. The latter can be passed directly as the
+first argument to the download utility's constructor.
 
 The location of the download cache is specified by the ``download-cache``
 option:
 
->>> download = Download({'download-cache': '/var/cache/buildout'},
-...                     namespace='cmmi')
+>>> download = Download({'download-cache': cache}, namespace='cmmi')
 >>> print download.cache_dir
-/var/cache/buildout/cmmi
+/download-cache/cmmi
 
 Keyword parameters take precedence over the corresponding options:
 
->>> download = Download({'download-cache': '/var/cache/buildout'}, cache=None)
+>>> download = Download({'download-cache': cache}, cache=None)
 >>> print download.cache_dir
 None
 
