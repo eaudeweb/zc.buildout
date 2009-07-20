@@ -710,20 +710,18 @@ characters, hyphens, and periods.
 Annotated sections
 ------------------
 
-When used with the -A option, buildout displays annotated sections. 
+When used with the `annotate` command, buildout displays annotated sections. 
 All sections are displayed, sorted alphabetically. For each section,
 all key-value pairs are displayed, sorted alphabetically, along with 
 the origin of the value (file name or COMPUTED_VALUE, DEFAULT_VALUE, 
 COMMAND_LINE_VALUE).
 
-    >>> print system(buildout+ ' -A'), # doctest: +ELLIPSIS
+    >>> print system(buildout+ ' annotate'), # doctest: +ELLIPSIS
     <BLANKLINE>
     Annotated sections
     ==================
     <BLANKLINE>
     [buildout]
-    annotate=true
-        COMMAND_LINE_VALUE
     bin-directory=bin
         DEFAULT_VALUE
     develop=recipes
@@ -756,7 +754,6 @@ COMMAND_LINE_VALUE).
         .../_TEST_/sample-buildout/buildout.cfg
     <BLANKLINE>
     <BLANKLINE>
-    ...
 
 Variable substitutions
 ----------------------
@@ -1079,7 +1076,7 @@ Verify option values.
 Annotated sections output shows which files are responsible for which
 operations.
 
-    >>> print system(os.path.join('bin', 'buildout') + ' -A'), # doctest: +ELLIPSIS
+    >>> print system(os.path.join('bin', 'buildout') + ' annotate'), # doctest: +ELLIPSIS
     <BLANKLINE>
     Annotated sections
     ==================
@@ -1718,12 +1715,6 @@ The following options are supported:
     new distributions if installed distributions satisfy it's
     requirements.
 
--A
-    Display annotated sections. All sections are displayed, sorted
-    alphabetically. For each section, all key-value pairs are displayed,
-    sorted alphabetically, along with the origin of the value (file name or 
-    COMPUTED_VALUE, DEFAULT_VALUE, COMMAND_LINE_VALUE).
-
 Assignments are of the form::
 
   section_name:option_name=value
@@ -2126,7 +2117,6 @@ database is shown.
     <BLANKLINE>
     Configuration data:
     [buildout]
-    annotate = false
     bin-directory = /sample-buildout/bin
     develop-eggs-directory = /sample-buildout/develop-eggs
     directory = /sample-buildout

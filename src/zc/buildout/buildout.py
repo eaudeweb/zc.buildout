@@ -118,7 +118,6 @@ _buildout_default_options = _annotate_section({
     'executable': sys.executable,
     'log-level': 'INFO',
     'log-format': '',
-    'annotate': 'false',
     }, 'DEFAULT_VALUE')
 
 
@@ -179,8 +178,6 @@ class Buildout(UserDict.DictMixin):
 
         self._annotated = copy.deepcopy(data)
         self._raw = _unannotate(data)
-        if data['buildout']['annotate'] == 'true':
-            _print_annotate(self._annotated)
         self._data = {}
         self._parts = []
         # provide some defaults before options are parsed
@@ -930,6 +927,9 @@ class Buildout(UserDict.DictMixin):
 
     runsetup = setup # backward compat.
 
+    def annotate(self, args):
+        _print_annotate(self._annotated)
+
     def __getitem__(self, section):
         __doing__ = 'Getting section %s.', section
         try:
@@ -1434,13 +1434,6 @@ Options:
     will be started. This is especially useful for debuging recipe
     problems.
 
-  -A
-
-    Display annotated sections. All sections are displayed, sorted
-    alphabetically. For each section, all key-value pairs are displayed,
-    sorted alphabetically, along with the origin of the value (file name or
-    COMPUTED_VALUE, DEFAULT_VALUE, COMMAND_LINE_VALUE).
-
 Assignments are of the form: section:option=value and are used to
 provide configuration options that override those given in the
 configuration file.  For example, to run the buildout in offline mode,
@@ -1484,6 +1477,13 @@ Commands:
     The script can be given either as a script path or a path to a
     directory containing a setup.py script.
 
+  annotate
+
+    Display annotated sections. All sections are displayed, sorted
+    alphabetically. For each section, all key-value pairs are displayed,
+    sorted alphabetically, along with the origin of the value (file name or
+    COMPUTED_VALUE, DEFAULT_VALUE, COMMAND_LINE_VALUE).
+
 """
 def _help():
     print _usage
@@ -1522,8 +1522,6 @@ def main(args=None):
                     options.append(('buildout', 'newest', 'false'))
                 elif op[0] == 'D':
                     debug = True
-                elif op[0] == 'A':
-                    options.append(('buildout', 'annotate', 'true'))
                 else:
                     _help()
                 op = op[1:]
@@ -1574,6 +1572,7 @@ def main(args=None):
         command = args.pop(0)
         if command not in (
             'install', 'bootstrap', 'runsetup', 'setup', 'init',
+            'annotate',
             ):
             _error('invalid command:', command)
     else:
