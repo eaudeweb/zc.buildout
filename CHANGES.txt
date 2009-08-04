@@ -13,12 +13,27 @@ Change History
 
   * A new boolean option, 'include-site-packages', includes or excludes site
     packages from finding requirements, and from generated scripts.
-    zc.buildout's own buildout.cfg dogfoods this option.
+    zc.buildout's own buildout.cfg dogfoods this option.  This defaults
+    to 'true', which is very similar to buildout's previous behavior.
+
+  * A new boolean option, 'include-site-packages-for-buildout', does the
+    same thing but only for the bin/buildout script.  This can be important
+    for getting recipes and their dependencies without conflicts.  This
+    defaults to 'false', which is different from buildout's previous behavior.
+
+  * Another new option, 'allowed-eggs-from-site-packages', lets you specify
+    a whitelist of project names of eggs that are allowed to come from
+    your Python's site-packages.  This lets you more tightly control your use
+    of site-packages.
 
   * Script generation pushes dependency paths that are in site-packages to
     the end of the dependency paths in sys.path (but, as before, these are
     still before extra paths, the standard library, and the rest of the
     site-package paths).
+
+  * Running "bin/buildout -v" will include output alerting you to selected eggs
+    that came from site-packages, using the pattern
+    "Egg from site-packages: ...".
 
   * Fix an error when at least two dependencies were in a shared location like
     site-packages, and the first one met the "versions" setting.  The first
