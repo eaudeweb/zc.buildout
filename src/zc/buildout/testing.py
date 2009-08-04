@@ -278,6 +278,8 @@ def buildoutSetUp(test):
          # trick bootstrap into putting the buildout develop egg
          # in the eggs dir.
          ('buildout', 'develop-eggs-directory', 'eggs'),
+         # we need to have setuptools around.
+         ('buildout', 'include-site-packages-for-buildout', 'true'),
          ]
         ).bootstrap([])
 

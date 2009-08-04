@@ -21,6 +21,7 @@ $Id$
 """
 
 import distutils.errors
+import fnmatch
 import glob
 import logging
 import os
@@ -202,6 +203,7 @@ class Installer:
     _allow_picked_versions = True
     _always_unzip = False
     _include_site_packages = True
+    _allowed_eggs_from_site_packages = ('*',)
 
     def __init__(self,
                  dest=None,
@@ -214,6 +216,7 @@ class Installer:
                  versions=None,
                  use_dependency_links=None,
                  include_site_packages=None,
+                 allowed_eggs_from_site_packages=None,
                  allow_hosts=('*',)
                  ):
         self._dest = dest
@@ -239,6 +242,9 @@ class Installer:
         path = (path and path[:] or [])
         if include_site_packages is not None:
             self._include_site_packages = include_site_packages
+        if allowed_eggs_from_site_packages is not None:
+            self._allowed_eggs_from_site_packages = tuple(
+                allowed_eggs_from_site_packages)
         stdlib, self._site_packages = _get_system_packages(executable)
         if self._include_site_packages:
             path.extend(buildout_and_setuptools_path)
@@ -260,18 +266,34 @@ class Installer:
         if versions is not None:
             self._versions = versions
 
+    _allowed_eggs_from_site_packages_regex = None
+    def allow_site_package_egg(self, name):
+        if (not self._include_site_packages or
+            not self._allowed_eggs_from_site_packages):
+            # If the answer is a blanket "no," perform a shortcut.
+            return False
+        if self._allowed_eggs_from_site_packages_regex is None:
+            pattern = '(%s)' % (
+                '|'.join(
+                    fnmatch.translate(name)
+                    for name in self._allowed_eggs_from_site_packages),
+                )
+            self._allowed_eggs_from_site_packages_regex = re.compile(pattern)
+        return bool(self._allowed_eggs_from_site_packages_regex.match(name))
+
     def _satisfied(self, req, source=None):
-        # We get all distributions that match the given requirement.  If we
-        # are not supposed to include site-packages, we also filter those out.
-        # We need to do the filtering here even though we have exluded
-        # site packages from the _env's paths (see Installer.__init__) because
-        # an .egg-link, such as one for setuptools or zc.buildout installed
-        # by zc.buildout.buildout.Buildout.bootstrap, can indirectly include
-        # a path in our _site_packages.
+        # We get all distributions that match the given requirement.  If we are
+        # not supposed to include site-packages for the given egg, we also
+        # filter those out. Even if include_site_packages is False and so we
+        # have excluded site packages from the _env's paths (see
+        # Installer.__init__), we need to do the filtering here because an
+        # .egg-link, such as one for setuptools or zc.buildout installed by
+        # zc.buildout.buildout.Buildout.bootstrap, can indirectly include a
+        # path in our _site_packages.
         dists = [dist for dist in self._env[req.project_name] if (
                     dist in req and (
-                        self._include_site_packages or
-                        dist.location not in self._site_packages)
+                        dist.location not in self._site_packages or
+                        self.allow_site_package_egg(dist.project_name))
                     )
                 ]
         if not dists:
@@ -477,18 +499,19 @@ class Installer:
             # Nothing is available.
             return None
 
-        # Filter the available dists for the requirement and source flag. If we
-        # are not supposed to include site-packages, we also filter those out.
-        # We need to do the filtering here even though we have exluded site
-        # packages from the _index's paths (see Installer.__init__) because an
+        # Filter the available dists for the requirement and source flag.  If
+        # we are not supposed to include site-packages for the given egg, we
+        # also filter those out. Even if include_site_packages is False and so
+        # we have excluded site packages from the _env's paths (see
+        # Installer.__init__), we need to do the filtering here because an
         # .egg-link, such as one for setuptools or zc.buildout installed by
         # zc.buildout.buildout.Buildout.bootstrap, can indirectly include a
         # path in our _site_packages.
         dists = [dist for dist in index[requirement.project_name]
                  if ((dist in requirement)
                      and
-                     (self._include_site_packages or
-                      dist.location not in self._site_packages)
+                     (dist.location not in self._site_packages or
+                      self.allow_site_package_egg(dist.project_name))
                      and
                      ((not source) or
                       (dist.precedence == pkg_resources.SOURCE_DIST)
@@ -778,6 +801,8 @@ class Installer:
                     pkg_resources.VersionConflict(dist, req), ws)
             requirements.extend(dist.requires(req.extras)[::-1])
             processed[req] = True
+            if dist.location in self._site_packages:
+                logger.debug('Egg from site-packages: %s', dist)
 
         return ws
 
@@ -879,6 +904,12 @@ def include_site_packages(setting=None):
         Installer._include_site_packages = bool(setting)
     return old
 
+def allowed_eggs_from_site_packages(setting=None):
+    old = Installer._allowed_eggs_from_site_packages
+    if setting is not None:
+        Installer._allowed_eggs_from_site_packages = tuple(setting)
+    return old
+
 def use_dependency_links(setting=None):
     old = Installer._use_dependency_links
     if setting is not None:
@@ -902,10 +933,12 @@ def install(specs, dest,
             executable=sys.executable, always_unzip=None,
             path=None, working_set=None, newest=True, versions=None,
             use_dependency_links=None, include_site_packages=None,
-            allow_hosts=('*',)):
+            allowed_eggs_from_site_packages=None, allow_hosts=('*',)):
     installer = Installer(dest, links, index, executable, always_unzip, path,
                           newest, versions, use_dependency_links,
-                          include_site_packages, allow_hosts=allow_hosts)
+                          include_site_packages,
+                          allowed_eggs_from_site_packages,
+                          allow_hosts=allow_hosts)
     return installer.install(specs, working_set)
 
 
@@ -913,9 +946,11 @@ def build(spec, dest, build_ext,
           links=(), index=None,
           executable=sys.executable,
           path=None, newest=True, versions=None, include_site_packages=None,
-          allow_hosts=('*',)):
+          allowed_eggs_from_site_packages=None, allow_hosts=('*',)):
     installer = Installer(dest, links, index, executable, True, path, newest,
-                          versions, include_site_packages, allow_hosts=allow_hosts)
+                          versions, include_site_packages,
+                          allowed_eggs_from_site_packages,
+                          allow_hosts=allow_hosts)
     return installer.build(spec, build_ext)
 
 
@@ -1011,10 +1046,12 @@ def develop(setup, dest,
         [f() for f in undo]
 
 
-def working_set(specs, executable, path, include_site_packages=None):
+def working_set(specs, executable, path, include_site_packages=None,
+                allowed_eggs_from_site_packages=None):
     return install(
         specs, None, executable=executable, path=path,
-        include_site_packages=include_site_packages)
+        include_site_packages=include_site_packages,
+        allowed_eggs_from_site_packages=allowed_eggs_from_site_packages)
 
 def get_path(working_set, executable, extra_paths=(),
              include_site_packages=True):

@@ -25,8 +25,8 @@ class Eggs(object):
         self.buildout = buildout
         self.name = name
         self.options = options
-        links = options.get('find-links',
-                            buildout['buildout'].get('find-links'))
+        b_options = buildout['buildout']
+        links = options.get('find-links', b_options['find-links'])
         if links:
             links = links.split()
             options['find-links'] = '\n'.join(links)
@@ -34,33 +34,27 @@ class Eggs(object):
             links = ()
         self.links = links
 
-        index = options.get('index', buildout['buildout'].get('index'))
+        index = options.get('index', b_options.get('index'))
         if index is not None:
             options['index'] = index
         self.index = index
 
-        allow_hosts = buildout['buildout'].get('allow-hosts', '*')
+        allow_hosts = b_options['allow-hosts']
         allow_hosts = tuple([host.strip() for host in allow_hosts.split('\n')
                                if host.strip()!=''])
         self.allow_hosts = allow_hosts 
 
-        options['eggs-directory'] = buildout['buildout']['eggs-directory']
+        options['eggs-directory'] = b_options['eggs-directory']
         options['_e'] = options['eggs-directory'] # backward compat.
-        options['develop-eggs-directory'
-                ] = buildout['buildout']['develop-eggs-directory']
+        options['develop-eggs-directory'] = b_options['develop-eggs-directory']
         options['_d'] = options['develop-eggs-directory'] # backward compat.
 
-        assert options.get('unzip') in ('true', 'false', None)
+        # verify that these are None, 'true' or 'false'
+        get_bool(options, 'unzip')
+        get_bool(options, 'include-site-packages')
 
-        python = options.get('python', buildout['buildout']['python'])
+        python = options.get('python', b_options['python'])
         options['executable'] = buildout[python]['executable']
-        include_site_packages = self.options.get(
-            'include-site-packages',
-            self.buildout['buildout'].get('include-site-packages', 'true'))
-        if include_site_packages not in ('true', 'false'):
-            self._error('Invalid value for include-site-packages option: %s',
-                        include_site_packages)
-        self.include_site_packages = (include_site_packages=='true')
 
     def working_set(self, extra=()):
         """Separate method to just get the working set
@@ -68,6 +62,7 @@ class Eggs(object):
         This is intended for reuse by similar recipes.
         """
         options = self.options
+        b_options = self.buildout['buildout']
 
         distributions = [
             r.strip()
@@ -75,18 +70,24 @@ class Eggs(object):
             if r.strip()]
         orig_distributions = distributions[:]
         distributions.extend(extra)
-
+        kw = {
+            'allowed_eggs_from_site_packages': tuple(
+                name.strip() for name in
+                options.get(
+                    'allowed-eggs-from-site-packages',
+                    b_options['allowed-eggs-from-site-packages']).split('\n'))}
+        if 'include-site-packages' in options:
+            kw['include_site_packages'] = get_bool(
+                options, 'include-site-packages')
         if self.buildout['buildout'].get('offline') == 'true':
             ws = zc.buildout.easy_install.working_set(
                 distributions, options['executable'],
                 [options['develop-eggs-directory'], options['eggs-directory']],
-                include_site_packages=self.include_site_packages
+                **kw
                 )
         else:
-            kw = {}
-            if options.get('unzip'):
+            if 'unzip' in options:
                 kw['always_unzip'] = get_bool(options, 'unzip')
-
             ws = zc.buildout.easy_install.install(
                 distributions, options['eggs-directory'],
                 links=self.links,
@@ -95,7 +96,6 @@ class Eggs(object):
                 path=[options['develop-eggs-directory']],
                 newest=self.buildout['buildout'].get('newest') == 'true',
                 allow_hosts=self.allow_hosts,
-                include_site_packages=self.include_site_packages,
                 **kw)
 
         return orig_distributions, ws
@@ -167,6 +167,10 @@ class Scripts(Eggs):
                     if name != 'setuptools' and name not in reqs:
                         reqs.append(name)
 
+            kw = {}
+            if 'include-site-packages' in options:
+                kw['include_site_packages'] = get_bool(
+                    options, 'include-site-packages')
             return zc.buildout.easy_install.scripts(
                 reqs, ws, options['executable'],
                 options['bin-directory'],
@@ -175,8 +179,8 @@ class Scripts(Eggs):
                 interpreter=options.get('interpreter'),
                 initialization=options.get('initialization', ''),
                 arguments=options.get('arguments', ''),
-                include_site_packages=self.include_site_packages,
-                relative_paths=self._relative_paths
+                relative_paths=self._relative_paths,
+                **kw
                 )
 
         return ()
@@ -193,6 +197,6 @@ def get_bool(options, name, default=False):
         return False
     else:
         raise zc.buildout.UserError(
-            "Invalid value for %s: %s" % (name, value))
+            "Invalid value for %s option: %s" % (name, value))
 
 Egg = Scripts

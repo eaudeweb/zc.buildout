@@ -2023,19 +2023,23 @@ database is shown.
 
     >>> print system(buildout+' -vv'),
     Installing 'zc.buildout', 'setuptools'.
-    We have a develop egg: zc.buildout 1.0.0.
+    We have a develop egg: zc.buildout X.X.
     We have the best distribution that satisfies 'setuptools'.
-    Picked: setuptools = 0.6
+    Picked: setuptools = V.V
     <BLANKLINE>
     Configuration data:
     [buildout]
+    allow-hosts = *
     allow-picked-versions = true
+    allowed-eggs-from-site-packages = *
     bin-directory = /sample-buildout/bin
     develop-eggs-directory = /sample-buildout/develop-eggs
     directory = /sample-buildout
     eggs-directory = /sample-buildout/eggs
-    executable = /usr/local/bin/python2.3
+    executable = python
+    find-links = 
     include-site-packages = true
+    include-site-packages-for-buildout = false
     install-from-cache = false
     installed = /sample-buildout/.installed.cfg
     log-format = 
@@ -2055,6 +2059,29 @@ All of these options can be overridden by configuration files or by
 command-line assignments.  We've discussed most of these options
 already, but let's review them and touch on some we haven't discussed:
 
+allow-hosts
+    On some environments the links visited by `zc.buildout` can be forbidden by
+    paranoid firewalls. These URLs might be in the chain of links visited by
+    `zc.buildout` as defined by buildout's `find-links` option, or as defined
+    by various eggs in their `url`, `download_url`, `dependency_links` metadata.
+    
+    The fact that package_index works like a spider and might visit links and
+    go to other locations makes this even harder.
+    
+    The `allow-hosts` option provides a way to prevent this, and
+    works exactly like the one provided in `easy_install`.
+    
+    You can provide a list of allowed host, together with wildcards::
+    
+        [buildout]
+        ...
+    
+        allow-hosts =
+            *.python.org
+            example.com
+    
+    All URLs that does not match these hosts will not be visited.
+
 allow-picked-versions
     By default, the buildout will choose the best match for a given requirement
     if the requirement is not specified precisely (for instance, using the
@@ -2062,6 +2089,35 @@ allow-picked-versions
     "allow-picked-versions" being set to its default value, "true".  If
     "allow-picked-versions" is "false," instead of picking the best match,
     buildout will raise an error.  This helps enforce repeatability.
+
+allowed-eggs-from-site-packages
+    Sometimes you need or want to control what eggs from site-packages are
+    used. The allowed-eggs-from-site-packages option allows you to specify a
+    whitelist of project names that may be included from site-packages.  You
+    can use globs to specify the value.  It defaults to a single value of '*',
+    indicating that any package may come from site-packages.
+
+    Here's a usage example::
+    
+        [buildout]
+        ...
+    
+        allowed-eggs-from-site-packages =
+            demo
+            bigdemo
+            zope.*
+
+    This option interacts with the ``include-site-packages`` option in the
+    following ways.
+    
+    If ``include-site-packages`` is true, then
+    ``allowed-eggs-from-site-packages`` filters what eggs from site-packages
+    may be chosen.  Therefore, if ``allowed-eggs-from-site-packages`` is an
+    empty list, then no eggs from site-packages are chosen, but site-packages
+    will still be included at the end of path lists.
+    
+    If ``include-site-packages`` is false, the value of
+    ``allowed-eggs-from-site-packages`` is irrelevant.
 
 bin-directory
    The directory path where scripts are written.  This can be a
@@ -2087,6 +2143,38 @@ executable
    The Python executable used to run the buildout.  See the python
    option below.
 
+find-links
+    You can specify more locations to search for distributions using the
+    `find-links` option. All locations specified will be searched for
+    distributions along with the package index as described before.
+    
+    Locations can be urls::
+    
+      [buildout]
+      ...
+      find-links = http://download.zope.org/distribution/
+    
+    They can also be directories on disk::
+    
+      [buildout]
+      ...
+      find-links = /some/path
+    
+    Finally, they can also be direct paths to distributions::
+    
+      [buildout]
+      ...
+      find-links = /some/path/someegg-1.0.0-py2.3.egg
+    
+    Any number of locations can be specified in the `find-links` option::
+    
+      [buildout]
+      ...
+      find-links =
+          http://download.zope.org/distribution/
+          /some/otherpath
+          /some/path/someegg-1.0.0-py2.3.egg
+
 include-site-packages
     By default, buildout will look for dependencies in the system's
     site-packages.  For this purpose, paths outside of Python's standard
@@ -2095,6 +2183,27 @@ include-site-packages
     here.  The include-site-packages buildout option can be used to override
     the default behavior of using site packages
     ("include-site-packages = false").
+
+include-site-packages-for-buildout
+    When buildout gets a recipe egg (as opposed to runs a recipe), it starts
+    with the current Python working set--the one that the bin/buildout script
+    uses itself. If this working set includes site-packages, and site-packages
+    includes an egg for a package that the recipe needs, *and* the recipe
+    specifies a newer version of that package, this can generate a version
+    conflict.
+    
+    One solution to this is to not use site-packages
+    (``include-site-packages = false``).  However, if you want your scripts to
+    use site-packages, then you have to specify 'include-site-packages = true'
+    for all of them.
+    
+    To make this use case easier to handle, you can instead specify
+    ``include-site-packages-with-buildout = false``, which indicates that the
+    bin/buildout should *not* use site-packages; and
+    ``include-site-packages = true``, which indicates that the rest of the
+    scripts should use site-packages.
+    
+    This is the default configuration.
 
 install-from-cache
     A download cache can be used as the basis of application source releases. 
@@ -2197,7 +2306,6 @@ verbosity
    A log-level adjustment.  Typically, this is set via the -q and -v
    command-line options.
 
-
 Creating new buildouts and bootstrapping
 ----------------------------------------
 
@@ -2209,6 +2317,7 @@ local buildout scripts.
 
     >>> print system(buildout
     ...              +' -c'+os.path.join(sample_bootstrapped, 'setup.cfg')
+    ...              +' buildout:include-site-packages-for-buildout=true'
     ...              +' init'),
     Creating '/sample-bootstrapped/setup.cfg'.
     Creating directory '/sample-bootstrapped/bin'.
@@ -2246,30 +2355,31 @@ If we have an existing buildout that already has a buildout.cfg, we'll
 normally use the bootstrap command instead of init.  It will complain
 if there isn't a configuration file:
 
-     >>> sample_bootstrapped2 = tmpdir('sample-bootstrapped2')
-
-     >>> print system(buildout
-     ...              +' -c'+os.path.join(sample_bootstrapped2, 'setup.cfg')
-     ...              +' bootstrap'),
-     While:
-       Initializing.
-     Error: Couldn't open /sample-bootstrapped2/setup.cfg
-
-     >>> write(sample_bootstrapped2, 'setup.cfg',
-     ... """
-     ... [buildout]
-     ... parts =
-     ... """)
+    >>> sample_bootstrapped2 = tmpdir('sample-bootstrapped2')
 
     >>> print system(buildout
     ...              +' -c'+os.path.join(sample_bootstrapped2, 'setup.cfg')
+    ...              +' buildout:include-site-packages-for-buildout=true'
+    ...              +' bootstrap'),
+    While:
+      Initializing.
+    Error: Couldn't open /sample-bootstrapped2/setup.cfg
+
+    >>> write(sample_bootstrapped2, 'setup.cfg',
+    ... """
+    ... [buildout]
+    ... parts =
+    ... """)
+
+    >>> print system(buildout
+    ...              +' -c'+os.path.join(sample_bootstrapped2, 'setup.cfg')
+    ...              +' buildout:include-site-packages-for-buildout=true'
     ...              +' bootstrap'),
     Creating directory '/sample-bootstrapped2/bin'.
     Creating directory '/sample-bootstrapped2/parts'.
     Creating directory '/sample-bootstrapped2/eggs'.
     Creating directory '/sample-bootstrapped2/develop-eggs'.
     Generated script '/sample-bootstrapped2/bin/buildout'.
-
 
 Finding distributions
 ---------------------
@@ -2289,35 +2399,7 @@ distributions. The latest version of the distribution that meets the
 requirements of the buildout will always be used.
 
 You can also specify more locations to search for distributions using
-the `find-links` option. All locations specified will be searched for
-distributions along with the package index as described before.
-
-Locations can be urls::
-
-  [buildout]
-  ...
-  find-links = http://download.zope.org/distribution/
-
-They can also be directories on disk::
-
-  [buildout]
-  ...
-  find-links = /some/path
-
-Finally, they can also be direct paths to distributions::
-
-  [buildout]
-  ...
-  find-links = /some/path/someegg-1.0.0-py2.3.egg
-
-Any number of locations can be specified in the `find-links` option::
-
-  [buildout]
-  ...
-  find-links =
-      http://download.zope.org/distribution/
-      /some/otherpath
-      /some/path/someegg-1.0.0-py2.3.egg
+the `find-links` option. See its description above.
 
 
 Controlling the installation database
@@ -2480,32 +2562,6 @@ We see that our extension is loaded and executed:
     ext ['buildout']
     Develop: '/sample-bootstrapped/demo'
     unload ['buildout']
-
-Allow hosts
------------
-
-On some environments the links visited by `zc.buildout` can be forbidden
-by paranoiac firewalls. These URL might be on the chain of links
-visited by `zc.buildout` wheter they are defined in the `find-links` option,
-wheter they are defined by various eggs in their `url`, `download_url`,
-`dependency_links` metadata.
-
-It is even harder to track that package_index works like a spider and
-might visit links and go to other location.
-
-The `allow-hosts` option provides a way to prevent this, and
-works exactly like the one provided in `easy_install`.
-
-You can provide a list of allowed host, together with wildcards::
-
-    [buildout]
-    ...
-
-    allow-hosts =
-        *.python.org
-        example.com
-
-All urls that does not match these hosts will not be visited.
 
 .. [#future_recipe_methods] In the future, additional methods may be
        added. Older recipes with fewer methods will still be
