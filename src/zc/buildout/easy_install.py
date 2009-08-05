@@ -1082,17 +1082,14 @@ def get_path(working_set, executable, extra_paths=(),
             postponed.append(location)
         elif location in site_packages:
             postponed.append(location)
+            site_packages.remove(location)
         elif location not in postponed:
             path.append(location)
     path.extend(postponed)
     path.extend(extra_paths)
     # now we add in all paths
     if include_site_packages:
-        # err a bit on the side of cleanliness, avoiding dupes just to look
-        # pretty.
-        for location in site_packages:
-            if location not in path:
-                path.append(location)
+        path.extend(site_packages) # these are the remaining site_packages
     path.extend(stdlib)
     path = map(realpath, path)
     return path
