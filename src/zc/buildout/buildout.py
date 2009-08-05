@@ -364,8 +364,7 @@ class Buildout(UserDict.DictMixin):
         zc.buildout.easy_install.scripts(
             ['zc.buildout'], ws, options['executable'],
             options['bin-directory'],
-            include_site_packages=
-                zc.buildout.easy_install.include_site_packages())
+            include_site_packages=self.include_site_packages_for_buildout)
 
     init = bootstrap
 
