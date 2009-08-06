@@ -14,7 +14,7 @@
 """Python easy_install API
 
 This module provides a high-level Python API for installing packages.
-It doesn't install scripts.  It uses setuptools and requires it to be
+It doesn't install scripts.  It uses distribute and requires it to be
 installed.
 
 $Id$
@@ -61,7 +61,7 @@ if is_jython:
 
 
 setuptools_loc = pkg_resources.working_set.find(
-    pkg_resources.Requirement.parse('setuptools')
+    pkg_resources.Requirement.parse('distribute')
     ).location
 
 # Include buildout and setuptools eggs in paths
@@ -301,7 +301,7 @@ class Installer:
         tmp = tempfile.mkdtemp(dir=dest)
         try:
             path = self._get_dist(
-                self._constrain(pkg_resources.Requirement.parse('setuptools')),
+                self._constrain(pkg_resources.Requirement.parse('distribute')),
                 ws, False,
                 )[0].location
 
@@ -594,7 +594,7 @@ class Installer:
     def _maybe_add_setuptools(self, ws, dist):
         if dist.has_metadata('namespace_packages.txt'):
             for r in dist.requires():
-                if r.project_name == 'setuptools':
+                if r.project_name == 'distribute':
                     break
             else:
                 # We have a namespace package but no requirement for setuptools
@@ -602,10 +602,10 @@ class Installer:
                     logger.warn(
                         "Develop distribution: %s\n"
                         "uses namespace packages but the distribution "
-                        "does not require setuptools.",
+                        "does not require distribute.",
                         dist)
                 requirement = self._constrain(
-                    pkg_resources.Requirement.parse('setuptools')
+                    pkg_resources.Requirement.parse('distribute')
                     )
                 if ws.find(requirement) is None:
                     for dist in self._get_dist(requirement, ws, False):
@@ -1047,7 +1047,7 @@ def _script(module_name, attrs, path, dest, executable, arguments,
     if is_win32:
         # generate exe file and give the script a magic name:
         exe = script+'.exe'
-        new_data = pkg_resources.resource_string('setuptools', 'cli.exe')
+        new_data = pkg_resources.resource_string('distirbute', 'cli.exe')
         if not os.path.exists(exe) or (open(exe, 'rb').read() != new_data):
             # Only write it if it's different.
             open(exe, 'wb').write(new_data)
@@ -1103,7 +1103,7 @@ def _pyscript(path, dest, executable, rsetup):
         # generate exe file and give the script a magic name:
         exe = script + '.exe'
         open(exe, 'wb').write(
-            pkg_resources.resource_string('setuptools', 'cli.exe')
+            pkg_resources.resource_string('distribute', 'cli.exe')
             )
         generated.append(exe)
 

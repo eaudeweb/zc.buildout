@@ -40,7 +40,7 @@ fsync = getattr(os, 'fsync', lambda fileno: None)
 is_win32 = sys.platform == 'win32'
 
 setuptools_location = pkg_resources.working_set.find(
-    pkg_resources.Requirement.parse('setuptools')).location
+    pkg_resources.Requirement.parse('distribute')).location
 
 def cat(dir, *names):
     path = os.path.join(dir, *names)
