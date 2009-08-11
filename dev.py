@@ -47,9 +47,8 @@ subprocess.Popen(
 
 pkg_resources.working_set.add_entry('src')
 
-import zc.buildout.easy_install
-zc.buildout.easy_install.scripts(
-    ['zc.buildout'], pkg_resources.working_set , sys.executable, 'bin')
+import zc.buildout.buildout
+zc.buildout.buildout.main(['bootstrap'])
 
 bin_buildout = os.path.join('bin', 'buildout')
 

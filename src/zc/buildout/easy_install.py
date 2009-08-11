@@ -1056,19 +1056,19 @@ def working_set(specs, executable, path, include_site_packages=None,
 def get_path(working_set, executable, extra_paths=(),
              include_site_packages=True):
     """Given working set and path to executable, return value for sys.path.
-    
+
     Distribution locations from the working set come first in the list.  Within
     that collection, this function pushes site-packages-based distribution
     locations to the end of the list, so that they don't mask eggs.
-    
+
     This expects that the working_set has already been created to honor a
     include_site_packages setting.  That is, if include_site_packages is False,
     this function does *not* verify that the working_set's distributions are
     not in site packages.
-    
+
     However, it does explicitly include site packages if include_site_packages
     is True.
-    
+
     The standard library (defined as what the given Python executable has on
     the path before its site.py is run) is always included.
     """
@@ -1260,8 +1260,9 @@ else:
 script_template = script_header + '''\
 
 %(relative_paths_setup)s
-import sys
-sys.path[:] = [
+import sys, os
+pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+sys.path[:] = pythonpath + [
     %(path)s,
     ]
 %(initialization)s
@@ -1309,7 +1310,7 @@ py_script_template = script_header + '''\
 globs = globals().copy() # get a clean copy early
 
 %(relative_paths_setup)s
-import sys
+import sys, os
 
 _set_path = _interactive = True
 _force_interactive = False
@@ -1345,6 +1346,8 @@ if _set_path:
     sys.path[:] = [
     %(path)s,
     ]
+pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+sys.path[0:0] = pythonpath
 sys.path.insert(0, '.')
 
 sys.argv[:] = _args
@@ -1463,4 +1466,3 @@ def redo_pyc(egg):
                     subprocess.call([sys.executable, args])
                 else:
                     os.spawnv(os.P_WAIT, sys.executable, args)
-

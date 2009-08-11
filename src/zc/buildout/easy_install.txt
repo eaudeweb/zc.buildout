@@ -650,8 +650,9 @@ The demo script run the entry point defined in the demo egg:
     >>> cat(bin, 'demo') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
-    import sys
-    sys.path[:] = [
+    import sys, os
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    sys.path[:] = pythonpath + [
         '/sample-install/demo-0.3-py2.4.egg',
         '/sample-install/demoneeded-1.1-py2.4.egg',
         ...
@@ -689,8 +690,9 @@ rather than passing a requirement:
     >>> cat(bin, 'demo') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
-    import sys
-    sys.path[:] = [
+    import sys, os
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    sys.path[:] = pythonpath + [
         '/sample-install/demo-0.3-py2.4.egg',
         '/sample-install/demoneeded-1.1-py2.4.egg',
         ...
@@ -735,7 +737,7 @@ the path set:
     #!/usr/local/bin/python2.4
     globs = globals().copy() # get a clean copy early
     <BLANKLINE>
-    import sys
+    import sys, os
     <BLANKLINE>
     _set_path = _interactive = True
     _force_interactive = False
@@ -773,6 +775,8 @@ the path set:
         '/sample-install/demoneeded-1.1-pyN.N.egg',
         ...
         ]
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    sys.path[0:0] = pythonpath
     sys.path.insert(0, '.')
     <BLANKLINE>
     sys.argv[:] = _args
@@ -825,8 +829,9 @@ to be included in the a generated script:
     >>> cat(bin, 'run') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
-    import sys
-    sys.path[:] = [
+    import sys, os
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    sys.path[:] = pythonpath + [
       '/sample-install/demo-0.3-py2.4.egg',
       '/sample-install/demoneeded-1.1-py2.4.egg',
       '/foo',
@@ -846,7 +851,7 @@ We have already seen that we have a precise definition for a loose term:
 precisely, those that are not included when Python is started with the -S
 argument--are loosely referred to as "site-packages" here.
 
-When generating scripts, paths that come from the site-packages are ordered 
+When generating scripts, paths that come from the site-packages are ordered
 after the other specific dependencies generated from the working set.  This
 is so that directories such as "site-packages" that can contain multiple
 dependencies come after the more specific distributions found by setuptools,
@@ -913,8 +918,9 @@ parentheses in the call:
 
     >>> cat(bin, 'run') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
-    import sys
-    sys.path[:] = [
+    import sys, os
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    sys.path[:] = pythonpath + [
       '/sample-install/demo-0.3-py2.4.egg',
       '/sample-install/demoneeded-1.1-py2.4.egg',
       ...
@@ -937,8 +943,9 @@ You can also pass script initialization code:
 
     >>> cat(bin, 'run') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
-    import sys
-    sys.path[:] = [
+    import sys, os
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    sys.path[:] = pythonpath + [
         '/sample-install/demo-0.3-py2.4.egg',
         '/sample-install/demoneeded-1.1-py2.4.egg',
         ...
@@ -985,8 +992,9 @@ to pass a common base directory of the scripts and eggs:
     base = os.path.dirname(os.path.abspath(__file__))
     base = os.path.dirname(base)
     <BLANKLINE>
-    import sys
-    sys.path[:] = [
+    import sys, os
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    sys.path[:] = pythonpath + [
         join(base, 'eggs/demo-0.3-pyN.N.egg'),
         join(base, 'eggs/demoneeded-1.1-pyN.N.egg'),
         '/ba',
@@ -1020,7 +1028,7 @@ We specified an interpreter and its paths are adjusted too:
     base = os.path.dirname(os.path.abspath(__file__))
     base = os.path.dirname(base)
     <BLANKLINE>
-    import sys
+    import sys, os
     <BLANKLINE>
     _set_path = _interactive = True
     _force_interactive = False
@@ -1060,6 +1068,8 @@ We specified an interpreter and its paths are adjusted too:
         join(base, 'bar'),
         ...,
         ]
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    sys.path[0:0] = pythonpath
     sys.path.insert(0, '.')
     <BLANKLINE>
     sys.argv[:] = _args

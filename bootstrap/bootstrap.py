@@ -39,7 +39,7 @@ helpstring = __doc__ + textwrap.dedent('''
     any of the following options *and* buildout command-line options like
     -c, first use the following options, and then use the buildout options.
 
-    Options: 
+    Options:
       --version=ZC_BUILDOUT_VERSION
                 Specify a version number of the zc.buildout to use
       --ez_setup-source=URL_OR_FILE

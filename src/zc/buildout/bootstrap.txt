@@ -127,7 +127,7 @@ other bootstrap options.
     >>> write('ez_setup.py', '''\
     ... def use_setuptools(**kwargs):
     ...     import sys, pprint
-    ...     pprint.pprint(kwargs)
+    ...     pprint.pprint(kwargs, width=40)
     ...     sys.exit()
     ... ''')
     >>> print system(
@@ -155,7 +155,7 @@ Here's the entire help text.
 
     >>> print system(
     ...     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
-    ...     'bootstrap.py --help')
+    ...     'bootstrap.py --help'),
     ... # doctest: +ELLIPSIS
     Bootstrap a buildout-based project
     <BLANKLINE>
@@ -171,7 +171,7 @@ Here's the entire help text.
     any of the following options *and* buildout command-line options like
     -c, first use the following options, and then use the buildout options.
     <BLANKLINE>
-    Options: 
+    Options:
       --version=ZC_BUILDOUT_VERSION
                 Specify a version number of the zc.buildout to use
       --ez_setup-source=URL_OR_FILE
@@ -188,6 +188,3 @@ Here's the entire help text.
     By using --ez_setup-source and --download-base to point to local resources,
     you can keep this script from going over the network.
     <BLANKLINE>
-    <BLANKLINE>
-
-

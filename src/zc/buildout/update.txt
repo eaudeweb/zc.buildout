@@ -21,7 +21,7 @@ Let's update the sample buildout.cfg to look in this area:
     ... index = %(new_releases)s
     ... parts = show-versions
     ... develop = showversions
-    ... 
+    ...
     ... [show-versions]
     ... recipe = showversions
     ... """ % dict(new_releases=new_releases))
@@ -31,7 +31,7 @@ zc.buildout used:
 
     >>> mkdir(sample_buildout, 'showversions')
 
-    >>> write(sample_buildout, 'showversions', 'showversions.py', 
+    >>> write(sample_buildout, 'showversions', 'showversions.py',
     ... """
     ... import pkg_resources
     ...
@@ -52,7 +52,7 @@ zc.buildout used:
     >>> write(sample_buildout, 'showversions', 'setup.py',
     ... """
     ... from setuptools import setup
-    ... 
+    ...
     ... setup(
     ...     name = "showversions",
     ...     entry_points = {'zc.buildout': ['default = showversions:Recipe']},
@@ -83,8 +83,9 @@ Our buildout script has been updated to use the new eggs:
     >>> cat(sample_buildout, 'bin', 'buildout') # doctest: +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
-    import sys
-    sys.path[:] = [
+    import sys, os
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    sys.path[:] = pythonpath + [
         '/sample-buildout/eggs/zc.buildout-99.99-py2.4.egg',
         '/sample-buildout/eggs/setuptools-99.99-py2.4.egg',
         ...
@@ -108,7 +109,7 @@ buildout will install earlier versions of these packages:
     ... develop = showversions
     ... zc.buildout-version = < 99
     ... setuptools-version = < 99
-    ... 
+    ...
     ... [show-versions]
     ... recipe = showversions
     ... """ % dict(new_releases=new_releases))
@@ -127,7 +128,7 @@ Now we can see that we actually "upgrade" to an earlier version.
     setuptools 0.6
 
 There are a number of cases, described below, in which the updates
-don't happen. 
+don't happen.
 
 We won't upgrade in offline mode:
 
@@ -138,7 +139,7 @@ We won't upgrade in offline mode:
     ... index = %(new_releases)s
     ... parts = show-versions
     ... develop = showversions
-    ... 
+    ...
     ... [show-versions]
     ... recipe = showversions
     ... """ % dict(new_releases=new_releases))
@@ -167,9 +168,9 @@ directory:
     ... [buildout]
     ... find-links = %(new_releases)s
     ... index = %(new_releases)s
-    ... parts = 
+    ... parts =
     ... """ % dict(new_releases=new_releases))
-    
+
     >>> cd(sample_buildout2)
     >>> print system(buildout),
     Creating directory '/sample_buildout2/bin'.
