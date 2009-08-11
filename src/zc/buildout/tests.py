@@ -2978,6 +2978,7 @@ allowed, because we see that we were unable to get "other".
     ... eggs = other
     ... ''' % globals())
     >>> print system(primed_executable+" "+buildout)
+    Uninstalling eggs.
     Installing eggs.
     Couldn't find index page for 'other' (maybe misspelled?)
     Getting distribution for 'other'.
