@@ -1261,7 +1261,7 @@ script_template = script_header + '''\
 
 %(relative_paths_setup)s
 import sys, os
-pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
 sys.path[:] = pythonpath + [
     %(path)s,
     ]
@@ -1346,7 +1346,7 @@ if _set_path:
     sys.path[:] = [
     %(path)s,
     ]
-pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
 sys.path[0:0] = pythonpath
 sys.path.insert(0, '.')
 
