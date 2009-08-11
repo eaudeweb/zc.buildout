@@ -116,12 +116,19 @@ def _runsetup(setup, executable, *args):
     args = [zc.buildout.easy_install._safe_arg(arg)
             for arg in args]
     args.insert(0, '-q')
-    args.append(dict(os.environ, PYTHONPATH=setuptools_location))
+
+    env = dict(os.environ)
+    if executable == sys.executable:
+        env['PYTHONPATH'] = setuptools_location
+    # else pass an executable that has setuptools!  See testselectingpython.py.
+    args.append(env)
 
     here = os.getcwd()
     try:
         os.chdir(d)
-        os.spawnle(os.P_WAIT, executable, zc.buildout.easy_install._safe_arg (executable), setup, *args)
+        os.spawnle(os.P_WAIT, executable,
+                   zc.buildout.easy_install._safe_arg(executable),
+                   setup, *args)
         if os.path.exists('build'):
             rmtree('build')
     finally:
@@ -132,6 +139,11 @@ def sdist(setup, dest):
 
 def bdist_egg(setup, executable, dest):
     _runsetup(setup, executable, 'bdist_egg', '-d', dest)
+
+def sys_install(setup, dest):
+    _runsetup(setup, sys.executable, 'install', '--home', dest,
+              '--single-version-externally-managed',
+              '--record', os.path.join(dest, 'added'))
 
 def find_python(version):
     e = os.environ.get('PYTHON%s' % version)
@@ -266,13 +278,15 @@ def buildoutSetUp(test):
          # trick bootstrap into putting the buildout develop egg
          # in the eggs dir.
          ('buildout', 'develop-eggs-directory', 'eggs'),
+         # we need to have setuptools around.
+         ('buildout', 'include-site-packages-for-buildout', 'true'),
          ]
         ).bootstrap([])
 
 
 
     # Create the develop-eggs dir, which didn't get created the usual
-    # way due to thr trick above:
+    # way due to the trick above:
     os.mkdir('develop-eggs')
 
     def start_server(path):

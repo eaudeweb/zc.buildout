@@ -21,6 +21,7 @@ $Id$
 """
 
 import distutils.errors
+import fnmatch
 import glob
 import logging
 import os
@@ -64,12 +65,54 @@ setuptools_loc = pkg_resources.working_set.find(
     pkg_resources.Requirement.parse('setuptools')
     ).location
 
-# Include buildout and setuptools eggs in paths
-buildout_and_setuptools_path = [
-    setuptools_loc,
-    pkg_resources.working_set.find(
-        pkg_resources.Requirement.parse('zc.buildout')).location,
-    ]
+# Include buildout and setuptools eggs in paths.  We prevent dupes just to
+# keep from duplicating any log messages about them.
+buildout_loc = pkg_resources.working_set.find(
+    pkg_resources.Requirement.parse('zc.buildout')).location
+buildout_and_setuptools_path = [setuptools_loc]
+if os.path.normpath(setuptools_loc) != os.path.normpath(buildout_loc):
+    buildout_and_setuptools_path.append(buildout_loc)
+
+def _get_system_packages(executable):
+    """return a pair of the standard lib and site packages for the executable.
+    """
+    # We want to get a list of the site packages, which is not easy.  The
+    # canonical way to do this is to use distutils.sysconfig.get_python_lib(),
+    # but that only returns a single path, which does not reflect reality for
+    # many system Pythons, which have multiple additions.  Instead, we start
+    # Python with -S, which does not import site.py and set up the extra paths
+    # like site-packages or (Ubuntu/Debian) dist-packages and python-support.
+    # We then compare that sys.path with the normal one.  The set of the normal
+    # one minus the set of the ones in ``python -S`` is the set of packages
+    # that are effectively site-packages.
+    def get_sys_path(clean=False):
+        cmd = [executable, "-c",
+               "import sys, os;"
+               "print repr([os.path.normpath(p) for p in sys.path])"]
+        if clean:
+            cmd.insert(1, '-S')
+        _proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = _proc.communicate();
+        if _proc.returncode:
+            raise RuntimeError(
+                'error trying to get system packages:\n%s' % (stderr,))
+        res = eval(stdout)
+        try:
+            res.remove('.')
+        except ValueError:
+            pass
+        return res
+    stdlib = get_sys_path(clean=True)
+    # The given executable might not be the current executable, so it is
+    # appropriate to do another subprocess to figure out what the additional
+    # site-package paths are. Moreover, even if this executable *is* the
+    # current executable, this code might be run in the context of code that
+    # has manipulated the sys.path--for instance, to add local zc.buildout or
+    # setuptools eggs.
+    site_packages = [p for p in get_sys_path() if p not in stdlib]
+    return (stdlib, site_packages)
+
 
 class IncompatibleVersionError(zc.buildout.UserError):
     """A specified version is incompatible with a given requirement.
@@ -99,6 +142,7 @@ def _get_version(executable):
 
 FILE_SCHEME = re.compile('file://', re.I).match
 
+
 class AllowHostsPackageIndex(setuptools.package_index.PackageIndex):
     """Will allow urls that are local to the system.
 
@@ -111,7 +155,12 @@ class AllowHostsPackageIndex(setuptools.package_index.PackageIndex):
 
 
 _indexes = {}
-def _get_index(executable, index_url, find_links, allow_hosts=('*',)):
+def _get_index(executable, index_url, find_links, allow_hosts=('*',),
+               path=None):
+    # If path is None, the index will use sys.path.  If you provide an empty
+    # path ([]), it will complain uselessly about missing index pages for
+    # packages found in the paths that you expect to use.  Therefore, this path
+    # is always the same as the _env path in the Installer.
     key = executable, index_url, tuple(find_links)
     index = _indexes.get(key)
     if index is not None:
@@ -120,7 +169,8 @@ def _get_index(executable, index_url, find_links, allow_hosts=('*',)):
     if index_url is None:
         index_url = default_index_url
     index = AllowHostsPackageIndex(
-        index_url, hosts=allow_hosts, python=_get_version(executable)
+        index_url, hosts=allow_hosts, search_path=path,
+        python=_get_version(executable)
         )
 
     if find_links:
@@ -152,6 +202,8 @@ class Installer:
     _use_dependency_links = True
     _allow_picked_versions = True
     _always_unzip = False
+    _include_site_packages = True
+    _allowed_eggs_from_site_packages = ('*',)
 
     def __init__(self,
                  dest=None,
@@ -163,6 +215,8 @@ class Installer:
                  newest=True,
                  versions=None,
                  use_dependency_links=None,
+                 include_site_packages=None,
+                 allowed_eggs_from_site_packages=None,
                  allow_hosts=('*',)
                  ):
         self._dest = dest
@@ -185,7 +239,19 @@ class Installer:
         self._executable = executable
         if always_unzip is not None:
             self._always_unzip = always_unzip
-        path = (path and path[:] or []) + buildout_and_setuptools_path
+        path = (path and path[:] or [])
+        if include_site_packages is not None:
+            self._include_site_packages = include_site_packages
+        if allowed_eggs_from_site_packages is not None:
+            self._allowed_eggs_from_site_packages = tuple(
+                allowed_eggs_from_site_packages)
+        stdlib, self._site_packages = _get_system_packages(executable)
+        if self._include_site_packages:
+            path.extend(buildout_and_setuptools_path)
+            path.extend(self._site_packages)
+        # else we could try to still include the buildout_and_setuptools_path
+        # if the elements are not in site_packages, but we're not bothering
+        # with this optimization for now, in the name of code simplicity.
         if dest is not None and dest not in path:
             path.insert(0, dest)
         self._path = path
@@ -194,13 +260,42 @@ class Installer:
         self._newest = newest
         self._env = pkg_resources.Environment(path,
                                               python=_get_version(executable))
-        self._index = _get_index(executable, index, links, self._allow_hosts)
+        self._index = _get_index(executable, index, links, self._allow_hosts,
+                                 self._path)
 
         if versions is not None:
             self._versions = versions
 
+    _allowed_eggs_from_site_packages_regex = None
+    def allow_site_package_egg(self, name):
+        if (not self._include_site_packages or
+            not self._allowed_eggs_from_site_packages):
+            # If the answer is a blanket "no," perform a shortcut.
+            return False
+        if self._allowed_eggs_from_site_packages_regex is None:
+            pattern = '(%s)' % (
+                '|'.join(
+                    fnmatch.translate(name)
+                    for name in self._allowed_eggs_from_site_packages),
+                )
+            self._allowed_eggs_from_site_packages_regex = re.compile(pattern)
+        return bool(self._allowed_eggs_from_site_packages_regex.match(name))
+
     def _satisfied(self, req, source=None):
-        dists = [dist for dist in self._env[req.project_name] if dist in req]
+        # We get all distributions that match the given requirement.  If we are
+        # not supposed to include site-packages for the given egg, we also
+        # filter those out. Even if include_site_packages is False and so we
+        # have excluded site packages from the _env's paths (see
+        # Installer.__init__), we need to do the filtering here because an
+        # .egg-link, such as one for setuptools or zc.buildout installed by
+        # zc.buildout.buildout.Buildout.bootstrap, can indirectly include a
+        # path in our _site_packages.
+        dists = [dist for dist in self._env[req.project_name] if (
+                    dist in req and (
+                        dist.location not in self._site_packages or
+                        self.allow_site_package_egg(dist.project_name))
+                    )
+                ]
         if not dists:
             logger.debug('We have no distributions for %s that satisfies %r.',
                          req.project_name, str(req))
@@ -346,8 +441,8 @@ class Installer:
 
             if exit_code:
                 logger.error(
-                    "An error occured when trying to install %s."
-                    "Look above this message for any errors that"
+                    "An error occured when trying to install %s. "
+                    "Look above this message for any errors that "
                     "were output by easy_install.",
                     dist)
 
@@ -404,9 +499,19 @@ class Installer:
             # Nothing is available.
             return None
 
-        # Filter the available dists for the requirement and source flag
+        # Filter the available dists for the requirement and source flag.  If
+        # we are not supposed to include site-packages for the given egg, we
+        # also filter those out. Even if include_site_packages is False and so
+        # we have excluded site packages from the _env's paths (see
+        # Installer.__init__), we need to do the filtering here because an
+        # .egg-link, such as one for setuptools or zc.buildout installed by
+        # zc.buildout.buildout.Buildout.bootstrap, can indirectly include a
+        # path in our _site_packages.
         dists = [dist for dist in index[requirement.project_name]
                  if ((dist in requirement)
+                     and
+                     (dist.location not in self._site_packages or
+                      self.allow_site_package_egg(dist.project_name))
                      and
                      ((not source) or
                       (dist.precedence == pkg_resources.SOURCE_DIST)
@@ -571,7 +676,7 @@ class Installer:
                         self._links.append(link)
                         self._index = _get_index(self._executable,
                                                  self._index_url, self._links,
-                                                 self._allow_hosts)
+                                                 self._allow_hosts, self._path)
 
         for dist in dists:
             # Check whether we picked a version and, if we did, report it:
@@ -630,9 +735,9 @@ class Installer:
         logger.debug('Installing %s.', repr(specs)[1:-1])
 
         path = self._path
-        dest = self._dest
-        if dest is not None and dest not in path:
-            path.insert(0, dest)
+        destination = self._dest
+        if destination is not None and destination not in path:
+            path.insert(0, destination)
 
         requirements = [self._constrain(pkg_resources.Requirement.parse(spec))
                         for spec in specs]
@@ -650,34 +755,54 @@ class Installer:
                 self._maybe_add_setuptools(ws, dist)
 
         # OK, we have the requested distributions and they're in the working
-        # set, but they may have unmet requirements.  We'll simply keep
-        # trying to resolve requirements, adding missing requirements as they
-        # are reported.
+        # set, but they may have unmet requirements.  We'll resolve these
+        # requirements. This is code modified from
+        # pkg_resources.WorkingSet.resolve.  We can't reuse that code directly
+        # because we have to constrain our requirements (see
+        # versions_section_ignored_for_dependency_in_favor_of_site_packages in
+        # zc.buildout.tests).
         #
-        # Note that we don't pass in the environment, because we want
+        requirements.reverse() # Set up the stack.
+        processed = {}  # This is a set of processed requirements.
+        best = {}  # This is a mapping of key -> dist.
+        #
+        # Note that we don't use the existing environment, because we want
         # to look for new eggs unless what we have is the best that
         # matches the requirement.
-        while 1:
-            try:
-                ws.resolve(requirements)
-            except pkg_resources.DistributionNotFound, err:
-                [requirement] = err
-                requirement = self._constrain(requirement)
-                if dest:
-                    logger.debug('Getting required %r', str(requirement))
-                else:
-                    logger.debug('Adding required %r', str(requirement))
-                _log_requirement(ws, requirement)
-
-                for dist in self._get_dist(requirement, ws, self._always_unzip
-                                           ):
-
-                    ws.add(dist)
-                    self._maybe_add_setuptools(ws, dist)
-            except pkg_resources.VersionConflict, err:
-                raise VersionConflict(err, ws)
-            else:
-                break
+        env = pkg_resources.Environment(ws.entries)
+        while requirements:
+            # Process dependencies breadth-first.
+            req = self._constrain(requirements.pop(0))
+            if req in processed:
+                # Ignore cyclic or redundant dependencies.
+                continue
+            dist = best.get(req.key)
+            if dist is None:
+                # Find the best distribution and add it to the map.
+                dist = ws.by_key.get(req.key)
+                if dist is None:
+                    try:
+                        dist = best[req.key] = env.best_match(req, ws)
+                    except pkg_resources.VersionConflict, err:
+                        raise VersionConflict(err, ws)
+                    if dist is None:
+                        if destination:
+                            logger.debug('Getting required %r', str(req))
+                        else:
+                            logger.debug('Adding required %r', str(req))
+                        _log_requirement(ws, req)
+                        for dist in self._get_dist(req,
+                                                   ws, self._always_unzip):
+                            ws.add(dist)
+                            self._maybe_add_setuptools(ws, dist)
+            if dist not in req:
+                # Oops, the "best" so far conflicts with a dependency.
+                raise VersionConflict(
+                    pkg_resources.VersionConflict(dist, req), ws)
+            requirements.extend(dist.requires(req.extras)[::-1])
+            processed[req] = True
+            if dist.location in self._site_packages:
+                logger.debug('Egg from site-packages: %s', dist)
 
         return ws
 
@@ -773,6 +898,18 @@ def prefer_final(setting=None):
         Installer._prefer_final = bool(setting)
     return old
 
+def include_site_packages(setting=None):
+    old = Installer._include_site_packages
+    if setting is not None:
+        Installer._include_site_packages = bool(setting)
+    return old
+
+def allowed_eggs_from_site_packages(setting=None):
+    old = Installer._allowed_eggs_from_site_packages
+    if setting is not None:
+        Installer._allowed_eggs_from_site_packages = tuple(setting)
+    return old
+
 def use_dependency_links(setting=None):
     old = Installer._use_dependency_links
     if setting is not None:
@@ -795,9 +932,12 @@ def install(specs, dest,
             links=(), index=None,
             executable=sys.executable, always_unzip=None,
             path=None, working_set=None, newest=True, versions=None,
-            use_dependency_links=None, allow_hosts=('*',)):
+            use_dependency_links=None, include_site_packages=None,
+            allowed_eggs_from_site_packages=None, allow_hosts=('*',)):
     installer = Installer(dest, links, index, executable, always_unzip, path,
                           newest, versions, use_dependency_links,
+                          include_site_packages,
+                          allowed_eggs_from_site_packages,
                           allow_hosts=allow_hosts)
     return installer.install(specs, working_set)
 
@@ -805,9 +945,12 @@ def install(specs, dest,
 def build(spec, dest, build_ext,
           links=(), index=None,
           executable=sys.executable,
-          path=None, newest=True, versions=None, allow_hosts=('*',)):
+          path=None, newest=True, versions=None, include_site_packages=None,
+          allowed_eggs_from_site_packages=None, allow_hosts=('*',)):
     installer = Installer(dest, links, index, executable, True, path, newest,
-                          versions, allow_hosts=allow_hosts)
+                          versions, include_site_packages,
+                          allowed_eggs_from_site_packages,
+                          allow_hosts=allow_hosts)
     return installer.build(spec, build_ext)
 
 
@@ -866,7 +1009,7 @@ def develop(setup, dest,
         undo.append(lambda: os.close(fd))
 
         os.write(fd, runsetup_template % dict(
-            setuptools=setuptools_loc,
+            sys_path=',\n    '.join(repr(p) for p in sys.path),
             setupdir=directory,
             setup=setup,
             __file__ = setup,
@@ -903,8 +1046,53 @@ def develop(setup, dest,
         [f() for f in undo]
 
 
-def working_set(specs, executable, path):
-    return install(specs, None, executable=executable, path=path)
+def working_set(specs, executable, path, include_site_packages=None,
+                allowed_eggs_from_site_packages=None):
+    return install(
+        specs, None, executable=executable, path=path,
+        include_site_packages=include_site_packages,
+        allowed_eggs_from_site_packages=allowed_eggs_from_site_packages)
+
+def get_path(working_set, executable, extra_paths=(),
+             include_site_packages=True):
+    """Given working set and path to executable, return value for sys.path.
+
+    Distribution locations from the working set come first in the list.  Within
+    that collection, this function pushes site-packages-based distribution
+    locations to the end of the list, so that they don't mask eggs.
+
+    This expects that the working_set has already been created to honor a
+    include_site_packages setting.  That is, if include_site_packages is False,
+    this function does *not* verify that the working_set's distributions are
+    not in site packages.
+
+    However, it does explicitly include site packages if include_site_packages
+    is True.
+
+    The standard library (defined as what the given Python executable has on
+    the path before its site.py is run) is always included.
+    """
+    stdlib, site_packages = _get_system_packages(executable)
+    postponed = []
+    path = []
+    for dist in working_set:
+        location = os.path.normpath(dist.location)
+        if location in path:
+            path.remove(location)
+            postponed.append(location)
+        elif location in site_packages:
+            postponed.append(location)
+            site_packages.remove(location)
+        elif location not in postponed:
+            path.append(location)
+    path.extend(postponed)
+    path.extend(extra_paths)
+    # now we add in all paths
+    if include_site_packages:
+        path.extend(site_packages) # these are the remaining site_packages
+    path.extend(stdlib)
+    path = map(realpath, path)
+    return path
 
 def scripts(reqs, working_set, executable, dest,
             scripts=None,
@@ -912,13 +1100,11 @@ def scripts(reqs, working_set, executable, dest,
             arguments='',
             interpreter=None,
             initialization='',
-            relative_paths=False,
+            include_site_packages=True,
+            relative_paths=False
             ):
-
-    path = [dist.location for dist in working_set]
-    path.extend(extra_paths)
-    path = map(realpath, path)
-
+    path = get_path(
+        working_set, executable, extra_paths, include_site_packages)
     generated = []
 
     if isinstance(reqs, str):
@@ -969,7 +1155,7 @@ def _relative_path_and_setup(sname, path, relative_paths):
     if relative_paths:
         relative_paths = os.path.normcase(relative_paths)
         sname = os.path.normcase(os.path.abspath(sname))
-        spath = ',\n  '.join(
+        spath = ',\n    '.join(
             [_relativitize(os.path.normcase(path_item), sname, relative_paths)
              for path_item in path]
             )
@@ -977,7 +1163,7 @@ def _relative_path_and_setup(sname, path, relative_paths):
         for i in range(_relative_depth(relative_paths, sname)):
             rpsetup += "base = os.path.dirname(base)\n"
     else:
-        spath = repr(path)[1:-1].replace(', ', ',\n  ')
+        spath = repr(path)[1:-1].replace(', ', ',\n    ')
         rpsetup = ''
     return spath, rpsetup
 
@@ -1074,10 +1260,11 @@ else:
 script_template = script_header + '''\
 
 %(relative_paths_setup)s
-import sys
-sys.path[0:0] = [
-  %(path)s,
-  ]
+import sys, os
+pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+sys.path[:] = pythonpath + [
+    %(path)s,
+    ]
 %(initialization)s
 import %(module_name)s
 
@@ -1120,37 +1307,70 @@ def _pyscript(path, dest, executable, rsetup):
 
 py_script_template = script_header + '''\
 
+globs = globals().copy() # get a clean copy early
+
 %(relative_paths_setup)s
-import sys
+import sys, os
 
-sys.path[0:0] = [
-  %(path)s,
-  ]
+_set_path = _interactive = True
+_force_interactive = False
 
-_interactive = True
-if len(sys.argv) > 1:
-    import getopt
-    _options, _args = getopt.getopt(sys.argv[1:], 'ic:')
+_command = None
+_args = sys.argv[1:]
+
+while _args:
+    if _args[0].startswith('-'):
+        _arg = _args.pop(0)
+        for _ix, _opt in enumerate(_arg[1:]):
+            if _opt == 'i':
+                _force_interactive = True
+            elif _opt == 'c':
+                _interactive = False
+                _command = _args.pop(0) # Argument expected for the -c option
+                _args.insert(0, '-c')
+                break
+            elif _opt == 'S':
+                # We'll approximate this.  It is mostly convenient for tests.
+                _set_path = False
+            elif _opt == 'V':
+                print 'Python ' + sys.version.split()[0]
+                _interactive = False
+                break
+        else:
+            continue
+        break
+    else:
+        break
+
+if _set_path:
+    sys.path[:] = [
+    %(path)s,
+    ]
+pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+sys.path[0:0] = pythonpath
+sys.path.insert(0, '.')
+
+sys.argv[:] = _args
+
+if _command:
+    exec _command
+elif _args:
     _interactive = False
-    for (_opt, _val) in _options:
-        if _opt == '-i':
-            _interactive = True
-        elif _opt == '-c':
-            exec _val
+    globs['__file__'] = sys.argv[0]
+    execfile(sys.argv[0], globs)
 
-    if _args:
-        sys.argv[:] = _args
-        execfile(sys.argv[0])
-
-if _interactive:
+if _interactive or _force_interactive:
     import code
-    code.interact(banner="", local=globals())
+    del globs['__file__']
+    code.interact(banner="", local=globs)
 '''
 
 runsetup_template = """
 import sys
-sys.path.insert(0, %(setupdir)r)
-sys.path.insert(0, %(setuptools)r)
+sys.path[:] = [
+    %(setupdir)r,
+    %(sys_path)s
+    ]
 import os, setuptools
 
 __file__ = %(__file__)r
@@ -1246,4 +1466,3 @@ def redo_pyc(egg):
                     subprocess.call([sys.executable, args])
                 else:
                     os.spawnv(os.P_WAIT, sys.executable, args)
-

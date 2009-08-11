@@ -61,7 +61,7 @@ class MissingOption(zc.buildout.UserError, KeyError):
     """
 
 class MissingSection(zc.buildout.UserError, KeyError):
-    """A required section is missinh
+    """A required section is missing
     """
 
     def __str__(self):
@@ -117,15 +117,27 @@ def _unannotate(data):
     return data
 
 _buildout_default_options = _annotate_section({
-    'eggs-directory': 'eggs',
-    'develop-eggs-directory': 'develop-eggs',
+    'allow-hosts': '*',
+    'allow-picked-versions': 'true',
+    'allowed-eggs-from-site-packages': '*',
     'bin-directory': 'bin',
-    'parts-directory': 'parts',
-    'installed': '.installed.cfg',
-    'python': 'buildout',
+    'develop-eggs-directory': 'develop-eggs',
+    'eggs-directory': 'eggs',
     'executable': sys.executable,
-    'log-level': 'INFO',
+    'find-links': '',
+    'include-site-packages-for-buildout': 'false',
+    'include-site-packages': 'true',
+    'install-from-cache': 'false',
+    'installed': '.installed.cfg',
     'log-format': '',
+    'log-level': 'INFO',
+    'newest': 'true',
+    'offline': 'false',
+    'parts-directory': 'parts',
+    'prefer-final': 'false',
+    'python': 'buildout',
+    'unzip': 'false',
+    'use-dependency-links': 'true',
     }, 'DEFAULT_VALUE')
 
 
@@ -150,7 +162,7 @@ class Buildout(UserDict.DictMixin):
                     print 'Creating %r.' % config_file
                     open(config_file, 'w').write('[buildout]\nparts = \n')
                 elif command == 'setup':
-                    # Sigh. this model of a buildout nstance
+                    # Sigh. this model of a buildout instance
                     # with methods is breaking down :(
                     config_file = None
                     data['buildout']['directory'] = ('.', 'COMPUTED_VALUE')
@@ -195,7 +207,7 @@ class Buildout(UserDict.DictMixin):
         # provide some defaults before options are parsed
         # because while parsing options those attributes might be
         # used already (Gottfried Ganssauge)
-        buildout_section = data.get('buildout')
+        buildout_section = data['buildout']
 
         # Try to make sure we have absolute paths for standard
         # directories. We do this before doing substitutions, in case
@@ -208,22 +220,29 @@ class Buildout(UserDict.DictMixin):
                 d = self._buildout_path(buildout_section[name+'-directory'])
                 buildout_section[name+'-directory'] = d
 
-        links = buildout_section and buildout_section.get('find-links', '')
+        # Arguably, these attributes shouldn't be used by recipes.  Using
+        # attributes on the buildout causes bugs when a buildout is extended,
+        # potentially overriding these values; and yet the option is read from
+        # this attribute during the initialization of the recipes (see
+        # ``options = self['buildout']`` below) before the full processing
+        # is completed.  These attributes are left behind for legacy support
+        # but recipe authors should beware of using them.  A better practice is
+        # for a recipe to read the buildout['buildout'] options.
+        links = buildout_section['find-links']
         self._links = links and links.split() or ()
-
-        allow_hosts = buildout_section and buildout_section.get(
-             'allow-hosts', '*').split('\n')
+        allow_hosts = buildout_section['allow-hosts'].split('\n')
         self._allow_hosts = tuple([host.strip() for host in allow_hosts
                                    if host.strip() != ''])
-
         self._logger = logging.getLogger('zc.buildout')
-        self.offline = False
-        self.newest = True
+        self.offline = buildout_section['offline'] == 'true'
+        self.newest = buildout_section['newest'] == 'true'
 
         ##################################################################
         ## WARNING!!!
         ## ALL ATTRIBUTES MUST HAVE REASONABLE DEFAULTS AT THIS POINT
-        ## OTHERWISE ATTRIBUTEERRORS MIGHT HAPPEN ANY TIME
+        ## OTHERWISE ATTRIBUTEERRORS MIGHT HAPPEN ANY TIME FROM RECIPES.
+        ## RECIPES SHOULD GENERALLY USE buildout['buildout'] OPTIONS, NOT
+        ## BUILDOUT ATTRIBUTES.
         ##################################################################
         # initialize some attrs and buildout directories.
         options = self['buildout']
@@ -232,7 +251,7 @@ class Buildout(UserDict.DictMixin):
         links = options.get('find-links', '')
         self._links = links and links.split() or ()
 
-        allow_hosts = options.get('allow-hosts', '*').split('\n')
+        allow_hosts = options.setdefault('allow-hosts', '*').split('\n')
         self._allow_hosts = tuple([host.strip() for host in allow_hosts
                                    if host.strip() != ''])
 
@@ -250,39 +269,60 @@ class Buildout(UserDict.DictMixin):
 
         self._setup_logging()
 
-        offline = options.get('offline', 'false')
+        offline = options['offline']
         if offline not in ('true', 'false'):
             self._error('Invalid value for offline option: %s', offline)
-        options['offline'] = offline
-        self.offline = offline == 'true'
+        self.offline = (offline == 'true')
 
         if self.offline:
             newest = options['newest'] = 'false'
         else:
-            newest = options.get('newest', 'true')
+            newest = options['newest']
             if newest not in ('true', 'false'):
                 self._error('Invalid value for newest option: %s', newest)
-            options['newest'] = newest
-        self.newest = newest == 'true'
+        self.newest = (newest == 'true')
 
         versions = options.get('versions')
         if versions:
             zc.buildout.easy_install.default_versions(dict(self[versions]))
 
-        prefer_final = options.get('prefer-final', 'false')
+        prefer_final = options['prefer-final']
         if prefer_final not in ('true', 'false'):
             self._error('Invalid value for prefer-final option: %s',
                         prefer_final)
         zc.buildout.easy_install.prefer_final(prefer_final=='true')
 
-        use_dependency_links = options.get('use-dependency-links', 'true')
+        include_site_packages = options['include-site-packages']
+        if include_site_packages not in ('true', 'false'):
+            self._error('Invalid value for include-site-packages option: %s',
+                        include_site_packages)
+        zc.buildout.easy_install.include_site_packages(
+            include_site_packages=='true')
+
+        allowed_eggs_from_site_packages = tuple(
+            name.strip() for name in
+            options['allowed-eggs-from-site-packages'].split('\n'))
+        zc.buildout.easy_install.allowed_eggs_from_site_packages(
+            allowed_eggs_from_site_packages)
+
+        include_site_packages_for_buildout = options[
+            'include-site-packages-for-buildout']
+        if include_site_packages_for_buildout not in ('true', 'false'):
+            self._error(
+                'Invalid value for include-site-packages-for-buildout option: '
+                '%s',
+                 include_site_packages_for_buildout)
+        self.include_site_packages_for_buildout = (
+            include_site_packages_for_buildout=='true')
+
+        use_dependency_links = options['use-dependency-links']
         if use_dependency_links not in ('true', 'false'):
             self._error('Invalid value for use-dependency-links option: %s',
                         use_dependency_links)
         zc.buildout.easy_install.use_dependency_links(
-            use_dependency_links == 'true')
+            use_dependency_links=='true')
 
-        allow_picked_versions = options.get('allow-picked-versions', 'true')
+        allow_picked_versions = options['allow-picked-versions']
         if allow_picked_versions not in ('true', 'false'):
             self._error('Invalid value for allow-picked-versions option: %s',
                         allow_picked_versions)
@@ -304,22 +344,18 @@ class Buildout(UserDict.DictMixin):
 
             zc.buildout.easy_install.download_cache(download_cache)
 
-        install_from_cache = options.get('install-from-cache')
-        if install_from_cache:
-            if install_from_cache not in ('true', 'false'):
-                self._error('Invalid value for install-from-cache option: %s',
-                            install_from_cache)
-            if install_from_cache == 'true':
-                zc.buildout.easy_install.install_from_cache(True)
+        install_from_cache = options['install-from-cache']
+        if install_from_cache not in ('true', 'false'):
+            self._error('Invalid value for install-from-cache option: %s',
+                        install_from_cache)
+        zc.buildout.easy_install.install_from_cache(
+            install_from_cache=='true')
 
-
-        always_unzip = options.get('unzip')
-        if always_unzip:
-            if always_unzip not in ('true', 'false'):
-                self._error('Invalid value for unzip option: %s',
-                            always_unzip)
-            if always_unzip == 'true':
-                zc.buildout.easy_install.always_unzip(True)
+        always_unzip = options['unzip']
+        if always_unzip not in ('true', 'false'):
+            self._error('Invalid value for unzip option: %s',
+                        always_unzip)
+        zc.buildout.easy_install.always_unzip(always_unzip=='true')
 
         # "Use" each of the defaults so they aren't reported as unused options.
         for name in _buildout_default_options:
@@ -338,15 +374,38 @@ class Buildout(UserDict.DictMixin):
         return os.path.join(self._buildout_dir, name)
 
     def bootstrap(self, args):
-        __doing__ = 'Bootstraping.'
+        __doing__ = 'Bootstrapping.'
 
         self._setup_directories()
+
+        options = self['buildout']
+
+        # Get a base working set for our distributions that corresponds to the
+        # stated desires in the configuration.
+        distributions = ['setuptools', 'zc.buildout']
+        if options.get('offline') == 'true':
+            ws = zc.buildout.easy_install.working_set(
+                distributions, options['executable'],
+                [options['develop-eggs-directory'], options['eggs-directory']],
+                include_site_packages=self.include_site_packages_for_buildout
+                )
+        else:
+            ws = zc.buildout.easy_install.install(
+                distributions, options['eggs-directory'],
+                links=self._links,
+                index=options.get('index'),
+                executable=options['executable'],
+                path=[options['develop-eggs-directory']],
+                newest=self.newest,
+                allow_hosts=self._allow_hosts,
+                include_site_packages=self.include_site_packages_for_buildout
+                )
 
         # Now copy buildout and setuptools eggs, and record destination eggs:
         entries = []
         for name in 'setuptools', 'zc.buildout':
             r = pkg_resources.Requirement.parse(name)
-            dist = pkg_resources.working_set.find(r)
+            dist = ws.find(r)
             if dist.precedence == pkg_resources.DEVELOP_DIST:
                 dest = os.path.join(self['buildout']['develop-eggs-directory'],
                                     name+'.egg-link')
@@ -366,8 +425,9 @@ class Buildout(UserDict.DictMixin):
         ws = pkg_resources.WorkingSet(entries)
         ws.require('zc.buildout')
         zc.buildout.easy_install.scripts(
-            ['zc.buildout'], ws, sys.executable,
-            self['buildout']['bin-directory'])
+            ['zc.buildout'], ws, options['executable'],
+            options['bin-directory'],
+            include_site_packages=self.include_site_packages_for_buildout)
 
     init = bootstrap
 
@@ -908,7 +968,7 @@ class Buildout(UserDict.DictMixin):
         if not args:
             raise zc.buildout.UserError(
                 "The setup command requires the path to a setup script or \n"
-                "directory containing a setup script, and it's arguments."
+                "directory containing a setup script, and its arguments."
                 )
         setup = args.pop(0)
         if os.path.isdir(setup):
@@ -920,7 +980,7 @@ class Buildout(UserDict.DictMixin):
         fd, tsetup = tempfile.mkstemp()
         try:
             os.write(fd, zc.buildout.easy_install.runsetup_template % dict(
-                setuptools=pkg_resources_loc,
+                sys_path=',\n    '.join(repr(p) for p in sys.path),
                 setupdir=os.path.dirname(setup),
                 setup=setup,
                 __file__ = setup,
