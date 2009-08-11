@@ -377,7 +377,7 @@ Let's look at the script that was generated:
     #!/usr/local/bin/python2.4
     <BLANKLINE>
     import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
     sys.path[:] = pythonpath + [
         '/sample-buildout/eggs/demo-0.4c1-py2.4.egg',
         '/sample-buildout/eggs/demoneeded-1.2c1-py2.4.egg',
@@ -433,7 +433,7 @@ Let's look at the script that was generated:
     base = os.path.dirname(base)
     <BLANKLINE>
     import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
     sys.path[:] = pythonpath + [
         join(base, 'eggs/demo-0.4c1-pyN.N.egg'),
         join(base, 'eggs/demoneeded-1.2c1-pyN.N.egg'),
@@ -483,7 +483,7 @@ each individual script section:
     base = os.path.dirname(base)
     <BLANKLINE>
     import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
     sys.path[:] = pythonpath + [
         join(base, 'eggs/demo-0.4c1-pyN.N.egg'),
         join(base, 'eggs/demoneeded-1.2c1-pyN.N.egg'),
@@ -533,7 +533,7 @@ to be included in generated scripts:
     #!/usr/local/bin/python2.4
     <BLANKLINE>
     import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
     sys.path[:] = pythonpath + [
         '/sample-buildout/eggs/demo-0.4c1-py2.4.egg',
         '/sample-buildout/eggs/demoneeded-1.2c1-py2.4.egg',
@@ -593,7 +593,7 @@ declare entry points using the entry-points option:
     #!/usr/local/bin/python2.4
     <BLANKLINE>
     import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
     sys.path[:] = pythonpath + [
         '/sample-buildout/eggs/demo-0.4c1-py2.4.egg',
         '/sample-buildout/eggs/demoneeded-1.2c1-py2.4.egg',

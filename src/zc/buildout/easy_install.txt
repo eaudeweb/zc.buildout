@@ -651,7 +651,7 @@ The demo script run the entry point defined in the demo egg:
     #!/usr/local/bin/python2.4
     <BLANKLINE>
     import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
     sys.path[:] = pythonpath + [
         '/sample-install/demo-0.3-py2.4.egg',
         '/sample-install/demoneeded-1.1-py2.4.egg',
@@ -691,7 +691,7 @@ rather than passing a requirement:
     #!/usr/local/bin/python2.4
     <BLANKLINE>
     import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
     sys.path[:] = pythonpath + [
         '/sample-install/demo-0.3-py2.4.egg',
         '/sample-install/demoneeded-1.1-py2.4.egg',
@@ -775,7 +775,7 @@ the path set:
         '/sample-install/demoneeded-1.1-pyN.N.egg',
         ...
         ]
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
     sys.path[0:0] = pythonpath
     sys.path.insert(0, '.')
     <BLANKLINE>
@@ -830,7 +830,7 @@ to be included in the a generated script:
     #!/usr/local/bin/python2.4
     <BLANKLINE>
     import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
     sys.path[:] = pythonpath + [
       '/sample-install/demo-0.3-py2.4.egg',
       '/sample-install/demoneeded-1.1-py2.4.egg',
@@ -919,7 +919,7 @@ parentheses in the call:
     >>> cat(bin, 'run') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
     sys.path[:] = pythonpath + [
       '/sample-install/demo-0.3-py2.4.egg',
       '/sample-install/demoneeded-1.1-py2.4.egg',
@@ -944,7 +944,7 @@ You can also pass script initialization code:
     >>> cat(bin, 'run') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
     sys.path[:] = pythonpath + [
         '/sample-install/demo-0.3-py2.4.egg',
         '/sample-install/demoneeded-1.1-py2.4.egg',
@@ -993,7 +993,7 @@ to pass a common base directory of the scripts and eggs:
     base = os.path.dirname(base)
     <BLANKLINE>
     import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
     sys.path[:] = pythonpath + [
         join(base, 'eggs/demo-0.3-pyN.N.egg'),
         join(base, 'eggs/demoneeded-1.1-pyN.N.egg'),
@@ -1068,7 +1068,7 @@ We specified an interpreter and its paths are adjusted too:
         join(base, 'bar'),
         ...,
         ]
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(':'))
+    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
     sys.path[0:0] = pythonpath
     sys.path.insert(0, '.')
     <BLANKLINE>
