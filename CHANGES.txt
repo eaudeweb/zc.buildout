@@ -25,6 +25,22 @@ Change History
     a whitelist of project names of eggs that are allowed to come from
     your Python's site-packages.  This lets you more tightly control your use
     of site-packages.
+    
+    This option interacts with the ``include-site-packages`` option in the
+    following ways.
+    
+    If ``include-site-packages`` is true, then
+    ``allowed-eggs-from-site-packages`` filters what eggs from site-packages
+    may be chosen.  Therefore, if ``allowed-eggs-from-site-packages`` is an
+    empty list, then no eggs from site-packages are chosen, but site-packages
+    will still be included at the end of path lists.
+    
+    If ``include-site-packages`` is false, the value of
+    ``allowed-eggs-from-site-packages`` is irrelevant.
+    
+    The same pattern holds true for the ``include-site-packages-for-buildout``
+    option, except only the bin/buildout script is affected by that
+    interaction.
 
   * Script generation pushes dependency paths that are in site-packages to
     the end of the dependency paths in sys.path (but, as before, these are

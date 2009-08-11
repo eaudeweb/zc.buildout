@@ -2857,9 +2857,13 @@ As introduced in the previous test, the allowed-eggs-from-site-packages option
 allows you to specify a whitelist of project names that may be included from
 site-packages.
 
-This test shows the option being used in a buildout.
+This test shows the option being used in a buildout.  We try to limit these
+tests to those that test additional parts of the code beyond those tested in
+the test above.
 
-The buildout defaults to a whitelist of ('*',), or any project name.  
+The buildout defaults to a whitelist of ('*',), or any project name.  The
+buildout configuration option defaults are managed separately from the
+zc.buildout.easy_install API defaults, so we show this here.
 
     >>> from zc.buildout.buildout import Buildout
     >>> write('buildout.cfg',
@@ -2872,9 +2876,9 @@ The buildout defaults to a whitelist of ('*',), or any project name.
     >>> zc.buildout.easy_install.allowed_eggs_from_site_packages()
     ('*',)
 
-Our "primed_executable" has the "demoneeded," "other," and "setuptools"
+In the test below, our "primed_executable" has the "demoneeded," "other," and "setuptools"
 packages available.  We'll simply be asking for "other" here.  The default
-value of '*' will allow it.
+value of '*' will allow it.  This confirms behaviorally what we saw above.
 
     >>> primed_executable = get_executable_with_site_packages()
     >>> zc.buildout.easy_install.clear_index_cache()
@@ -2883,8 +2887,6 @@ value of '*' will allow it.
     ... [buildout]
     ... parts = eggs
     ... find-links =
-    ... allowed-eggs-from-site-packages = demoneeded
-    ...                                   other
     ...
     ... [primed_python]
     ... executable = %(primed_executable)s
@@ -2899,7 +2901,8 @@ value of '*' will allow it.
     Installing eggs.
     <BLANKLINE>
 
-Here we explicitly use a "*" for the same result.
+Here we explicitly use a "*" for the same result.  This also shows that we
+correctly parse a single-line value.
 
     >>> zc.buildout.easy_install.clear_index_cache()
     >>> write('buildout.cfg',
@@ -2922,7 +2925,8 @@ Here we explicitly use a "*" for the same result.
     Updating eggs.
     <BLANKLINE>
 
-Specifying the egg exactly will work as well.
+Specifying the egg exactly will work as well.  This shows we correctly
+parse a multi-line value.
 
     >>> zc.buildout.easy_install.clear_index_cache()
     >>> write('buildout.cfg',
@@ -2946,61 +2950,17 @@ Specifying the egg exactly will work as well.
     Updating eggs.
     <BLANKLINE>
 
-It will also work if we use a glob ("*" or "?").
-
-    >>> zc.buildout.easy_install.clear_index_cache()
-    >>> write('buildout.cfg',
-    ... '''
-    ... [buildout]
-    ... parts = eggs
-    ... find-links =
-    ... allowed-eggs-from-site-packages = demoneeded
-    ...                                   ?th*
-    ...
-    ... [primed_python]
-    ... executable = %(primed_executable)s
-    ...
-    ... [eggs]
-    ... recipe = zc.recipe.egg:eggs
-    ... python = primed_python
-    ... eggs = other
-    ... ''' % globals())
-
-    >>> print system(primed_executable+" "+buildout)
-    Updating eggs.
-    <BLANKLINE>
+It will also work if we use a glob ("*" or "?").  (We won't show that here
+because we already tested it in the previous doctest.)
 
 However, if we do not include "other" in the "allowed-eggs-from-site-packages"
 key, we get an error, because the packages are not available in any links, and
-they are not allowed to come from the executable's site packages.
+they are not allowed to come from the executable's site packages. (We won't
+show that here because we already tested it in the previous doctest.)
 
-    >>> zc.buildout.easy_install.clear_index_cache()
-    >>> write('buildout.cfg',
-    ... '''
-    ... [buildout]
-    ... parts = eggs
-    ... find-links =
-    ... allowed-eggs-from-site-packages = demoneeded
-    ...
-    ... [primed_python]
-    ... executable = %(primed_executable)s
-    ...
-    ... [eggs]
-    ... recipe = zc.recipe.egg:eggs
-    ... eggs = other
-    ... ''' % globals())
-    >>> print system(primed_executable+" "+buildout)
-    Uninstalling eggs.
-    Installing eggs.
-    Couldn't find index page for 'other' (maybe misspelled?)
-    Getting distribution for 'other'.
-    While:
-      Installing eggs.
-      Getting distribution for 'other'.
-    Error: Couldn't find a distribution for 'other'.
-    <BLANKLINE>
-
-Finally, here's the same with an empty value.
+Finally, here's a test with an empty value.  It shows that we parse an empty
+value correctly, and verifies that we really are controlling what eggs are
+allowed, because we see that we were unable to get "other".
 
     >>> zc.buildout.easy_install.clear_index_cache()
     >>> write('buildout.cfg',
@@ -3223,7 +3183,7 @@ def warn_users_when_expanding_shell_patterns_yields_no_results():
 
 def create_sample_eggs(test, executable=sys.executable):
     """Creates sample eggs, source distributions, and a faux site-packages."
-    
+
     Unlike the faux site-packages created by
     ``get_executable_with_site_packages``, this one has packages installed the
     way distributions often install eggs in system Pythons (via

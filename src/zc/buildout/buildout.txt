@@ -2118,6 +2118,10 @@ allowed-eggs-from-site-packages
     
     If ``include-site-packages`` is false, the value of
     ``allowed-eggs-from-site-packages`` is irrelevant.
+    
+    The same pattern holds true for the ``include-site-packages-for-buildout``
+    option, except only the bin/buildout script is affected by that
+    interaction.
 
 bin-directory
    The directory path where scripts are written.  This can be a
