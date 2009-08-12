@@ -1260,9 +1260,8 @@ else:
 script_template = script_header + '''\
 
 %(relative_paths_setup)s
-import sys, os
-pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
-sys.path[:] = pythonpath + [
+import sys
+sys.path[:] = [
     %(path)s,
     ]
 %(initialization)s
@@ -1310,7 +1309,7 @@ py_script_template = script_header + '''\
 globs = globals().copy() # get a clean copy early
 
 %(relative_paths_setup)s
-import sys, os
+import sys
 
 _set_path = _interactive = True
 _force_interactive = False
@@ -1346,8 +1345,6 @@ if _set_path:
     sys.path[:] = [
     %(path)s,
     ]
-pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
-sys.path[0:0] = pythonpath
 sys.path.insert(0, '.')
 
 sys.argv[:] = _args
