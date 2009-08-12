@@ -96,7 +96,7 @@ The demo egg defined a script, but we didn't get one installed:
     >>> ls(sample_buildout, 'bin')
     -  buildout
 
-If we want scripts provided by eggs to be installed, we should use the
+If we want scripts provided by eggs to be installed, we should use the 
 scripts recipe:
 
     >>> write(sample_buildout, 'buildout.cfg',
@@ -135,7 +135,7 @@ entry-points
 
    This option is useful when working with distributions that don't
    declare entry points, such as distributions not written to work
-   with setuptools.
+   with setuptools. 
 
    Examples can be seen in the section "Specifying entry points" below.
 
@@ -271,7 +271,7 @@ We didn't get an update for demo:
     -  setuptools-0.6-py2.3.egg
     -  zc.buildout-1.0-py2.3.egg
 
-If we run the buildout on the default online and newest modes,
+If we run the buildout on the default online and newest modes, 
 we'll get an update for demo:
 
     >>> print system(buildout),
@@ -376,9 +376,8 @@ Let's look at the script that was generated:
     ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
-    import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
-    sys.path[:] = pythonpath + [
+    import sys
+    sys.path[:] = [
         '/sample-buildout/eggs/demo-0.4c1-py2.4.egg',
         '/sample-buildout/eggs/demoneeded-1.2c1-py2.4.egg',
         '/foo/bar',
@@ -432,9 +431,8 @@ Let's look at the script that was generated:
     base = os.path.dirname(os.path.abspath(__file__))
     base = os.path.dirname(base)
     <BLANKLINE>
-    import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
-    sys.path[:] = pythonpath + [
+    import sys
+    sys.path[:] = [
         join(base, 'eggs/demo-0.4c1-pyN.N.egg'),
         join(base, 'eggs/demoneeded-1.2c1-pyN.N.egg'),
         '/foo/bar',
@@ -482,9 +480,8 @@ each individual script section:
     base = os.path.dirname(os.path.abspath(__file__))
     base = os.path.dirname(base)
     <BLANKLINE>
-    import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
-    sys.path[:] = pythonpath + [
+    import sys
+    sys.path[:] = [
         join(base, 'eggs/demo-0.4c1-pyN.N.egg'),
         join(base, 'eggs/demoneeded-1.2c1-pyN.N.egg'),
         '/foo/bar',
@@ -532,9 +529,8 @@ to be included in generated scripts:
     ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
-    import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
-    sys.path[:] = pythonpath + [
+    import sys
+    sys.path[:] = [
         '/sample-buildout/eggs/demo-0.4c1-py2.4.egg',
         '/sample-buildout/eggs/demoneeded-1.2c1-py2.4.egg',
         '/foo/bar',
@@ -592,9 +588,8 @@ declare entry points using the entry-points option:
     >>> cat(sample_buildout, 'bin', 'other') # doctest: +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
-    import sys, os
-    pythonpath = filter(None, os.environ.get('PYTHONPATH', '').split(os.pathsep))
-    sys.path[:] = pythonpath + [
+    import sys
+    sys.path[:] = [
         '/sample-buildout/eggs/demo-0.4c1-py2.4.egg',
         '/sample-buildout/eggs/demoneeded-1.2c1-py2.4.egg',
         '/foo/bar',
