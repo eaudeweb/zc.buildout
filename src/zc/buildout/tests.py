@@ -19,6 +19,7 @@ import re
 import shutil
 import sys
 import tempfile
+import textwrap
 import unittest
 import zc.buildout.easy_install
 import zc.buildout.testing
@@ -260,18 +261,17 @@ def make_dist_that_requires(dest, name, requires=[], version=1, egg=''):
 
 def show_who_requires_when_there_is_a_conflict():
     """
-    It's a pain when we require eggs that have requirements that are
-    incompatible. We want the error we get to tell us what is missing.
+It's a pain when we require eggs that have requirements that are incompatible.
+We want the error we get to tell us what is missing.
 
-    Let's make a few develop distros, some of which have incompatible
-    requirements.
+Let's make a few develop distros, some of which have incompatible requirements.
 
     >>> make_dist_that_requires(sample_buildout, 'sampley',
     ...                         ['demoneeded ==1.0'])
     >>> make_dist_that_requires(sample_buildout, 'samplez',
     ...                         ['demoneeded ==1.1'])
 
-    Now, let's create a buildout that requires y and z:
+Now, let's create a buildout that requires y and z:
 
     >>> write('buildout.cfg',
     ... '''
@@ -317,7 +317,7 @@ def show_who_requires_when_there_is_a_conflict():
     ...        samplez
     ... ''' % globals())
 
-If we use the verbose switch, we can see where requirements are comning from:
+If we use the verbose switch, we can see where requirements are coming from:
 
     >>> print system(buildout+' -v'), # doctest: +ELLIPSIS
     Installing 'zc.buildout', 'setuptools'.
@@ -350,11 +350,9 @@ If we use the verbose switch, we can see where requirements are comning from:
 
 def show_who_requires_missing_distributions():
     """
-
-    When working with a lot of eggs, which require eggs recursively,
-    it can be hard to tell why we're requireing things we can't find.
-    Fortunately, buildout will tell us who's asking for something that
-    we can't find.
+When working with a lot of eggs, which require eggs recursively, it can be hard
+to tell why we're requireing things we can't find. Fortunately, buildout will
+tell us who's asking for something that we can't find.
 
     >>> make_dist_that_requires(sample_buildout, 'sampley', ['demoneeded'])
     >>> make_dist_that_requires(sample_buildout, 'samplea', ['sampleb'])
@@ -384,11 +382,75 @@ def show_who_requires_missing_distributions():
     Error: Couldn't find a distribution for 'demoneeded'.
     """
 
+def show_eggs_from_site_packages():
+    """
+Sometimes you want to know what eggs are coming from site-packages.  This
+might be for a diagnostic, or so that you can get a starting value for the
+allowed-eggs-from-site-packages option.  The -v flag will also include this
+information.
+
+Our "primed_executable" has the "demoneeded," "other," and "setuptools"
+packages available.  We'll ask for "other" and "bigdemo".
+
+Here's our set up.
+
+    >>> primed_executable = get_executable_with_site_packages()
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... prefer-final = true
+    ... find-links = %(link_server)s
+    ...
+    ... [primed_python]
+    ... executable = %(primed_executable)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... python = primed_python
+    ... eggs = other
+    ...        bigdemo
+    ... ''' % globals())
+
+Now here is the output.  The lines that begin with "Egg from site-packages:"
+indicate the eggs from site-packages that have been selected.  You'll see
+we have two: other 1.0 and demoneeded 1.1.
+
+    >>> print system(primed_executable+" "+buildout+" -v")
+    Installing 'zc.buildout', 'setuptools'.
+    We have a develop egg: zc.buildout V
+    We have the best distribution that satisfies 'setuptools'.
+    Picked: setuptools = V
+    Installing 'zc.recipe.egg'.
+    We have a develop egg: zc.recipe.egg V
+    Installing eggs.
+    Installing 'other', 'bigdemo'.
+    We have the best distribution that satisfies 'other'.
+    Picked: other = 1.0
+    We have no distributions for bigdemo that satisfies 'bigdemo'.
+    Getting distribution for 'bigdemo'.
+    Got bigdemo 0.1.
+    Picked: bigdemo = 0.1
+    Egg from site-packages: other 1.0
+    Getting required 'demo'
+      required by bigdemo 0.1.
+    We have no distributions for demo that satisfies 'demo'.
+    Getting distribution for 'demo'.
+    Got demo 0.3.
+    Picked: demo = 0.3
+    Getting required 'demoneeded'
+      required by demo 0.3.
+    We have the best distribution that satisfies 'demoneeded'.
+    Picked: demoneeded = 1.1
+    Egg from site-packages: demoneeded 1.1
+    <BLANKLINE>
+
+    """
 
 def test_comparing_saved_options_with_funny_characters():
     """
-    If an option has newlines, extra/odd spaces or a %, we need to make
-    sure the comparison with the saved value works correctly.
+If an option has newlines, extra/odd spaces or a %, we need to make sure the
+comparison with the saved value works correctly.
 
     >>> mkdir(sample_buildout, 'recipes')
     >>> write(sample_buildout, 'recipes', 'debug.py',
@@ -606,6 +668,7 @@ bootstrapping.
 
     >>> os.chdir(d)
     >>> print system(os.path.join(sample_buildout, 'bin', 'buildout')
+    ...              + ' buildout:include-site-packages-for-buildout=true'
     ...              + ' bootstrap'),
     Creating directory '/sample-bootstrap/bin'.
     Creating directory '/sample-bootstrap/parts'.
@@ -633,6 +696,7 @@ def bug_92891_bootstrap_crashes_with_egg_recipe_in_buildout_section():
 
     >>> os.chdir(d)
     >>> print system(os.path.join(sample_buildout, 'bin', 'buildout')
+    ...              + ' buildout:include-site-packages-for-buildout=true'
     ...              + ' bootstrap'),
     Creating directory '/sample-bootstrap/bin'.
     Creating directory '/sample-bootstrap/parts'.
@@ -1770,6 +1834,54 @@ def bug_105081_Specific_egg_versions_are_ignored_when_newer_eggs_are_around():
     1 2
     """
 
+def versions_section_ignored_for_dependency_in_favor_of_site_packages():
+    r"""
+This is a test for a bugfix.
+
+The error showed itself when at least two dependencies were in a shared
+location like site-packages, and the first one met the "versions" setting.  The
+first dependency would be added, but subsequent dependencies from the same
+location (e.g., site-packages) would use the version of the package found in
+the shared location, ignoring the version setting.
+
+We begin with a Python that has demoneeded version 1.1 installed and a
+demo version 0.3, all in a site-packages-like shared directory.  We need
+to create this.  ``eggrecipedemo.main()`` shows the number after the dot
+(that is, ``X`` in ``1.X``), for the demo package and the demoneeded
+package, so this demonstrates that our Python does in fact have demo
+version 0.3 and demoneeded version 1.1.
+
+    >>> primed_executable = get_executable_with_system_installed_packages()
+    >>> print system(primed_executable+" -c "+
+    ...              "'import eggrecipedemo; eggrecipedemo.main()'")
+    3 1
+    <BLANKLINE>
+
+Now we will install bigdemo, specifying different versions of demo
+and demoneeded in a versions section.  Before the bugfix, the demo version
+would be honored, but not the demoneeded.
+
+Now here's a setup that would expose the bug, using the
+zc.buildout.easy_install API.
+
+    >>> example_dest = tmpdir('example_dest')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['bigdemo'], example_dest, links=[sample_eggs],
+    ...     executable=primed_executable,
+    ...     index=None, include_site_packages=True,
+    ...     versions={'demoneeded': '1.2c1', 'demo': '0.3'})
+    >>> for dist in workingset:
+    ...     print dist
+    bigdemo 0.1
+    demo 0.3
+    demoneeded 1.2c1
+
+Before the bugfix, the demoneeded distribution was not included in the working
+set, and the demoneeded in site-packages (of the wrong number) would have been
+used.
+
+    """
+
 if sys.version_info > (2, 4):
     def test_exit_codes():
         """
@@ -2158,7 +2270,7 @@ def prefer_final():
     """
 This test tests several permutations:
 
-Using different version numbers to work around zip impporter cache problems. :(
+Using different version numbers to work around zip importer cache problems. :(
 
 - With prefer final:
 
@@ -2337,6 +2449,602 @@ We get an error if we specify anything but true or false:
     While:
       Initializing.
     Error: Invalid value for prefer-final option: no
+
+    """
+
+def handle_sys_path_version_hack():
+    r"""
+If you use a Python that has a different version of one of your
+dependencies, and the new package tries to do sys.path tricks in the
+setup.py to get a __version__, and it uses namespace packages, the older
+package will be loaded first, making the setup version the wrong number.
+While very arguably packages simply shouldn't do this, some do, and we
+don't want buildout to fall over when they do.
+
+To demonstrate this, we will need to create a distribution that has one of
+these unpleasant tricks, and a Python that has an older version installed.
+
+    >>> for i in (0, 1):
+    ...     tmp = tempfile.mkdtemp()
+    ...     try:
+    ...         write(tmp, 'README.txt', '')
+    ...         mkdir(tmp, 'src')
+    ...         mkdir(tmp, 'src', 'tellmy')
+    ...         write(tmp, 'src', 'tellmy', '__init__.py',
+    ...             "__import__("
+    ...             "'pkg_resources').declare_namespace(__name__)\n")
+    ...         mkdir(tmp, 'src', 'tellmy', 'version')
+    ...         write(tmp, 'src', 'tellmy', 'version',
+    ...               '__init__.py', '__version__="1.%d"\n' % i)
+    ...         write(
+    ...             tmp, 'setup.py',
+    ...             "from setuptools import setup\n"
+    ...             "import sys\n"
+    ...             "sys.path.insert(0, 'src')\n"
+    ...             "from tellmy.version import __version__\n"
+    ...             "setup(\n"
+    ...             " name='tellmy.version',\n"
+    ...             " package_dir = {'': 'src'},\n"
+    ...             " packages = ['tellmy', 'tellmy.version'],\n"
+    ...             " install_requires = ['setuptools'],\n"
+    ...             " namespace_packages=['tellmy'],\n"
+    ...             " zip_safe=True, version=__version__,\n"
+    ...             " author='bob', url='bob', author_email='bob')\n"
+    ...             )
+    ...         zc.buildout.testing.sdist(tmp, sample_eggs)
+    ...         if i==0:
+    ...             zc.buildout.testing.sys_install(tmp, site_packages)
+    ...     finally:
+    ...         shutil.rmtree(tmp)
+    >>> primed_python = get_executable_with_system_installed_packages()
+    >>> print system(
+    ...     primed_python + " -c '" +
+    ...     "import tellmy.version\n" +
+    ...     "print tellmy.version.__version__\n" +
+    ...     "'")
+    1.0
+    <BLANKLINE>
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links = %(sample_eggs)s
+    ...
+    ... [primed_python]
+    ... executable = %(primed_python)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... python = primed_python
+    ... eggs = tellmy.version == 1.1
+    ... ''' % globals())
+
+Before the bugfix, running this buildout would generate this error:
+
+    Installing eggs.
+    Getting distribution for 'tellmy.version==1.1'.
+    Installing tellmy.version 1.1
+    Caused installation of a distribution:
+    tellmy.version 1.0
+    with a different version.
+    Got None.
+    While:
+      Installing eggs.
+    Error: There is a version conflict.
+    We already have: tellmy.version 1.0
+    <BLANKLINE>
+
+The bugfix was simply to add Python's "-S" option when calling
+easyinstall (see zc.buildout.easy_install.Installer._call_easy_install).
+Now the install works correctly, as seen here.
+
+    >>> print system(primed_python+" "+buildout)
+    Installing eggs.
+    Getting distribution for 'tellmy.version==1.1'.
+    Got tellmy.version 1.1.
+    <BLANKLINE>
+
+    """
+
+def isolated_include_site_packages():
+    """
+
+This is an isolated test of the include_site_packages functionality, passing
+the argument directly to install, overriding a default.
+
+Our "primed_executable" has the "demoneeded," "other," and "setuptools"
+packages available.  We'll simply be asking for "other" here.
+
+    >>> primed_executable = get_executable_with_site_packages()
+    >>> zc.buildout.easy_install.include_site_packages(False)
+    True
+
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
+    ...     index=None, include_site_packages=True)
+    >>> [dist.project_name for dist in workingset]
+    ['other']
+
+That worked fine.  Let's try again with site packages not allowed (and
+reversing the default).
+
+    >>> zc.buildout.easy_install.include_site_packages(True)
+    False
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
+    ...     index=None, include_site_packages=False)
+    Traceback (most recent call last):
+        ...
+    MissingDistribution: Couldn't find a distribution for 'other'.
+
+That's a failure, as expected.
+
+Now we explore an important edge case.
+
+Some system Pythons include setuptools (and other Python packages) in their
+site-packages (or equivalent) using a .egg-info directory.  The pkg_resources
+module (from setuptools) considers a package installed using .egg-info to be a
+develop egg.
+
+zc.buildout.buildout.Buildout.bootstrap will make setuptools and zc.buildout
+available to the buildout via the eggs directory, for normal eggs; or the
+develop-eggs directory, for develop-eggs.
+
+If setuptools or zc.buildout is found in site-packages and considered by
+pkg_resources to be a develop egg, then the bootstrap code will use a .egg-link
+in the local develop-eggs, pointing to site-packages, in its entirety.  Because
+develop-eggs must always be available for searching for distributions, this
+indirectly brings site-packages back into the search path for distributions.
+
+Because of this, we have to take special care that we still exclude
+site-packages even in this case.  See the comments about site packages in the
+Installer._satisfied and Installer._obtain methods for the implementation
+(as of this writing).
+
+In this demonstration, we insert a link to the "other" distribution in our
+develop-eggs, which would bring the package back in, except for the special
+care we have taken to exclude it.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> mkdir(example_dest, 'develop-eggs')
+    >>> stdlib, site_packages = (
+    ...     zc.buildout.easy_install._get_system_packages(primed_executable))
+    >>> path_to_other = [p for p in site_packages if 'other' in p][0]
+    >>> write(example_dest, 'develop-eggs', 'other.egg-link', path_to_other)
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, links=[],
+    ...     path=[join(example_dest, 'develop-eggs')],
+    ...     executable=primed_executable,
+    ...     index=None, include_site_packages=False)
+    Traceback (most recent call last):
+        ...
+    MissingDistribution: Couldn't find a distribution for 'other'.
+
+The MissingDistribution error shows that buildout correctly excluded the
+"site-packages" source even though it was indirectly included in the path
+via a .egg-link file.
+
+    """
+
+def buildout_include_site_packages_option():
+    """
+The include-site-packages buildout option can be used to override the default
+behavior of using site packages.
+
+The default is include-site-packages = true.  As a demonstration, notice we do
+not set find-links, but the eggs are still found because they are in the
+executable's path.
+
+Our "primed_executable" has the "demoneeded," "other," and "setuptools"
+packages available.  We'll simply be asking for "other" here.
+
+    >>> primed_executable = get_executable_with_site_packages()
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links =
+    ...
+    ... [primed_python]
+    ... executable = %(primed_executable)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... python = primed_python
+    ... eggs = other
+    ... ''' % globals())
+
+    >>> print system(primed_executable+" "+buildout)
+    Installing eggs.
+    <BLANKLINE>
+
+However, if we set include-site-packages to false, we get an error, because
+the packages are not available in any links, and they are not allowed to be
+obtained from the executable's site packages.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links =
+    ... include-site-packages = false
+    ...
+    ... [primed_python]
+    ... executable = %(primed_executable)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... eggs = other
+    ... ''' % globals())
+    >>> print system(primed_executable+" "+buildout)
+    Uninstalling eggs.
+    Installing eggs.
+    Couldn't find index page for 'other' (maybe misspelled?)
+    Getting distribution for 'other'.
+    While:
+      Installing eggs.
+      Getting distribution for 'other'.
+    Error: Couldn't find a distribution for 'other'.
+    <BLANKLINE>
+
+We get an error if we specify anything but true or false:
+
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links = %(link_server)s
+    ... include-site-packages = no
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... eggs = other
+    ... ''' % globals())
+
+    >>> print system(primed_executable+" "+buildout)
+    While:
+      Initializing.
+    Error: Invalid value for include-site-packages option: no
+    <BLANKLINE>
+
+    """
+
+def include_site_packages_with_buildout():
+    """
+When buildout gets a recipe egg (as opposed to runs a recipe), it starts with
+the current Python working set--the one that the bin/buildout script uses
+itself. If this working set includes site-packages, and site-packages includes
+an egg for package that the recipe needs, and the recipe specifies a newer
+version of that package, this can generate a version conflict.
+
+One solution to this is to not use site-packages
+('include-site-packages = false').  However, if you want your scripts to use
+site-packages, then you have to specify 'include-site-packages = true' for
+all of them.
+
+To make this use case easier to handle, you can instead specify
+``include-site-packages-with-buildout = false``, which indicates that
+the bin/buildout should *not* use site-packages; and
+``include-site-packages = true``, which indicates that the rest of the scripts
+should use site-packages.
+
+This is the default configuration.
+
+    >>> from zc.buildout.buildout import Buildout
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... find-links = %(link_server)s
+    ... ''' % globals())
+    >>> buildout = Buildout('buildout.cfg', ())
+    >>> buildout['buildout']['include-site-packages-for-buildout']
+    'false'
+    >>> buildout['buildout']['include-site-packages']
+    'true'
+    >>> buildout.include_site_packages_for_buildout
+    False
+    >>> zc.buildout.easy_install.include_site_packages()
+    True
+
+This means that, when the buildout script is created by buildout, it explicitly
+specifies that site-packages should not be used.  We'll monkeypatch the
+zc.buildout.easy_install install function so we can see this happens.  (We test
+that this argument actually does what we want in other tests.)
+
+    >>> original_install = zc.buildout.easy_install.install
+    >>> def install(*args, **kwargs):
+    ...     print 'include_site_packages =', kwargs['include_site_packages']
+    ...     return original_install(*args, **kwargs)
+    ...
+    >>> zc.buildout.easy_install.install = install
+    >>> buildout.bootstrap(()) # doctest: +ELLIPSIS
+    include_site_packages = False...
+
+Now we'll do the reverse settings to show that the value will be honored in
+that case.
+
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... include-site-packages-for-buildout = true
+    ... include-site-packages = false
+    ... find-links = %(link_server)s
+    ... ''' % globals())
+    >>> buildout = Buildout('buildout.cfg', ())
+    >>> buildout['buildout']['include-site-packages-for-buildout']
+    'true'
+    >>> buildout['buildout']['include-site-packages']
+    'false'
+    >>> buildout.include_site_packages_for_buildout
+    True
+    >>> zc.buildout.easy_install.include_site_packages()
+    False
+    >>> buildout.bootstrap(()) # doctest: +ELLIPSIS
+    include_site_packages = True...
+    >>> zc.buildout.easy_install.install = original_install
+
+Now we'll show that a value that is not 'true' or 'false' generates an error.
+
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... include-site-packages-for-buildout = shazbot
+    ... ''')
+    >>> buildout = Buildout('buildout.cfg', ())
+    Traceback (most recent call last):
+    ...
+    UserError: Invalid value for include-site-packages-for-buildout option: shazbot
+
+    """
+
+def allowed_eggs_from_site_packages():
+    """
+Sometimes you need or want to control what eggs from site-packages are used.
+The allowed-eggs-from-site-packages option allows you to specify a whitelist of
+project names that may be included from site-packages.  You can use globs to
+specify the value.  It defaults to a single value of '*', indicating that any
+package may come from site-packages.
+
+This option interacts with include-site-packages in the following ways.
+
+If include-site-packages is true, then allowed-eggs-from-site-packages filters
+what eggs from site-packages may be chosen.  If allowed-eggs-from-site-packages
+is an empty list, then no eggs from site-packages are chosen, but site-packages
+will still be included at the end of path lists.
+
+If include-site-packages is false, allowed-eggs-from-site-packages is
+irrelevant.
+
+This test shows the interaction with the zc.buildout.easy_install API.  Another
+test below (allow_site_package_eggs_option) shows using it with a buildout.cfg.
+
+Our "primed_executable" has the "demoneeded," "other," and "setuptools"
+packages available.  We'll simply be asking for "other" here.
+
+    >>> primed_executable = get_executable_with_site_packages()
+
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
+    ...     index=None,
+    ...     allowed_eggs_from_site_packages=['demoneeded', 'other'])
+    >>> [dist.project_name for dist in workingset]
+    ['other']
+
+That worked fine.  It would work fine for a glob too.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
+    ...     index=None,
+    ...     allowed_eggs_from_site_packages=['demoneeded', '?th*'])
+    >>> [dist.project_name for dist in workingset]
+    ['other']
+
+But now let's try again with 'other' not allowed.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
+    ...     index=None,
+    ...     allowed_eggs_from_site_packages=['demoneeded'])
+    Traceback (most recent call last):
+        ...
+    MissingDistribution: Couldn't find a distribution for 'other'.
+
+Here's the same, but with an empty list.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
+    ...     index=None,
+    ...     allowed_eggs_from_site_packages=[])
+    Traceback (most recent call last):
+        ...
+    MissingDistribution: Couldn't find a distribution for 'other'.
+
+Of course, this doesn't stop us from getting a package from elsewhere.  Here,
+we add a link server.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, executable=primed_executable,
+    ...     links=[link_server], index=link_server+'index/',
+    ...     allowed_eggs_from_site_packages=['demoneeded'])
+    >>> [dist.project_name for dist in workingset]
+    ['other']
+    >>> [dist.location for dist in workingset]
+    ['/site-packages-example-install/other-1.0-py2.6.egg']
+
+Finally, here's an example of an interaction we described above: we say that it
+is OK to allow the "other" egg to come from site-packages, but we don't
+include-site-packages.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
+    ...     index=None, include_site_packages=False,
+    ...     allowed_eggs_from_site_packages=['other'])
+    Traceback (most recent call last):
+        ...
+    MissingDistribution: Couldn't find a distribution for 'other'.
+
+    """
+
+def allowed_eggs_from_site_packages_option():
+    """
+As introduced in the previous test, the allowed-eggs-from-site-packages option
+allows you to specify a whitelist of project names that may be included from
+site-packages.
+
+This test shows the option being used in a buildout.  We try to limit these
+tests to those that test additional parts of the code beyond those tested in
+the test above.
+
+The buildout defaults to a whitelist of ('*',), or any project name.  The
+buildout configuration option defaults are managed separately from the
+zc.buildout.easy_install API defaults, so we show this here.
+
+    >>> from zc.buildout.buildout import Buildout
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... ''')
+    >>> buildout_instance = Buildout('buildout.cfg', ())
+    >>> buildout_instance['buildout']['allowed-eggs-from-site-packages']
+    '*'
+    >>> zc.buildout.easy_install.allowed_eggs_from_site_packages()
+    ('*',)
+
+In the test below, our "primed_executable" has the "demoneeded," "other," and "setuptools"
+packages available.  We'll simply be asking for "other" here.  The default
+value of '*' will allow it.  This confirms behaviorally what we saw above.
+
+    >>> primed_executable = get_executable_with_site_packages()
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links =
+    ...
+    ... [primed_python]
+    ... executable = %(primed_executable)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... python = primed_python
+    ... eggs = other
+    ... ''' % globals())
+
+    >>> print system(primed_executable+" "+buildout)
+    Installing eggs.
+    <BLANKLINE>
+
+Here we explicitly use a "*" for the same result.  This also shows that we
+correctly parse a single-line value.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links =
+    ... allowed-eggs-from-site-packages = *
+    ...
+    ... [primed_python]
+    ... executable = %(primed_executable)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... python = primed_python
+    ... eggs = other
+    ... ''' % globals())
+
+    >>> print system(primed_executable+" "+buildout)
+    Updating eggs.
+    <BLANKLINE>
+
+Specifying the egg exactly will work as well.  This shows we correctly
+parse a multi-line value.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links =
+    ... allowed-eggs-from-site-packages = demoneeded
+    ...                                   other
+    ...
+    ... [primed_python]
+    ... executable = %(primed_executable)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... python = primed_python
+    ... eggs = other
+    ... ''' % globals())
+
+    >>> print system(primed_executable+" "+buildout)
+    Updating eggs.
+    <BLANKLINE>
+
+It will also work if we use a glob ("*" or "?").  (We won't show that here
+because we already tested it in the previous doctest.)
+
+However, if we do not include "other" in the "allowed-eggs-from-site-packages"
+key, we get an error, because the packages are not available in any links, and
+they are not allowed to come from the executable's site packages. (We won't
+show that here because we already tested it in the previous doctest.)
+
+Finally, here's a test with an empty value.  It shows that we parse an empty
+value correctly, and verifies that we really are controlling what eggs are
+allowed, because we see that we were unable to get "other".
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links =
+    ... allowed-eggs-from-site-packages =
+    ...
+    ... [primed_python]
+    ... executable = %(primed_executable)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... eggs = other
+    ... ''' % globals())
+    >>> print system(primed_executable+" "+buildout)
+    Uninstalling eggs.
+    Installing eggs.
+    Couldn't find index page for 'other' (maybe misspelled?)
+    Getting distribution for 'other'.
+    While:
+      Installing eggs.
+      Getting distribution for 'other'.
+    Error: Couldn't find a distribution for 'other'.
+    <BLANKLINE>
 
     """
 
@@ -2656,8 +3364,17 @@ def increment_on_command_line():
 ######################################################################
 
 def create_sample_eggs(test, executable=sys.executable):
+    """Creates sample eggs, source distributions, and a faux site-packages."
+
+    Unlike the faux site-packages created by
+    ``get_executable_with_site_packages``, this one has packages installed the
+    way distributions often install eggs in system Pythons (via
+    zc.buildout.testing.sys_install).
+    """
     write = test.globs['write']
     dest = test.globs['sample_eggs']
+    site_packages = test.globs['tmpdir']('site_packages')
+    test.globs['site_packages'] = site_packages
     tmp = tempfile.mkdtemp()
     try:
         write(tmp, 'README.txt', '')
@@ -2674,6 +3391,8 @@ def create_sample_eggs(test, executable=sys.executable):
                 % (i, c1)
                 )
             zc.buildout.testing.sdist(tmp, dest)
+            if i==1:
+                zc.buildout.testing.sys_install(tmp, site_packages)
 
         write(
             tmp, 'setup.py',
@@ -2703,6 +3422,8 @@ def create_sample_eggs(test, executable=sys.executable):
                 " zip_safe=True, version='0.%s%s')\n" % (i, c1)
                 )
             zc.buildout.testing.bdist_egg(tmp, executable, dest)
+            if i==3:
+                zc.buildout.testing.sys_install(tmp, site_packages)
 
         write(tmp, 'eggrecipebigdemo.py', 'import eggrecipedemo')
         write(
@@ -2777,6 +3498,93 @@ def easy_install_SetUp(test):
         test.globs['sample_eggs'])
     test.globs['update_extdemo'] = lambda : add_source_dist(test, 1.5)
     zc.buildout.testing.install_develop('zc.recipe.egg', test)
+    # Most tests don't need this set up, and it takes some time, so we just
+    # make it available as a convenience.
+    def get_executable_with_site_packages(requirements=None):
+        executable_buildout = test.globs['tmpdir']('executable')
+        old_wd = os.getcwd()
+        os.chdir(executable_buildout)
+        if requirements is None:
+            requirements = ['demoneeded', 'setuptools', 'other']
+        elif len([req for req in requirements
+                  if req.startswith('setuptools')]) == 0:
+            requirements.append('setuptools') # you always need that.
+        requirements = '\n       '.join(requirements)
+        test.globs['write']('buildout.cfg', textwrap.dedent(
+            '''
+            [buildout]
+            parts = interpreter
+            find-links = %(link_server)s
+            prefer-final = true
+
+            [interpreter]
+            recipe = zc.recipe.egg
+            interpreter = py
+            eggs = %(requirements)s
+            ''') % {'requirements': requirements,
+                   'link_server': test.globs['link_server']})
+        zc.buildout.buildout.Buildout(
+            'buildout.cfg',
+            [('buildout', 'log-level', 'WARNING'),
+             # trick bootstrap into putting the buildout develop egg
+             # in the eggs dir.
+             ('buildout', 'develop-eggs-directory', 'eggs'),
+             # we need to have setuptools around.
+             ('buildout', 'include-site-packages-for-buildout', 'true'),
+            ]
+            ).bootstrap([])
+        os.mkdir('develop-eggs')
+        zc.buildout.testing.install_develop(
+            'zc.recipe.egg',
+            os.path.join(executable_buildout, 'develop-eggs'))
+        test.globs['system'](
+            os.path.join(executable_buildout, 'bin', 'buildout'))
+        os.chdir(old_wd)
+        return os.path.join(executable_buildout, 'bin', 'py')
+    test.globs['get_executable_with_site_packages'] = (
+        get_executable_with_site_packages)
+    # Most tests also don't need this one.  This creates an executable with
+    # eggs installed as a system might.
+    def get_executable_with_system_installed_packages():
+        executable_buildout = test.globs['tmpdir']('executable_buildout')
+        old_wd = os.getcwd()
+        os.chdir(executable_buildout)
+        import textwrap
+        test.globs['write']('buildout.cfg', textwrap.dedent(
+            '''
+            [buildout]
+            parts = interpreter
+       
+            [interpreter]
+            recipe = zc.recipe.egg
+            scripts = py
+            interpreter = py
+            extra-paths = %(site-packages)s
+            include-site-packages = false
+            eggs = setuptools
+            ''') % {
+                'site-packages': os.path.join(
+                    test.globs['site_packages'], 'lib', 'python')})
+        zc.buildout.buildout.Buildout(
+            'buildout.cfg',
+            [('buildout', 'log-level', 'WARNING'),
+             # trick bootstrap into putting the buildout develop egg
+             # in the eggs dir.
+             ('buildout', 'develop-eggs-directory', 'eggs'),
+             # we need to have setuptools around.
+             ('buildout', 'include-site-packages-for-buildout', 'true'),
+            ]
+            ).bootstrap([])
+        os.mkdir('develop-eggs')
+        zc.buildout.testing.install_develop(
+            'zc.recipe.egg',
+            os.path.join(executable_buildout, 'develop-eggs'))
+        test.globs['system'](
+            os.path.join(executable_buildout, 'bin', 'buildout'))
+        os.chdir(old_wd)
+        return os.path.join(executable_buildout, 'bin', 'py')
+    test.globs['get_executable_with_system_installed_packages'] = (
+        get_executable_with_system_installed_packages)
 
 egg_parse = re.compile('([0-9a-zA-Z_.]+)-([0-9a-zA-Z_.]+)-py(\d[.]\d).egg$'
                        ).match
@@ -2980,7 +3788,10 @@ def test_suite():
                    '-q develop -mxN -d "/sample-buildout/develop-eggs'),
                    '-q develop -mxN -d /sample-buildout/develop-eggs'
                 ),
-                (re.compile(r'^[*]...'), '...'),
+               (re.compile(r'^[*]...'), '...'),
+               # for bug_92891_bootstrap_crashes_with_egg_recipe_in_buildout_section
+               (re.compile(r"Unused options for buildout: 'eggs' 'scripts'\."),
+                "Unused options for buildout: 'scripts' 'eggs'."),
                ]),
             ),
         zc.buildout.testselectingpython.test_suite(),
