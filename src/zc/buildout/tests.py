@@ -2464,7 +2464,7 @@ don't want buildout to fall over when they do.
 To demonstrate this, we will need to create a distribution that has one of
 these unpleasant tricks, and a Python that has an older version installed.
 
-    >>> for i in (0, 1):
+    >>> for version in ('1.0', '1.1'):
     ...     tmp = tempfile.mkdtemp()
     ...     try:
     ...         write(tmp, 'README.txt', '')
@@ -2475,7 +2475,7 @@ these unpleasant tricks, and a Python that has an older version installed.
     ...             "'pkg_resources').declare_namespace(__name__)\n")
     ...         mkdir(tmp, 'src', 'tellmy', 'version')
     ...         write(tmp, 'src', 'tellmy', 'version',
-    ...               '__init__.py', '__version__="1.%d"\n' % i)
+    ...               '__init__.py', '__version__=%r\n' % version)
     ...         write(
     ...             tmp, 'setup.py',
     ...             "from setuptools import setup\n"
@@ -2492,7 +2492,9 @@ these unpleasant tricks, and a Python that has an older version installed.
     ...             " author='bob', url='bob', author_email='bob')\n"
     ...             )
     ...         zc.buildout.testing.sdist(tmp, sample_eggs)
-    ...         if i==0:
+    ...         if version == '1.0':
+    ...             # We install the 1.0 version in site packages the way a
+    ...             # system packaging system (debs, rpms) would do it.
     ...             zc.buildout.testing.sys_install(tmp, site_packages)
     ...     finally:
     ...         shutil.rmtree(tmp)
