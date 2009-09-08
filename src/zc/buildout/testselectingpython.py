@@ -36,7 +36,7 @@ We can specify an specific Python executable.
     >>> ls(dest)
     d  demo-0.3-py%(other_version)s.egg
     d  demoneeded-1.1-py%(other_version)s.egg
-    d  setuptools-0.6-py%(other_version)s.egg
+    d  distribute-0.6-py%(other_version)s.egg
 
 """ % dict(other_version=other_version)
     )
@@ -63,7 +63,7 @@ def test_suite():
         setUp=setup,
         tearDown=zc.buildout.testing.buildoutTearDown,
         checker=renormalizing.RENormalizing([
-            (re.compile('setuptools-\S+-py%s.egg' % other_version),
-             'setuptools-V-py%s.egg' % other_version),
+            (re.compile('distribute-\S+-py%s.egg' % other_version),
+             'distribute-V-py%s.egg' % other_version),
             ]),
         )

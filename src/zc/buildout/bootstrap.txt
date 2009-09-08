@@ -82,7 +82,7 @@ Let's make sure the generated `buildout` script uses it::
     <BLANKLINE>
     import sys
     sys.path[0:0] = [
-      '/sample/eggs/setuptools-...egg',
+      '/sample/eggs/distribute-...egg',
       '/sample/eggs/zc.buildout-1.1.2...egg',
       ]
     <BLANKLINE>
@@ -110,7 +110,7 @@ Let's make sure the generated `buildout` script uses it::
     <BLANKLINE>
     import sys
     sys.path[0:0] = [
-      '/sample/eggs/setuptools-...egg',
+      '/sample/eggs/distribute-...egg',
       '/sample/eggs/zc.buildout-1.2.1...egg',
       ]
     <BLANKLINE>
