@@ -28,9 +28,9 @@ if os_path_sep == '\\':
     os_path_sep *= 2
 
 
-def develop_w_non_setuptools_setup_scripts():
+def develop_w_non_distribute_setup_scripts():
     """
-We should be able to deal with setup scripts that aren't setuptools based.
+We should be able to deal with setup scripts that aren't distribute based.
 
     >>> mkdir('foo')
     >>> write('foo', 'setup.py',
@@ -57,7 +57,7 @@ We should be able to deal with setup scripts that aren't setuptools based.
 
 def develop_verbose():
     """
-We should be able to deal with setup scripts that aren't setuptools based.
+We should be able to deal with setup scripts that aren't distribute based.
 
     >>> mkdir('foo')
     >>> write('foo', 'setup.py',
@@ -318,10 +318,10 @@ def show_who_requires_when_there_is_a_conflict():
 If we use the verbose switch, we can see where requirements are comning from:
 
     >>> print system(buildout+' -v'), # doctest: +ELLIPSIS
-    Installing 'zc.buildout', 'setuptools'.
+    Installing 'zc.buildout', 'distribute'.
     We have a develop egg: zc.buildout 1.0.0
-    We have the best distribution that satisfies 'setuptools'.
-    Picked: setuptools = 0.6
+    We have the best distribution that satisfies 'distribute'.
+    Picked: distribute = 0.6
     Develop: '/sample-buildout/sampley'
     Develop: '/sample-buildout/samplez'
     Develop: '/sample-buildout/samplea'
@@ -557,7 +557,7 @@ def create_sections_on_command_line():
     ... ''')
 
     >>> print system(buildout + ' foo:bar=1 -vv'), # doctest: +ELLIPSIS
-    Installing 'zc.buildout', 'setuptools'.
+    Installing 'zc.buildout', 'distribute'.
     ...
     [foo]
     bar = 1
@@ -726,14 +726,14 @@ All gone
     '''
 
 
-def add_setuptools_to_dependencies_when_namespace_packages():
+def add_distribute_to_dependencies_when_namespace_packages():
     '''
-Often, a package depends on setuptools soley by virtue of using
+Often, a package depends on distribute soley by virtue of using
 namespace packages. In this situation, package authors often forget to
-declare setuptools as a dependency. This is a mistake, but,
+declare distribute as a dependency. This is a mistake, but,
 unfortunately, a common one that we need to work around.  If an egg
-uses namespace packages and does not include setuptools as a depenency,
-we will still include setuptools in the working set.  If we see this for
+uses namespace packages and does not include distribute as a depenency,
+we will still include distribute in the working set.  If we see this for
 a devlop egg, we will also generate a warning.
 
     >>> mkdir('foo')
@@ -742,15 +742,15 @@ a devlop egg, we will also generate a warning.
     >>> write('foo', 'src', 'stuff', '__init__.py',
     ... """__import__('pkg_resources').declare_namespace(__name__)
     ... """)
-    >>> mkdir('foo', 'src', 'stuff', 'foox')
-    >>> write('foo', 'src', 'stuff', 'foox', '__init__.py', '')
+    >>> mkdir('foo', 'src', 'stuff', 'afoox')
+    >>> write('foo', 'src', 'stuff', 'afoox', '__init__.py', '')
     >>> write('foo', 'setup.py',
     ... """
     ... from setuptools import setup
-    ... setup(name='foox',
+    ... setup(name='afoox',
     ...       namespace_packages = ['stuff'],
     ...       package_dir = {'': 'src'},
-    ...       packages = ['stuff', 'stuff.foox'],
+    ...       packages = ['stuff', 'stuff.afoox'],
     ...       )
     ... """)
     >>> write('foo', 'README.txt', '')
@@ -766,7 +766,7 @@ a devlop egg, we will also generate a warning.
     Develop: '/sample-buildout/foo'
 
 Now, if we generate a working set using the egg link, we will get a warning
-and we will get setuptools included in the working set.
+and we will get distribute included in the working set.
 
     >>> import logging, zope.testing.loggingsupport
     >>> handler = zope.testing.loggingsupport.InstalledHandler(
@@ -775,22 +775,22 @@ and we will get setuptools included in the working set.
 
     >>> [dist.project_name
     ...  for dist in zc.buildout.easy_install.working_set(
-    ...    ['foox'], sys.executable,
+    ...    ['afoox'], sys.executable,
     ...    [join(sample_buildout, 'eggs'),
     ...     join(sample_buildout, 'develop-eggs'),
     ...     ])]
-    ['foox', 'setuptools']
+    ['afoox', 'distribute']
 
     >>> print handler
     zc.buildout.easy_install WARNING
-      Develop distribution: foox 0.0.0
-    uses namespace packages but the distribution does not require setuptools.
+      Develop distribution: afoox 0.0.0
+    uses namespace packages but the distribution does not require distribute.
 
     >>> handler.clear()
 
 On the other hand, if we have a regular egg, rather than a develop egg:
 
-    >>> os.remove(join('develop-eggs', 'foox.egg-link'))
+    >>> os.remove(join('develop-eggs', 'afoox.egg-link'))
 
     >>> _ = system(join('bin', 'buildout') + ' setup foo bdist_egg -d'
     ...            + join(sample_buildout, 'eggs'))
@@ -799,18 +799,18 @@ On the other hand, if we have a regular egg, rather than a develop egg:
     -  zc.recipe.egg.egg-link
 
     >>> ls('eggs') # doctest: +ELLIPSIS
-    -  foox-0.0.0-py2.4.egg
+    -  afoox-0.0.0-py2.4.egg
     ...
 
-We do not get a warning, but we do get setuptools included in the working set:
+We do not get a warning, but we do get distribute included in the working set:
 
     >>> [dist.project_name
     ...  for dist in zc.buildout.easy_install.working_set(
-    ...    ['foox'], sys.executable,
+    ...    ['afoox'], sys.executable,
     ...    [join(sample_buildout, 'eggs'),
     ...     join(sample_buildout, 'develop-eggs'),
     ...     ])]
-    ['foox', 'setuptools']
+    ['afoox', 'distribute']
 
     >>> print handler,
 
@@ -822,7 +822,7 @@ namespace package.
     >>> write('bar', 'setup.py',
     ... """
     ... from setuptools import setup
-    ... setup(name='bar', install_requires = ['foox'])
+    ... setup(name='bar', install_requires = ['afoox'])
     ... """)
     >>> write('bar', 'README.txt', '')
 
@@ -843,12 +843,12 @@ namespace package.
     ...    [join(sample_buildout, 'eggs'),
     ...     join(sample_buildout, 'develop-eggs'),
     ...     ])]
-    ['bar', 'foox', 'setuptools']
+    ['bar', 'afoox', 'distribute']
 
     >>> print handler,
     zc.buildout.easy_install WARNING
-      Develop distribution: foox 0.0.0
-    uses namespace packages but the distribution does not require setuptools.
+      Develop distribution: afoox 0.0.0
+    uses namespace packages but the distribution does not require distribute.
 
 
     >>> logging.getLogger('zc.buildout.easy_install').propagate = True
@@ -1892,7 +1892,7 @@ def bug_59270_recipes_always_start_in_buildout_dir():
 def bug_61890_file_urls_dont_seem_to_work_in_find_dash_links():
     """
 
-    This bug arises from the fact that setuptools is overly restrictive
+    This bug arises from the fact that distribute is overly restrictive
     about file urls, requiring that file urls pointing at directories
     must end in a slash.
 
@@ -1976,10 +1976,10 @@ def dealing_with_extremely_insane_dependencies():
     However, if we run in verbose mode, we can see why packages were included:
 
     >>> print system(buildout+' -v'), # doctest: +ELLIPSIS
-    Installing 'zc.buildout', 'setuptools'.
+    Installing 'zc.buildout', 'distribute'.
     We have a develop egg: zc.buildout 1.0.0
-    We have the best distribution that satisfies 'setuptools'.
-    Picked: setuptools = 0.6
+    We have the best distribution that satisfies 'distribute'.
+    Picked: distribute = 0.6
     Develop: '/sample-buildout/pack0'
     Develop: '/sample-buildout/pack1'
     Develop: '/sample-buildout/pack2'
@@ -2267,7 +2267,7 @@ The default is prefer-final = false:
     ... ''' % globals())
 
     >>> print system(buildout+' -v'), # doctest: +ELLIPSIS
-    Installing 'zc.buildout', 'setuptools'.
+    Installing 'zc.buildout', 'distribute'.
     ...
     Picked: demo = 0.4c1
     ...
@@ -2289,7 +2289,7 @@ We get the same behavior if we add prefer-final = false
     ... ''' % globals())
 
     >>> print system(buildout+' -v'), # doctest: +ELLIPSIS
-    Installing 'zc.buildout', 'setuptools'.
+    Installing 'zc.buildout', 'distribute'.
     ...
     Picked: demo = 0.4c1
     ...
@@ -2311,7 +2311,7 @@ distributions:
     ... ''' % globals())
 
     >>> print system(buildout+' -v'), # doctest: +ELLIPSIS
-    Installing 'zc.buildout', 'setuptools'.
+    Installing 'zc.buildout', 'distribute'.
     ...
     Picked: demo = 0.3
     ...
@@ -2370,9 +2370,9 @@ Distribution setup scripts can import modules in the distribution directory:
 
     """
 
-def dont_pick_setuptools_if_version_is_specified_when_required_by_src_dist():
+def dont_pick_distribute_if_version_is_specified_when_required_by_src_dist():
     """
-When installing a source distribution, we got setuptools without
+When installing a source distribution, we got distribute without
 honoring our version specification.
 
     >>> mkdir('dist')
@@ -2393,14 +2393,14 @@ honoring our version specification.
     ... allow-picked-versions = false
     ...
     ... [versions]
-    ... setuptools = %s
+    ... distribute = %s
     ... foo = 1
     ...
     ... [foo]
     ... recipe = zc.recipe.egg
     ... eggs = foo
     ... ''' % pkg_resources.working_set.find(
-    ...    pkg_resources.Requirement.parse('setuptools')).version)
+    ...    pkg_resources.Requirement.parse('distribute')).version)
 
     >>> print system(buildout),
     Installing foo.
@@ -2699,7 +2699,7 @@ def updateSetup(test):
             '-q', 'bdist_egg', '-d', eggs,
             dict(os.environ,
                  PYTHONPATH=pkg_resources.working_set.find(
-                               pkg_resources.Requirement.parse('setuptools')
+                               pkg_resources.Requirement.parse('distribute')
                                ).location,
                  ),
             ) == 0
@@ -2717,10 +2717,10 @@ def updateSetup(test):
 
     # now let's make the new releases
     makeNewRelease('zc.buildout', ws, new_releases)
-    makeNewRelease('setuptools', ws, new_releases)
+    makeNewRelease('distribute', ws, new_releases)
 
     os.mkdir(os.path.join(new_releases, 'zc.buildout'))
-    os.mkdir(os.path.join(new_releases, 'setuptools'))
+    os.mkdir(os.path.join(new_releases, 'distribute'))
 
 
 
@@ -2745,7 +2745,7 @@ def test_suite():
                 '__buildout_signature__ = recipes-SSSSSSSSSSS'),
                (re.compile('executable = [\S ]+python\S*', re.I),
                 'executable = python'),
-               (re.compile('[-d]  setuptools-\S+[.]egg'), 'setuptools.egg'),
+               (re.compile('[-d]  distribute-\S+[.]egg'), 'distribute.egg'),
                (re.compile('zc.buildout(-\S+)?[.]egg(-link)?'),
                 'zc.buildout.egg'),
                (re.compile('creating \S*setup.cfg'), 'creating setup.cfg'),
@@ -2786,12 +2786,12 @@ def test_suite():
                zc.buildout.testing.normalize_egg_py,
                normalize_bang,
                (re.compile('99[.]99'), 'NINETYNINE.NINETYNINE'),
-               (re.compile('(zc.buildout|setuptools)-\d+[.]\d+\S*'
+               (re.compile('(zc.buildout|distribute)-\d+[.]\d+\S*'
                            '-py\d.\d.egg'),
                 '\\1.egg'),
-               (re.compile('(zc.buildout|setuptools)( version)? \d+[.]\d+\S*'),
+               (re.compile('(zc.buildout|distribute)( version)? \d+[.]\d+\S*'),
                 '\\1 V.V'),
-               (re.compile('[-d]  setuptools'), '-  setuptools'),
+               (re.compile('[-d]  distribute'), '-  distribute'),
                ])
             ),
 
@@ -2807,7 +2807,7 @@ def test_suite():
                zc.buildout.testing.normalize_egg_py,
                normalize_bang,
                (re.compile('extdemo[.]pyd'), 'extdemo.so'),
-               (re.compile('[-d]  setuptools-\S+[.]egg'), 'setuptools.egg'),
+               (re.compile('[-d]  distribute-\S+[.]egg'), 'distribute.egg'),
                (re.compile(r'\\[\\]?'), '/'),
                ]),
             ),
@@ -2836,16 +2836,16 @@ def test_suite():
                zc.buildout.testing.normalize_egg_py,
                (re.compile("buildout: Running \S*setup.py"),
                 'buildout: Running setup.py'),
-               (re.compile('setuptools-\S+-'),
-                'setuptools.egg'),
+               (re.compile('distribute-\S+-'),
+                'distribute.egg'),
                (re.compile('zc.buildout-\S+-'),
                 'zc.buildout.egg'),
                (re.compile('File "\S+one.py"'),
                 'File "one.py"'),
                (re.compile(r'We have a develop egg: (\S+) (\S+)'),
                 r'We have a develop egg: \1 V'),
-               (re.compile('Picked: setuptools = \S+'),
-                'Picked: setuptools = V'),
+               (re.compile('Picked: distribute = \S+'),
+                'Picked: distribute = V'),
                (re.compile(r'\\[\\]?'), '/'),
                (re.compile(
                    '-q develop -mxN -d "/sample-buildout/develop-eggs'),
@@ -2867,7 +2867,7 @@ def test_suite():
                zc.buildout.testing.normalize_egg_py,
                (re.compile('__buildout_signature__ = recipes-\S+'),
                 '__buildout_signature__ = recipes-SSSSSSSSSSS'),
-               (re.compile('[-d]  setuptools-\S+[.]egg'), 'setuptools.egg'),
+               (re.compile('[-d]  distribute-\S+[.]egg'), 'distribute.egg'),
                (re.compile('zc.buildout(-\S+)?[.]egg(-link)?'),
                 'zc.buildout.egg'),
                (re.compile('creating \S*setup.cfg'), 'creating setup.cfg'),
@@ -2910,7 +2910,7 @@ def test_suite():
                zc.buildout.testing.normalize_endings,
                zc.buildout.testing.normalize_script,
                normalize_bang,
-               (re.compile('Downloading.*setuptools.*egg\n'), ''),
+               (re.compile('Downloading.*distribute.*egg\n'), ''),
                ]),
             ))
 

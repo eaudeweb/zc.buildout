@@ -18,11 +18,11 @@ By default, zc.buildout doesn't unzip zip-safe eggs.
     >>> ls('eggs')
     -  demo-0.4c1-py2.4.egg
     -  demoneeded-1.2c1-py2.4.egg
-    d  setuptools-0.6c8-py2.4.egg
+    d  distribute-0.6c8-py2.4.egg
     -  zc.buildout.egg-link
 
 This follows the
-policy followed by setuptools itself.  Experience shows this policy
+policy followed by distribute itself.  Experience shows this policy
 to to be inconvenient.  Zipped eggs make debugging more difficult and
 often import more slowly.
 
@@ -51,5 +51,5 @@ default unzipping policy.
     >>> ls('eggs')
     d  demo-0.4c1-py2.4.egg
     d  demoneeded-1.2c1-py2.4.egg
-    d  setuptools-0.6c8-py2.4.egg
+    d  distribute-0.6c8-py2.4.egg
     -  zc.buildout.egg-link

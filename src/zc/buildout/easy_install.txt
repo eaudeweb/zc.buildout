@@ -28,7 +28,7 @@ The easy_install module provides a function, install, for installing one
 or more packages and their dependencies.  The install function takes 2
 positional arguments:
 
-- An iterable of setuptools requirement strings for the distributions
+- An iterable of distribute requirement strings for the distributions
   to be installed, and
 
 - A destination directory to install to and to satisfy requirements
@@ -402,7 +402,7 @@ dictionary:
 Dependency links
 ----------------
 
-Setuptools allows metadata that describes where to search for package
+Distribute allows metadata that describes where to search for package
 dependencies. This option is called dependency_links. Buildout has its
 own notion of where to look for dependencies, but it also uses the
 setup tools dependency_links information if it's available.
@@ -522,7 +522,7 @@ Script generation
 -----------------
 
 The easy_install module provides support for creating scripts from
-eggs.  It provides a function similar to setuptools except that it
+eggs.  It provides a function similar to distribute except that it
 provides facilities for baking a script's path into the script.  This
 has two advantages:
 
@@ -549,7 +549,7 @@ from the demo egg:
 the four arguments we passed were:
 
 1. A sequence of distribution requirements.  These are of the same
-   form as setuptools requirements.  Here we passed a single
+   form as distribute requirements.  Here we passed a single
    requirement, for the version 0.1 demo distribution.
 
 2. A working set,
@@ -633,7 +633,7 @@ rather than passing a requirement:
 
 Passing entry-point information directly is handy when using eggs (or
 distributions) that don't declare their entry points, such as
-distributions that aren't based on setuptools.
+distributions that aren't based on distribute.
 
 The interpreter keyword argument can be used to generate a script that can
 be used to invoke the Python interactive interpreter with the path set
@@ -1177,7 +1177,7 @@ Now, if we install demo, and extdemo:
     GET 200 /demo-0.2-py2.4.egg
     GET 404 /index/demoneeded/
     GET 200 /demoneeded-1.1.zip
-    GET 404 /index/setuptools/
+    GET 404 /index/distribute/
 
     >>> zc.buildout.easy_install.build(
     ...   'extdemo', dest,
@@ -1220,7 +1220,7 @@ Now when we install the distributions:
     GET 404 /index/demo/
     GET 200 /index/
     GET 404 /index/demoneeded/
-    GET 404 /index/setuptools/
+    GET 404 /index/distribute/
 
     >>> zc.buildout.easy_install.build(
     ...   'extdemo', dest,
