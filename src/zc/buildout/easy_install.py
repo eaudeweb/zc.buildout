@@ -16,8 +16,6 @@
 This module provides a high-level Python API for installing packages.
 It doesn't install scripts.  It uses distribute and requires it to be
 installed.
-
-$Id$
 """
 
 import distutils.errors
@@ -34,7 +32,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import urlparse
 import zc.buildout
 import zipimport
 
@@ -55,7 +52,6 @@ is_win32 = sys.platform == 'win32'
 is_jython = sys.platform.startswith('java')
 
 if is_jython:
-    import subprocess
     import java.lang.System
     jython_os_name = (java.lang.System.getProperties()['os.name']).lower()
 
@@ -621,7 +617,9 @@ class Installer:
                 raise IncompatibleVersionError("Bad version", version)
 
             requirement = pkg_resources.Requirement.parse(
-                "%s ==%s" % (requirement.project_name, version))
+                "%s[%s] ==%s" % (requirement.project_name,
+                               ','.join(requirement.extras),
+                               version))
 
         return requirement
 
@@ -1023,7 +1021,7 @@ relative_paths_setup = """
 import os
 
 join = os.path.join
-base = os.path.dirname(os.path.abspath(__file__))
+base = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
 """
 
 def _script(module_name, attrs, path, dest, executable, arguments,
@@ -1129,22 +1127,28 @@ sys.path[0:0] = [
 
 _interactive = True
 if len(sys.argv) > 1:
-    import getopt
-    _options, _args = getopt.getopt(sys.argv[1:], 'ic:')
+    _options, _args = __import__("getopt").getopt(sys.argv[1:], 'ic:m:')
     _interactive = False
     for (_opt, _val) in _options:
         if _opt == '-i':
             _interactive = True
         elif _opt == '-c':
             exec _val
+        elif _opt == '-m':
+            sys.argv[1:] = _args
+            _args = []
+            __import__("runpy").run_module(
+                 _val, {}, "__main__", alter_sys=True)
 
     if _args:
         sys.argv[:] = _args
-        execfile(sys.argv[0])
+        __file__ = _args[0]
+        del _options, _args
+        execfile(__file__)
 
 if _interactive:
-    import code
-    code.interact(banner="", local=globals())
+    del _interactive
+    __import__("code").interact(banner="", local=globals())
 '''
 
 runsetup_template = """

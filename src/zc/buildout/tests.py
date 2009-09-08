@@ -11,17 +11,19 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""XXX short summary goes here.
-
-$Id$
-"""
-
-import os, re, shutil, sys, tempfile, unittest, zipfile
-from zope.testing import doctest, renormalizing
+from zope.testing import doctest
+from zope.testing import renormalizing
+import os
 import pkg_resources
-import zc.buildout.testing, zc.buildout.easy_install
-
+import re
+import shutil
+import sys
+import tempfile
+import unittest
+import zc.buildout.easy_install
+import zc.buildout.testing
 import zc.buildout.testselectingpython
+import zipfile
 
 os_path_sep = os.path.sep
 if os_path_sep == '\\':
@@ -2527,6 +2529,129 @@ def warn_users_when_expanding_shell_patterns_yields_no_results():
 
     """
 
+def make_sure_versions_dont_cancel_extras():
+    """
+    There was a bug that caused extras in requirements to be lost.
+
+    >>> open('setup.py', 'w').write('''
+    ... from setuptools import setup
+    ... setup(name='extraversiondemo', version='1.0',
+    ...       url='x', author='x', author_email='x',
+    ...       extras_require=dict(foo=['demo']), py_modules=['t'])
+    ... ''')
+    >>> open('README', 'w').close()
+    >>> open('t.py', 'w').close()
+
+    >>> sdist('.', sample_eggs)
+    >>> mkdir('dest')
+    >>> ws = zc.buildout.easy_install.install(
+    ...     ['extraversiondemo[foo]'], 'dest', links=[sample_eggs],
+    ...     versions = dict(extraversiondemo='1.0')
+    ... )
+    >>> sorted(dist.key for dist in ws)
+    ['demo', 'demoneeded', 'extraversiondemo']
+    """
+
+def increment_buildout_options():
+    r"""
+    >>> write('b1.cfg', '''
+    ... [buildout]
+    ... parts = p1
+    ... x = 1
+    ... y = a
+    ...     b
+    ...
+    ... [p1]
+    ... recipe = zc.buildout:debug
+    ... foo = ${buildout:x} ${buildout:y}
+    ... ''')
+
+    >>> write('buildout.cfg', '''
+    ... [buildout]
+    ... extends = b1.cfg
+    ... parts += p2
+    ... x += 2
+    ... y -= a
+    ...
+    ... [p2]
+    ... <= p1
+    ... ''')
+
+    >>> print system(buildout),
+    Installing p1.
+      foo='1\n2 b'
+      recipe='zc.buildout:debug'
+    Installing p2.
+      foo='1\n2 b'
+      recipe='zc.buildout:debug'
+    """
+
+def increment_buildout_with_multiple_extended_files_421022():
+    r"""
+    >>> write('foo.cfg', '''
+    ... [buildout]
+    ... foo-option = foo
+    ... [other]
+    ... foo-option = foo
+    ... ''')
+    >>> write('bar.cfg', '''
+    ... [buildout]
+    ... bar-option = bar
+    ... [other]
+    ... bar-option = bar
+    ... ''')
+    >>> write('buildout.cfg', '''
+    ... [buildout]
+    ... parts = p other
+    ... extends = bar.cfg foo.cfg
+    ... bar-option += baz
+    ... foo-option += ham
+    ...
+    ... [other]
+    ... recipe = zc.buildout:debug
+    ... bar-option += baz
+    ... foo-option += ham
+    ...
+    ... [p]
+    ... recipe = zc.buildout:debug
+    ... x = ${buildout:bar-option} ${buildout:foo-option}
+    ... ''')
+
+    >>> print system(buildout),
+    Installing p.
+      recipe='zc.buildout:debug'
+      x='bar\nbaz foo\nham'
+    Installing other.
+      bar-option='bar\nbaz'
+      foo-option='foo\nham'
+      recipe='zc.buildout:debug'
+    """
+
+def increment_on_command_line():
+    r"""
+    >>> write('buildout.cfg', '''
+    ... [buildout]
+    ... parts = p1
+    ... x = 1
+    ... y = a
+    ...     b
+    ...
+    ... [p1]
+    ... recipe = zc.buildout:debug
+    ... foo = ${buildout:x} ${buildout:y}
+    ...
+    ... [p2]
+    ... <= p1
+    ... ''')
+
+    >>> print system(buildout+' buildout:parts+=p2 p1:foo+=bar'),
+    Installing p1.
+      foo='1 a\nb\nbar'
+      recipe='zc.buildout:debug'
+    Installing p2.
+      foo='1 a\nb\nbar'
+      recipe='zc.buildout:debug'
+    """
 
 ######################################################################
 
@@ -2809,7 +2934,11 @@ def test_suite():
                (re.compile('extdemo[.]pyd'), 'extdemo.so'),
                (re.compile('[-d]  distribute-\S+[.]egg'), 'distribute.egg'),
                (re.compile(r'\\[\\]?'), '/'),
-               ]),
+               ]+(sys.version_info < (2, 5) and [
+                  (re.compile('.*No module named runpy.*', re.S), ''),
+                  (re.compile('.*usage: pdb.py scriptfile .*', re.S), ''),
+                  (re.compile('.*Error: what does not exist.*', re.S), ''),
+                  ] or [])),
             ),
 
         doctest.DocFileSuite(
@@ -2818,7 +2947,7 @@ def test_suite():
             tearDown=zc.buildout.testing.buildoutTearDown,
             optionflags=doctest.NORMALIZE_WHITESPACE | doctest.ELLIPSIS,
             checker=renormalizing.RENormalizing([
-               (re.compile('0x[0-9a-f]+'), '<MEM ADDRESS>'),
+               (re.compile(' at -?0x[^>]+'), '<MEM ADDRESS>'),
                (re.compile('http://localhost:[0-9]{4,5}/'),
                 'http://localhost/'),
                (re.compile('[0-9a-f]{32}'), '<MD5 CHECKSUM>'),

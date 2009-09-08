@@ -12,37 +12,32 @@
 #
 ##############################################################################
 """Buildout main script
-
-$Id$
 """
 
-import distutils.errors
-import logging
-import os
-import pprint
-import re
-import shutil
-import cStringIO
-import sys
-import tempfile
-import ConfigParser
-import UserDict
-import glob
-import copy
-
-
-import pkg_resources
-import zc.buildout
-import zc.buildout.download
-import zc.buildout.easy_install
-
 from rmtree import rmtree
-
 try:
     from hashlib import md5
 except ImportError:
     # Python 2.4 and older
     from md5 import md5
+
+import ConfigParser
+import copy
+import distutils.errors
+import glob
+import itertools
+import logging
+import os
+import pkg_resources
+import re
+import shutil
+import sys
+import tempfile
+import UserDict
+import zc.buildout
+import zc.buildout.download
+import zc.buildout.easy_install
+
 
 realpath = zc.buildout.easy_install.realpath
 
@@ -164,9 +159,14 @@ class Buildout(UserDict.DictMixin):
         else:
             base = None
 
-        override = dict((option, (value, 'COMMAND_LINE_VALUE'))
-                        for section, option, value in cloptions
-                        if section == 'buildout')
+
+        cloptions = dict(
+            (section, dict((option, (value, 'COMMAND_LINE_VALUE'))
+                           for (_, option, value) in v))
+            for (section, v) in itertools.groupby(sorted(cloptions),
+                                                  lambda v: v[0])
+            )
+        override = cloptions.get('buildout', {}).copy()
 
         # load user defaults, which override defaults
         if user_defaults:
@@ -182,11 +182,7 @@ class Buildout(UserDict.DictMixin):
                                 data['buildout'].copy(), override))
 
         # apply command-line options
-        for (section, option, value) in cloptions:
-            options = data.get(section)
-            if options is None:
-                options = data[section] = {}
-            options[option] = value, "COMMAND_LINE_VALUE"
+        _update(data, cloptions)
 
         self._annotated = copy.deepcopy(data)
         self._raw = _unannotate(data)
@@ -929,10 +925,13 @@ class Buildout(UserDict.DictMixin):
                 arg_list = list()
 
                 for a in args:
-                    add_args.append(zc.buildout.easy_install._safe_arg(a))
+                    arg_list.append(zc.buildout.easy_install._safe_arg(a))
 
-                subprocess.Popen([zc.buildout.easy_install._safe_arg(sys.executable)] + list(tsetup) +
-                                arg_list).wait()
+                subprocess.Popen(
+                    [zc.buildout.easy_install._safe_arg(sys.executable)]
+                    + list(tsetup)
+                    + arg_list
+                    ).wait()
 
             else:
                 os.spawnl(os.P_WAIT, sys.executable, zc.buildout.easy_install._safe_arg (sys.executable), tsetup,
@@ -1028,6 +1027,9 @@ class Options(UserDict.DictMixin):
         name = self.name
         __doing__ = 'Initializing section %s.', name
 
+        if '<' in self._raw:
+            self._raw = self._do_extend_raw(name, self._raw, [])
+
         # force substitutions
         for k, v in self._raw.items():
             if '${' in v:
@@ -1047,6 +1049,33 @@ class Options(UserDict.DictMixin):
         __doing__ = 'Initializing part %s.', name
         self.recipe = recipe_class(buildout, name, self)
         buildout._parts.append(name)
+
+    def _do_extend_raw(self, name, data, doing):
+        if name == 'buildout':
+            return data
+        if name in doing:
+            raise zc.buildout.UserError("Infinite extending loop %r" % name)
+        doing.append(name)
+        try:
+            to_do = data.pop('<', None)
+            if to_do is None:
+                return data
+            __doing__ = 'Loading input sections for %r', name
+
+            result = {}
+            for iname in to_do.split('\n'):
+                iname = iname.strip()
+                if not iname:
+                    continue
+                raw = self.buildout._raw.get(iname)
+                if raw is None:
+                    raise zc.buildout.UserError("No section named %r" % iname)
+                result.update(self._do_extend_raw(iname, raw, doing))
+
+            result.update(data)
+            return result
+        finally:
+            assert doing.pop() == name
 
     def _dosub(self, option, v):
         __doing__ = 'Getting option %s:%s.', self.name, option
@@ -1086,7 +1115,7 @@ class Options(UserDict.DictMixin):
 
     _template_split = re.compile('([$]{[^}]*})').split
     _simple = re.compile('[-a-zA-Z0-9 ._]+$').match
-    _valid = re.compile('\${[-a-zA-Z0-9 ._]+:[-a-zA-Z0-9 ._]+}$').match
+    _valid = re.compile('\${[-a-zA-Z0-9 ._]*:[-a-zA-Z0-9 ._]+}$').match
     def _sub(self, template, seen):
         value = self._template_split(template)
         subs = []
@@ -1112,9 +1141,16 @@ class Options(UserDict.DictMixin):
                         "has invalid characters."
                         % ref)
 
-            v = self.buildout[s[0]].get(s[1], None, seen)
+            section, option = s
+            if not section:
+                section = self.name
+            v = self.buildout[section].get(option, None, seen)
             if v is None:
-                raise MissingOption("Referenced option does not exist:", *s)
+                if option == '_buildout_section_name_':
+                    v = self.name
+                else:
+                    raise MissingOption("Referenced option does not exist:",
+                                        section, option)
             subs.append(v)
         subs.append('')
 
@@ -1172,7 +1208,7 @@ class Options(UserDict.DictMixin):
                     elif os.path.isfile(p):
                         os.remove(p)
                     else:
-                        self._buildout._logger.warn("Couldn't clean up %r.", p)
+                        self.buildout._logger.warn("Couldn't clean up %r.", p)
                 raise
         finally:
             self._created = None
@@ -1238,11 +1274,13 @@ def _open(base, filename, seen, dl_options, override):
     """
     _update_section(dl_options, override)
     _dl_options = _unannotate_section(dl_options.copy())
+    is_temp = False
     download = zc.buildout.download.Download(
         _dl_options, cache=_dl_options.get('extends-cache'), fallback=True,
         hash_name=True)
     if _isurl(filename):
-        fp = open(download(filename))
+        path, is_temp = download(filename)
+        fp = open(path)
         base = filename[:filename.rfind('/')]
     elif _isurl(base):
         if os.path.isabs(filename):
@@ -1250,7 +1288,8 @@ def _open(base, filename, seen, dl_options, override):
             base = os.path.dirname(filename)
         else:
             filename = base + '/' + filename
-            fp = open(download(filename))
+            path, is_temp = download(filename)
+            fp = open(path)
             base = filename[:filename.rfind('/')]
     else:
         filename = os.path.join(base, filename)
@@ -1258,6 +1297,9 @@ def _open(base, filename, seen, dl_options, override):
         base = os.path.dirname(filename)
 
     if filename in seen:
+        if is_temp:
+            fp.close()
+            os.remove(path)
         raise zc.buildout.UserError("Recursive file include", seen, filename)
 
     root_config_file = not seen
@@ -1268,6 +1310,10 @@ def _open(base, filename, seen, dl_options, override):
     parser = ConfigParser.RawConfigParser()
     parser.optionxform = lambda s: s
     parser.readfp(fp)
+    if is_temp:
+        fp.close()
+        os.remove(path)
+
     extends = extended_by = None
     for section in parser.sections():
         options = dict(parser.items(section))
@@ -1283,10 +1329,10 @@ def _open(base, filename, seen, dl_options, override):
 
     if extends:
         extends = extends.split()
-        extends.reverse()
+        eresult = _open(base, extends.pop(0), seen, dl_options, override)
         for fname in extends:
-            result = _update(_open(base, fname, seen, dl_options, override),
-                             result)
+            _update(eresult, _open(base, fname, seen, dl_options, override))
+        result = _update(eresult, result)
 
     if extended_by:
         self._logger.warn(
@@ -1326,6 +1372,7 @@ def _dists_sig(dists):
     return result
 
 def _update_section(s1, s2):
+    s2 = s2.copy() # avoid mutating the second argument, which is unexpected
     for k, v in s2.items():
         v2, note2 = v
         if k.endswith('+'):

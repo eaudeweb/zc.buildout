@@ -21,6 +21,7 @@ from zc.buildout.easy_install import realpath
 import logging
 import os
 import os.path
+import re
 import shutil
 import tempfile
 import urllib
@@ -56,6 +57,7 @@ class Download(object):
 
     def __init__(self, options={}, cache=-1, namespace=None,
                  offline=-1, fallback=False, hash_name=False, logger=None):
+        self.directory = options.get('directory', '')
         self.cache = cache
         if cache == -1:
             self.cache = options.get('download-cache')
@@ -69,9 +71,14 @@ class Download(object):
         self.logger = logger or logging.getLogger('zc.buildout')
 
     @property
-    def cache_dir(self):
+    def download_cache(self):
         if self.cache is not None:
-            return os.path.join(realpath(self.cache), self.namespace or '')
+            return realpath(os.path.join(self.directory, self.cache))
+
+    @property
+    def cache_dir(self):
+        if self.download_cache is not None:
+            return os.path.join(self.download_cache, self.namespace or '')
 
     def __call__(self, url, md5sum=None, path=None):
         """Download a file according to the utility's configuration.
@@ -84,11 +91,11 @@ class Download(object):
 
         """
         if self.cache:
-            local_path = self.download_cached(url, md5sum)
+            local_path, is_temp = self.download_cached(url, md5sum)
         else:
-            local_path = self.download(url, md5sum, path)
+            local_path, is_temp = self.download(url, md5sum, path)
 
-        return locate_at(local_path, path)
+        return locate_at(local_path, path), is_temp
 
     def download_cached(self, url, md5sum=None):
         """Download a file from a URL using the cache.
@@ -98,17 +105,24 @@ class Download(object):
         but will not remove the copy in that case.
 
         """
+        if not os.path.exists(self.download_cache):
+            raise zc.buildout.UserError(
+                'The directory:\n'
+                '%r\n'
+                "to be used as a download cache doesn't exist.\n"
+                % self.download_cache)
         cache_dir = self.cache_dir
         if not os.path.exists(cache_dir):
-            os.makedirs(cache_dir)
+            os.mkdir(cache_dir)
         cache_key = self.filename(url)
         cached_path = os.path.join(cache_dir, cache_key)
 
         self.logger.debug('Searching cache at %s' % cache_dir)
         if os.path.isfile(cached_path):
+            is_temp = False
             if self.fallback:
                 try:
-                    self.download(url, md5sum, cached_path)
+                    _, is_temp = self.download(url, md5sum, cached_path)
                 except ChecksumError:
                     raise
                 except Exception:
@@ -122,9 +136,9 @@ class Download(object):
         else:
             self.logger.debug('Cache miss; will cache %s as %s' %
                               (url, cached_path))
-            self.download(url, md5sum, cached_path)
+            _, is_temp = self.download(url, md5sum, cached_path)
 
-        return cached_path
+        return cached_path, is_temp
 
     def download(self, url, md5sum=None, path=None):
         """Download a file from a URL to a given or temporary path.
@@ -135,6 +149,8 @@ class Download(object):
         returned and the client code is responsible for cleaning it up.
 
         """
+        if re.match(r"^[A-Za-z]:\\", url):
+            url = 'file:' + url
         parsed_url = urlparse.urlparse(url, 'file')
         url_scheme, _, url_path = parsed_url[:3]
         if url_scheme == 'file':
@@ -143,7 +159,7 @@ class Download(object):
                 raise ChecksumError(
                     'MD5 checksum mismatch for local resource at %r.' %
                     url_path)
-            return locate_at(url_path, path)
+            return locate_at(url_path, path), False
 
         if self.offline:
             raise zc.buildout.UserError(
@@ -152,18 +168,23 @@ class Download(object):
         self.logger.info('Downloading %s' % url)
         urllib._urlopener = url_opener
         handle, tmp_path = tempfile.mkstemp(prefix='buildout-')
-        tmp_path, headers = urllib.urlretrieve(url, tmp_path)
-        os.close(handle)
-        if not check_md5sum(tmp_path, md5sum):
+        try:
+            try:
+                tmp_path, headers = urllib.urlretrieve(url, tmp_path)
+                if not check_md5sum(tmp_path, md5sum):
+                    raise ChecksumError(
+                        'MD5 checksum mismatch downloading %r' % url)
+            finally:
+                os.close(handle)
+        except:
             os.remove(tmp_path)
-            raise ChecksumError(
-                'MD5 checksum mismatch downloading %r' % url)
+            raise
 
         if path:
             shutil.move(tmp_path, path)
-            return path
+            return path, False
         else:
-            return tmp_path
+            return tmp_path, True
 
     def filename(self, url):
         """Determine a file name from a URL according to the configuration.
@@ -172,14 +193,25 @@ class Download(object):
         if self.hash_name:
             return md5(url).hexdigest()
         else:
-            parsed = urlparse.urlparse(url)
+            if re.match(r"^[A-Za-z]:\\", url):
+                url = 'file:' + url
+            parsed = urlparse.urlparse(url, 'file')
             url_path = parsed[2]
-            for name in reversed(url_path.split('/')):
-                if name:
-                    return name
+
+            if parsed[0] == 'file':
+                while True:
+                    url_path, name = os.path.split(url_path)
+                    if name:
+                        return name
+                    if not url_path:
+                        break
             else:
-                url_host, url_port = parsed[-2:]
-                return '%s:%s' % (url_host, url_port)
+                for name in reversed(url_path.split('/')):
+                    if name:
+                        return name
+
+            url_host, url_port = parsed[-2:]
+            return '%s:%s' % (url_host, url_port)
 
 
 def check_md5sum(path, md5sum):

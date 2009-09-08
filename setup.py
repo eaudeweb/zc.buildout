@@ -11,11 +11,11 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-
+name = "zc.buildout"
 version = "1.4.0-distribute-dev"
 
 import os
-from setuptools import setup, find_packages
+from setuptools import setup
 
 def read(*rnames):
     return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
@@ -54,9 +54,15 @@ long_description=(
         '**********************\n'
         )
 
-open('doc.txt', 'w').write(long_description)
+entry_points = """
+[console_scripts]
+buildout = %(name)s.buildout:main
 
-name = "zc.buildout"
+[zc.buildout]
+debug = %(name)s.testrecipes:Debug
+
+""" % dict(name=name)
+
 setup(
     name = name,
     version = version,
@@ -66,7 +72,7 @@ setup(
     long_description=long_description,
     license = "ZPL 2.1",
     keywords = "development build",
-    url='http://www.python.org/pypi/zc.buildout',
+    url='http://pypi.python.org/pypi/zc.buildout',
 
     data_files = [('.', ['README.txt'])],
     packages = ['zc', 'zc.buildout'],
@@ -74,8 +80,7 @@ setup(
     namespace_packages = ['zc'],
     install_requires = 'distribute',
     include_package_data = True,
-    entry_points = {'console_scripts':
-                    ['buildout = %s.buildout:main' % name]}, 
+    entry_points = entry_points,
     zip_safe=False,
     classifiers = [
        'Intended Audience :: Developers',
