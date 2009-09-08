@@ -38,9 +38,9 @@ try:
         raise ImportError
 except ImportError:
     ez = {}
-    exec urllib2.urlopen('http://nightly.ziade.org/bootstraping.py'
+    exec urllib2.urlopen('http://nightly.ziade.org/distribute_setup.py'
                          ).read() in ez
-    ez['use_setuptools'](to_dir=tmpeggs, download_delay=0)
+    ez['use_setuptools'](to_dir='eggs', download_delay=0)
     if to_reload:
         reload(pkg_resources)
     else:
