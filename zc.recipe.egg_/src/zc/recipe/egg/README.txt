@@ -372,16 +372,29 @@ extra-paths option:
 
 Let's look at the script that was generated:
 
-    >>> cat(sample_buildout, 'bin', 'foo') # doctest: +NORMALIZE_WHITESPACE
+    >>> cat(sample_buildout, 'bin', 'foo')
+    ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
+    import site
     import sys
-    sys.path[0:0] = [
-      '/sample-buildout/eggs/demo-0.4c1-py2.4.egg',
-      '/sample-buildout/eggs/demoneeded-1.2c1-py2.4.egg',
-      '/foo/bar',
-      '/sample-buildout/spam',
-      ]
+    sys.path[:] = [
+        ...
+        ]
+    sys.path.extend([
+        '/sample-buildout/eggs/demo-0.4c1-pyN.N.egg',
+        '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg'
+        ])
+    site_dirs = [
+        '/foo/bar',
+        '/sample-buildout/spam',
+        ...
+        ]
+    # Add the site_dirs before `addsitedir` in case it has setuptools.
+    sys.path.extend(site_dirs)
+    # Process .pth files.
+    for p in site_dirs:
+        site.addsitedir(p)
     <BLANKLINE>
     import eggrecipedemo
     <BLANKLINE>
@@ -419,7 +432,8 @@ breaking scripts.
 
 Let's look at the script that was generated:
 
-    >>> cat(sample_buildout, 'bin', 'foo') # doctest: +NORMALIZE_WHITESPACE
+    >>> cat(sample_buildout, 'bin', 'foo')
+    ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
     import os
@@ -428,13 +442,25 @@ Let's look at the script that was generated:
     base = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
     base = os.path.dirname(base)
     <BLANKLINE>
+    import site
     import sys
-    sys.path[0:0] = [
-      join(base, 'eggs/demo-0.4c1-pyN.N.egg'),
-      join(base, 'eggs/demoneeded-1.2c1-pyN.N.egg'),
-      '/foo/bar',
-      join(base, 'spam'),
-      ]
+    sys.path[:] = [
+        ...
+        ]
+    sys.path.extend([
+        join(base, 'eggs/demo-0.4c1-pyN.N.egg'),
+        join(base, 'eggs/demoneeded-1.2c1-pyN.N.egg')
+        ])
+    site_dirs = [
+        '/foo/bar',
+        join(base, 'spam'),
+        ...
+        ]
+    # Add the site_dirs before `addsitedir` in case it has setuptools.
+    sys.path.extend(site_dirs)
+    # Process .pth files.
+    for p in site_dirs:
+        site.addsitedir(p)
     <BLANKLINE>
     import eggrecipedemo
     <BLANKLINE>
@@ -466,7 +492,8 @@ each individual script section:
     Installing demo.
     Generated script '/sample-buildout/bin/foo'.
 
-    >>> cat(sample_buildout, 'bin', 'foo') # doctest: +NORMALIZE_WHITESPACE
+    >>> cat(sample_buildout, 'bin', 'foo')
+    ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
     import os
@@ -475,13 +502,25 @@ each individual script section:
     base = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
     base = os.path.dirname(base)
     <BLANKLINE>
+    import site
     import sys
-    sys.path[0:0] = [
-      join(base, 'eggs/demo-0.4c1-pyN.N.egg'),
-      join(base, 'eggs/demoneeded-1.2c1-pyN.N.egg'),
-      '/foo/bar',
-      join(base, 'spam'),
-      ]
+    sys.path[:] = [
+        ...
+        ]
+    sys.path.extend([
+        join(base, 'eggs/demo-0.4c1-pyN.N.egg'),
+        join(base, 'eggs/demoneeded-1.2c1-pyN.N.egg')
+        ])
+    site_dirs = [
+        '/foo/bar',
+        join(base, 'spam'),
+        ...
+        ]
+    # Add the site_dirs before `addsitedir` in case it has setuptools.
+    sys.path.extend(site_dirs)
+    # Process .pth files.
+    for p in site_dirs:
+        site.addsitedir(p)
     <BLANKLINE>
     import eggrecipedemo
     <BLANKLINE>
@@ -519,16 +558,29 @@ to be included in generated scripts:
     Installing demo.
     Generated script '/sample-buildout/bin/foo'.
 
-    >>> cat(sample_buildout, 'bin', 'foo') # doctest: +NORMALIZE_WHITESPACE
+    >>> cat(sample_buildout, 'bin', 'foo')
+    ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
+    import site
     import sys
-    sys.path[0:0] = [
-      '/sample-buildout/eggs/demo-0.4c1-py2.4.egg',
-      '/sample-buildout/eggs/demoneeded-1.2c1-py2.4.egg',
-      '/foo/bar',
-      '/sample-buildout/spam',
-      ]
+    sys.path[:] = [
+        ...
+        ]
+    sys.path.extend([
+        '/sample-buildout/eggs/demo-0.4c1-pyN.N.egg',
+        '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg'
+        ])
+    site_dirs = [
+        '/foo/bar',
+        '/sample-buildout/spam',
+        ...
+        ]
+    # Add the site_dirs before `addsitedir` in case it has setuptools.
+    sys.path.extend(site_dirs)
+    # Process .pth files.
+    for p in site_dirs:
+        site.addsitedir(p)
     <BLANKLINE>
     a = (1, 2
     3, 4)
@@ -577,16 +629,29 @@ declare entry points using the entry-points option:
     -  demo
     -  other
 
-    >>> cat(sample_buildout, 'bin', 'other')
+    >>> cat(sample_buildout, 'bin', 'other') # doctest: +ELLIPSIS
+    ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
+    import site
     import sys
-    sys.path[0:0] = [
-      '/sample-buildout/eggs/demo-0.4c1-py2.4.egg',
-      '/sample-buildout/eggs/demoneeded-1.2c1-py2.4.egg',
-      '/foo/bar',
-      '/sample-buildout/spam',
-      ]
+    sys.path[:] = [
+        ...
+        ]
+    sys.path.extend([
+        '/sample-buildout/eggs/demo-0.4c1-pyN.N.egg',
+        '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg'
+        ])
+    site_dirs = [
+        '/foo/bar',
+        '/sample-buildout/spam',
+        ...
+        ]
+    # Add the site_dirs before `addsitedir` in case it has setuptools.
+    sys.path.extend(site_dirs)
+    # Process .pth files.
+    for p in site_dirs:
+        site.addsitedir(p)
     <BLANKLINE>
     import foo.bar
     <BLANKLINE>

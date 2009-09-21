@@ -80,14 +80,26 @@ new versions found in new releases:
 
 Our buildout script has been updated to use the new eggs:
 
-    >>> cat(sample_buildout, 'bin', 'buildout') 
+    >>> cat(sample_buildout, 'bin', 'buildout') # doctest: +ELLIPSIS
     #!/usr/local/bin/python2.4
     <BLANKLINE>
+    import site
     import sys
-    sys.path[0:0] = [
-      '/sample-buildout/eggs/zc.buildout-99.99-py2.4.egg',
-      '/sample-buildout/eggs/setuptools-99.99-py2.4.egg',
-      ]
+    sys.path[:] = [
+        ...
+        ]
+    sys.path.extend([
+        '/sample-buildout/eggs/zc.buildout-NINETYNINE.NINETYNINE-pyN.N.egg',
+        '/sample-buildout/eggs/setuptools-NINETYNINE.NINETYNINE-pyN.N.egg'
+        ])
+    site_dirs = [
+        ...
+        ]
+    # Add the site_dirs before `addsitedir` in case it has setuptools.
+    sys.path.extend(site_dirs)
+    # Process .pth files.
+    for p in site_dirs:
+        site.addsitedir(p)
     <BLANKLINE>
     import zc.buildout.buildout
     <BLANKLINE>

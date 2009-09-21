@@ -30,7 +30,7 @@ We'll use the buildout script from our sample buildout:
 
     >>> print system(buildout+' setup'),
     Error: The setup command requires the path to a setup script or 
-    directory containing a setup script, and it's arguments.
+    directory containing a setup script, and its arguments.
 
 Oops, we forgot to give the name of the setup script:
 
