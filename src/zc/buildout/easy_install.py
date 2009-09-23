@@ -109,6 +109,17 @@ def _get_system_packages(executable):
     site_packages = [p for p in get_sys_path() if p not in stdlib]
     return (stdlib, site_packages)
 
+def _get_clean_sys_modules(executable):
+    cmd = [executable, '-S', '-c',
+           'import sys; print repr(sys.modules.keys())']
+    _proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = _proc.communicate();
+    if _proc.returncode:
+        raise RuntimeError(
+            'error trying to get system packages:\n%s' % (stderr,))
+    return eval(stdout)
+
 
 class IncompatibleVersionError(zc.buildout.UserError):
     """A specified version is incompatible with a given requirement.
@@ -1109,6 +1120,10 @@ def scripts(reqs, working_set, executable, dest,
             ):
     stdlib, eggs, site_dirs = get_path(
         working_set, executable, extra_paths, include_site_packages)
+    clean_modules = set(_get_clean_sys_modules(executable))
+    clean_modules.add('site')
+    clean_modules.add('sys')
+
     generated = []
 
     if isinstance(reqs, str):
@@ -1133,6 +1148,7 @@ def scripts(reqs, working_set, executable, dest,
             entry_points.append(req)
 
     stdlib = repr(stdlib)[1:-1].replace(', ', ',\n    ')
+    clean_modules = repr(sorted(clean_modules))[1:-1].replace(', ', ',\n    ')
 
     for name, module_name, attrs in entry_points:
         if scripts is not None:
@@ -1147,9 +1163,9 @@ def scripts(reqs, working_set, executable, dest,
             script_name, eggs, site_dirs, relative_paths)
 
         generated.extend(
-            _script(module_name, attrs, stdlib, script_eggs, script_site_dirs,
-                    script_name, executable, arguments, initialization,
-                    rpsetup)
+            _script(module_name, attrs, clean_modules, stdlib, script_eggs,
+                    script_site_dirs, script_name, executable,
+                    arguments, initialization, rpsetup)
             )
 
     if interpreter:
@@ -1157,8 +1173,8 @@ def scripts(reqs, working_set, executable, dest,
         script_eggs, script_site_dirs, rpsetup = _relative_path_and_setup(
             script_name, eggs, site_dirs, relative_paths)
         generated.extend(
-            _pyscript(stdlib, script_eggs, script_site_dirs, script_name,
-                      executable, rpsetup))
+            _pyscript(clean_modules, stdlib, script_eggs, script_site_dirs,
+                      script_name, executable, rpsetup))
 
     return generated
 
@@ -1228,8 +1244,8 @@ join = os.path.join
 base = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
 """
 
-def _script(module_name, attrs, stdlib, eggs, site_dirs, dest, executable,
-            arguments, initialization, rsetup):
+def _script(module_name, attrs, clean_modules, stdlib, eggs, site_dirs, dest,
+            executable, arguments, initialization, rsetup):
     generated = []
     script = dest
     if is_win32:
@@ -1237,6 +1253,7 @@ def _script(module_name, attrs, stdlib, eggs, site_dirs, dest, executable,
 
     contents = script_template % dict(
         python = _safe_arg(executable),
+        clean_modules = clean_modules,
         stdlib = stdlib,
         eggs = eggs,
         site_dirs = site_dirs,
@@ -1280,6 +1297,15 @@ script_template = script_header + '''\
 %(relative_paths_setup)s
 import site
 import sys
+
+# Clean out sys.modules from site's processing of .pth files.
+clean_modules = [
+    %(clean_modules)s
+    ]
+for k in sys.modules.keys():
+    if k not in clean_modules:
+        del sys.modules[k]
+
 sys.path[:] = [
     %(stdlib)s
     ]
@@ -1291,6 +1317,13 @@ site_dirs = [
     ]
 # Add the site_dirs before `addsitedir` in case it has setuptools.
 sys.path.extend(site_dirs)
+# Process all buildout-controlled eggs before site-packages by importing
+# pkg_resources.  This is only important for namespace packages, so it may
+# not have been added, so ignore import errors.
+try:
+    import pkg_resources
+except ImportError:
+    pass
 # Process .pth files.
 for p in site_dirs:
     site.addsitedir(p)
@@ -1302,7 +1335,8 @@ if __name__ == '__main__':
 '''
 
 
-def _pyscript(stdlib, eggs, site_dirs, dest, executable, rsetup):
+def _pyscript(clean_modules, stdlib, eggs, site_dirs, dest, executable,
+              rsetup):
     generated = []
     script = dest
     if is_win32:
@@ -1310,6 +1344,7 @@ def _pyscript(stdlib, eggs, site_dirs, dest, executable, rsetup):
 
     contents = py_script_template % dict(
         python = _safe_arg(executable),
+        clean_modules = clean_modules,
         stdlib = stdlib,
         eggs = eggs,
         site_dirs = site_dirs,
@@ -1343,11 +1378,21 @@ globs = globals().copy()
 
 %(relative_paths_setup)s
 
+import site
+import sys
+
+# Clean out sys.modules from site's processing of .pth files.
+clean_modules = [
+    %(clean_modules)s
+    ]
+for k in sys.modules.keys():
+    if k not in clean_modules:
+        del sys.modules[k]
+
 import code
 import optparse
 import os
-import site
-import sys
+
 
 def _version_callback(*args, **kwargs):
     print 'Python ' + sys.version.split()[0]
@@ -1401,6 +1446,13 @@ if options.import_site:
     sys.path.extend(egg_paths)
     # Add the site_dirs before `addsitedir` in case it has setuptools.
     sys.path.extend(site_dirs)
+    # Process all buildout-controlled eggs before site-packages by importing
+    # pkg_resources.  This is only important for namespace packages, so it may
+    # not have been added, so ignore import errors.
+    try:
+        import pkg_resources
+    except ImportError:
+        pass
     # Process .pth files.
     for p in site_dirs:
         site.addsitedir(p)

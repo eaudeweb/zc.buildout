@@ -2548,6 +2548,124 @@ Now the install works correctly, as seen here.
 
     """
 
+def handle_namespace_package_in_both_site_packages_and_buildout_eggs():
+    r"""
+If you have the same namespace package in both site-packages and in
+buildout, we need to be very careful that faux-Python-executables and
+scripts correctly combine the two.
+
+To demonstrate this, we will create three packages: tellmy.version 1.0,
+tellmy.version 1.1, and tellmy.fortune 1.0.
+
+    >>> for pkg, version in (('version', '1.0'), ('version', '1.1'),
+    ...                      ('fortune', '1.0')):
+    ...     tmp = tempfile.mkdtemp()
+    ...     try:
+    ...         write(tmp, 'README.txt', '')
+    ...         mkdir(tmp, 'src')
+    ...         mkdir(tmp, 'src', 'tellmy')
+    ...         write(tmp, 'src', 'tellmy', '__init__.py',
+    ...             "__import__("
+    ...             "'pkg_resources').declare_namespace(__name__)\n")
+    ...         mkdir(tmp, 'src', 'tellmy', pkg)
+    ...         write(tmp, 'src', 'tellmy', pkg,
+    ...               '__init__.py', '__version__=%r\n' % version)
+    ...         write(
+    ...             tmp, 'setup.py',
+    ...             "from setuptools import setup\n"
+    ...             "setup(\n"
+    ...             " name='tellmy.%(pkg)s',\n"
+    ...             " package_dir = {'': 'src'},\n"
+    ...             " packages = ['tellmy', 'tellmy.%(pkg)s'],\n"
+    ...             " install_requires = ['setuptools'],\n"
+    ...             " namespace_packages=['tellmy'],\n"
+    ...             " zip_safe=True, version=%(version)r,\n"
+    ...             " author='bob', url='bob', author_email='bob')\n"
+    ...             % globals()
+    ...             )
+    ...         zc.buildout.testing.sdist(tmp, sample_eggs)
+    ...         if pkg == 'version' and version == '1.1':
+    ...             # We install the 1.1 version in site packages the way a
+    ...             # system packaging system (debs, rpms) would do it.
+    ...             zc.buildout.testing.sys_install(tmp, site_packages)
+    ...     finally:
+    ...         shutil.rmtree(tmp)
+    >>> primed_python = get_executable_with_system_installed_packages()
+    >>> print system(
+    ...     primed_python + " -c '" +
+    ...     "import tellmy.version\n" +
+    ...     "print tellmy.version.__version__\n" +
+    ...     "'")
+    1.1
+    <BLANKLINE>
+
+Now we will create a buildout that creates a script and a faux-Python script.
+We want to see that both can successfully import the specified versions of
+tellmy.version and tellmy.fortune.
+
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links = %(link_server)s
+    ...
+    ... [primed_python]
+    ... executable = %(primed_python)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg
+    ... python = primed_python
+    ... interpreter = py
+    ... eggs = tellmy.version == 1.0
+    ...        tellmy.fortune == 1.0
+    ...        demo
+    ... initialization =
+    ...     import tellmy.version
+    ...     print tellmy.version.__version__
+    ...     import tellmy.fortune
+    ...     print tellmy.fortune.__version__
+    ... ''' % globals())
+
+    >>> print system(primed_python+" "+buildout)
+    Installing eggs.
+    Getting distribution for 'tellmy.version==1.0'.
+    Got tellmy.version 1.0.
+    Getting distribution for 'tellmy.fortune==1.0'.
+    Got tellmy.fortune 1.0.
+    Generated script '/sample-buildout/bin/demo'.
+    Generated interpreter '/sample-buildout/bin/py'.
+    <BLANKLINE>
+
+Finally, we are ready for the actual test.  Prior to the bug fix that
+this tests, the results of both calls below was the following::
+
+    1.1
+    Traceback (most recent call last):
+      ...
+    ImportError: No module named fortune
+    <BLANKLINE>
+
+In other words, we got the site-packages version of tellmy.version, and
+we could not import tellmy.fortune at all.  The following are the correct
+results.
+
+    >>> print system(
+    ...     join('bin', 'py') + " -c '" +
+    ...     "import tellmy.version\n" +
+    ...     "print tellmy.version.__version__\n" +
+    ...     "import tellmy.fortune\n" +
+    ...     "print tellmy.fortune.__version__\n" +
+    ...     "'")
+    1.0
+    1.0
+    <BLANKLINE>
+    >>> print system(join('bin', 'demo'))
+    1.0
+    1.0
+    3 1
+    <BLANKLINE>
+    """
+
 def isolated_include_site_packages():
     """
 
@@ -2717,6 +2835,109 @@ We get an error if we specify anything but true or false:
     Error: Invalid value for include-site-packages option: no
     <BLANKLINE>
 
+    """
+
+def scripts_clean_sys_modules_when_site_packages_excluded():
+    r"""
+If you are using a Python with site-packages, the faux-Python-executables
+and scripts must be sure to not let any .pth files in site-packages affect
+sys.modules, which they can do normally because of importing site.py.
+
+Of course, .pth files that only contain paths simply affect sys.path, not
+sys.modules.  They can also contain arbitrary Python, however: if a line
+begins with "import" (followed by a space or a tab) then the line will be
+interpreted as Python (see http://docs.python.org/library/site.html ).
+
+The setuptools package uses this mechanism to create namespace packages, for
+instance.  The line ends up modifying sys.modules.
+
+This test verifies that, if ``include-site-packages = false``, sys.modules is
+not affected by the namespace package .pth files in the Python's
+site-packages.
+
+We begin by creating a namespace package installed as a distribution might
+install it.
+
+    >>> tmp = tempfile.mkdtemp()
+    >>> try:
+    ...     write(tmp, 'README.txt', '')
+    ...     mkdir(tmp, 'src')
+    ...     mkdir(tmp, 'src', 'tellmy')
+    ...     write(tmp, 'src', 'tellmy', '__init__.py',
+    ...         "__import__("
+    ...         "'pkg_resources').declare_namespace(__name__)\n")
+    ...     mkdir(tmp, 'src', 'tellmy', 'fortune')
+    ...     write(tmp, 'src', 'tellmy', 'fortune',
+    ...           '__init__.py', '__version__="1.0"\n')
+    ...     write(
+    ...         tmp, 'setup.py',
+    ...         "from setuptools import setup\n"
+    ...         "setup(\n"
+    ...         " name='tellmy.fortune',\n"
+    ...         " package_dir = {'': 'src'},\n"
+    ...         " packages = ['tellmy', 'tellmy.fortune'],\n"
+    ...         " install_requires = ['setuptools'],\n"
+    ...         " namespace_packages=['tellmy'],\n"
+    ...         " zip_safe=True, version='1.0',\n"
+    ...         " author='bob', url='bob', author_email='bob')\n"
+    ...         )
+    ...     zc.buildout.testing.sdist(tmp, sample_eggs)
+    ...     zc.buildout.testing.sys_install(tmp, site_packages)
+    ... finally:
+    ...     shutil.rmtree(tmp)
+    >>> primed_python = get_executable_with_system_installed_packages()
+
+Now we create a buildout that uses this Python but does not want to
+include site-packages.
+
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links = %(link_server)s
+    ... include-site-packages = false
+    ...
+    ... [primed_python]
+    ... executable = %(primed_python)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg
+    ... python = primed_python
+    ... interpreter = py
+    ... eggs = demo
+    ... initialization =
+    ...     import tellmy
+    ... ''' % globals())
+
+    >>> print system(primed_python+" "+buildout)
+    Installing eggs.
+    Getting distribution for 'demo'.
+    Got demo 0.4c1.
+    Getting distribution for 'demoneeded'.
+    Got demoneeded 1.2c1.
+    Generated script '/sample-buildout/bin/demo'.
+    Generated interpreter '/sample-buildout/bin/py'.
+    <BLANKLINE>
+
+Finally, we are ready for the actual test.  Prior to the bug fix that
+this tests, the results of both calls was no errors. In other words, you
+could still import tellmy because it was stashed in sys.modules, even
+though sys.path had been cleaned out.
+
+    >>> print system(
+    ...     join('bin', 'py') + " -c '" +
+    ...     "import eggrecipedemo\n" +
+    ...     "import tellmy\n" +
+    ...     "'") # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+      ...
+    ImportError: No module named tellmy
+    <BLANKLINE>
+    >>> print system(join('bin', 'demo')) # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+      ...
+    ImportError: No module named tellmy
+    <BLANKLINE>
     """
 
 def include_site_packages_with_buildout():
@@ -3556,7 +3777,7 @@ def easy_install_SetUp(test):
             '''
             [buildout]
             parts = interpreter
-       
+
             [interpreter]
             recipe = zc.recipe.egg
             scripts = py

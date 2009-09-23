@@ -96,7 +96,7 @@ The demo egg defined a script, but we didn't get one installed:
     >>> ls(sample_buildout, 'bin')
     -  buildout
 
-If we want scripts provided by eggs to be installed, we should use the 
+If we want scripts provided by eggs to be installed, we should use the
 scripts recipe:
 
     >>> write(sample_buildout, 'buildout.cfg',
@@ -135,7 +135,7 @@ entry-points
 
    This option is useful when working with distributions that don't
    declare entry points, such as distributions not written to work
-   with setuptools. 
+   with setuptools.
 
    Examples can be seen in the section "Specifying entry points" below.
 
@@ -271,7 +271,7 @@ We didn't get an update for demo:
     -  setuptools-0.6-py2.3.egg
     -  zc.buildout-1.0-py2.3.egg
 
-If we run the buildout on the default online and newest modes, 
+If we run the buildout on the default online and newest modes,
 we'll get an update for demo:
 
     >>> print system(buildout),
@@ -378,6 +378,15 @@ Let's look at the script that was generated:
     <BLANKLINE>
     import site
     import sys
+    <BLANKLINE>
+    # Clean out sys.modules from site's processing of .pth files.
+    clean_modules = [
+        ...
+        ]
+    for k in sys.modules.keys():
+        if k not in clean_modules:
+            del sys.modules[k]
+    <BLANKLINE>
     sys.path[:] = [
         ...
         ]
@@ -392,6 +401,13 @@ Let's look at the script that was generated:
         ]
     # Add the site_dirs before `addsitedir` in case it has setuptools.
     sys.path.extend(site_dirs)
+    # Process all buildout-controlled eggs before site-packages by importing
+    # pkg_resources.  This is only important for namespace packages, so it may
+    # not have been added, so ignore import errors.
+    try:
+        import pkg_resources
+    except ImportError:
+        pass
     # Process .pth files.
     for p in site_dirs:
         site.addsitedir(p)
@@ -444,6 +460,15 @@ Let's look at the script that was generated:
     <BLANKLINE>
     import site
     import sys
+    <BLANKLINE>
+    # Clean out sys.modules from site's processing of .pth files.
+    clean_modules = [
+        ...
+        ]
+    for k in sys.modules.keys():
+        if k not in clean_modules:
+            del sys.modules[k]
+    <BLANKLINE>
     sys.path[:] = [
         ...
         ]
@@ -458,6 +483,13 @@ Let's look at the script that was generated:
         ]
     # Add the site_dirs before `addsitedir` in case it has setuptools.
     sys.path.extend(site_dirs)
+    # Process all buildout-controlled eggs before site-packages by importing
+    # pkg_resources.  This is only important for namespace packages, so it may
+    # not have been added, so ignore import errors.
+    try:
+        import pkg_resources
+    except ImportError:
+        pass
     # Process .pth files.
     for p in site_dirs:
         site.addsitedir(p)
@@ -504,6 +536,15 @@ each individual script section:
     <BLANKLINE>
     import site
     import sys
+    <BLANKLINE>
+    # Clean out sys.modules from site's processing of .pth files.
+    clean_modules = [
+        ...
+        ]
+    for k in sys.modules.keys():
+        if k not in clean_modules:
+            del sys.modules[k]
+    <BLANKLINE>
     sys.path[:] = [
         ...
         ]
@@ -518,6 +559,13 @@ each individual script section:
         ]
     # Add the site_dirs before `addsitedir` in case it has setuptools.
     sys.path.extend(site_dirs)
+    # Process all buildout-controlled eggs before site-packages by importing
+    # pkg_resources.  This is only important for namespace packages, so it may
+    # not have been added, so ignore import errors.
+    try:
+        import pkg_resources
+    except ImportError:
+        pass
     # Process .pth files.
     for p in site_dirs:
         site.addsitedir(p)
@@ -564,6 +612,15 @@ to be included in generated scripts:
     <BLANKLINE>
     import site
     import sys
+    <BLANKLINE>
+    # Clean out sys.modules from site's processing of .pth files.
+    clean_modules = [
+        ...
+        ]
+    for k in sys.modules.keys():
+        if k not in clean_modules:
+            del sys.modules[k]
+    <BLANKLINE>
     sys.path[:] = [
         ...
         ]
@@ -578,6 +635,13 @@ to be included in generated scripts:
         ]
     # Add the site_dirs before `addsitedir` in case it has setuptools.
     sys.path.extend(site_dirs)
+    # Process all buildout-controlled eggs before site-packages by importing
+    # pkg_resources.  This is only important for namespace packages, so it may
+    # not have been added, so ignore import errors.
+    try:
+        import pkg_resources
+    except ImportError:
+        pass
     # Process .pth files.
     for p in site_dirs:
         site.addsitedir(p)
@@ -635,6 +699,15 @@ declare entry points using the entry-points option:
     <BLANKLINE>
     import site
     import sys
+    <BLANKLINE>
+    # Clean out sys.modules from site's processing of .pth files.
+    clean_modules = [
+        ...
+        ]
+    for k in sys.modules.keys():
+        if k not in clean_modules:
+            del sys.modules[k]
+    <BLANKLINE>
     sys.path[:] = [
         ...
         ]
@@ -649,6 +722,13 @@ declare entry points using the entry-points option:
         ]
     # Add the site_dirs before `addsitedir` in case it has setuptools.
     sys.path.extend(site_dirs)
+    # Process all buildout-controlled eggs before site-packages by importing
+    # pkg_resources.  This is only important for namespace packages, so it may
+    # not have been added, so ignore import errors.
+    try:
+        import pkg_resources
+    except ImportError:
+        pass
     # Process .pth files.
     for p in site_dirs:
         site.addsitedir(p)

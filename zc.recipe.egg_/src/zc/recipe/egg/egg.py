@@ -58,8 +58,10 @@ class Eggs(object):
 
     @property
     def include_site_packages(self):
-        return get_bool(self.options, 'include-site-packages',
-                        self.buildout['buildout']['include-site-packages'])
+        res = get_bool(self.options, 'include-site-packages', None)
+        if res is None:
+            res = get_bool(self.buildout['buildout'], 'include-site-packages')
+        return res
 
     def working_set(self, extra=()):
         """Separate method to just get the working set
