@@ -119,6 +119,8 @@ _buildout_default_options = _annotate_section({
     'eggs-directory': 'eggs',
     'executable': sys.executable,
     'find-links': '',
+    'include-site-packages-for-buildout': 'false',
+    'include-site-packages': 'true',
     'install-from-cache': 'false',
     'installed': '.installed.cfg',
     'log-format': '',
@@ -284,6 +286,23 @@ class Buildout(UserDict.DictMixin):
                         prefer_final)
         zc.buildout.easy_install.prefer_final(prefer_final=='true')
 
+        include_site_packages = options['include-site-packages']
+        if include_site_packages not in ('true', 'false'):
+            self._error('Invalid value for include-site-packages option: %s',
+                        include_site_packages)
+        zc.buildout.easy_install.include_site_packages(
+            include_site_packages=='true')
+
+        include_site_packages_for_buildout = options[
+            'include-site-packages-for-buildout']
+        if include_site_packages_for_buildout not in ('true', 'false'):
+            self._error(
+                'Invalid value for include-site-packages-for-buildout option: '
+                '%s',
+                 include_site_packages_for_buildout)
+        self.include_site_packages_for_buildout = (
+            include_site_packages_for_buildout=='true')
+
         use_dependency_links = options['use-dependency-links']
         if use_dependency_links not in ('true', 'false'):
             self._error('Invalid value for use-dependency-links option: %s',
@@ -355,7 +374,8 @@ class Buildout(UserDict.DictMixin):
         if options.get('offline') == 'true':
             ws = zc.buildout.easy_install.working_set(
                 distributions, options['executable'],
-                [options['develop-eggs-directory'], options['eggs-directory']]
+                [options['develop-eggs-directory'], options['eggs-directory']],
+                include_site_packages=self.include_site_packages_for_buildout,
                 )
         else:
             ws = zc.buildout.easy_install.install(
@@ -365,7 +385,8 @@ class Buildout(UserDict.DictMixin):
                 executable=options['executable'],
                 path=[options['develop-eggs-directory']],
                 newest=self.newest,
-                allow_hosts=self._allow_hosts
+                allow_hosts=self._allow_hosts,
+                include_site_packages=self.include_site_packages_for_buildout,
                 )
 
         # Now copy buildout and setuptools eggs, and record destination eggs:
@@ -393,7 +414,8 @@ class Buildout(UserDict.DictMixin):
         ws.require('zc.buildout')
         zc.buildout.easy_install.scripts(
             ['zc.buildout'], ws, options['executable'],
-            options['bin-directory'])
+            options['bin-directory'],
+            include_site_packages=self.include_site_packages_for_buildout)
 
     init = bootstrap
 
@@ -946,7 +968,7 @@ class Buildout(UserDict.DictMixin):
         fd, tsetup = tempfile.mkstemp()
         try:
             os.write(fd, zc.buildout.easy_install.runsetup_template % dict(
-                setuptools=pkg_resources_loc,
+                sys_path=',\n    '.join(repr(p) for p in sys.path),
                 setupdir=os.path.dirname(setup),
                 setup=setup,
                 __file__ = setup,

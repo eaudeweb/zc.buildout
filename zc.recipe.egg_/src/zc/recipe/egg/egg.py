@@ -48,11 +48,16 @@ class Eggs(object):
         options['_e'] = options['eggs-directory'] # backward compat.
         options['develop-eggs-directory'] = b_options['develop-eggs-directory']
         options['_d'] = options['develop-eggs-directory'] # backward compat.
-
         # verify that this is None, 'true' or 'false'
         get_bool(options, 'unzip')
-
-        python = options.get('python', b_options['python'])
+        value = options.setdefault('include-site-packages',
+                                   b_options['include-site-packages'])
+        if value not in ('true', 'false'):
+            raise zc.buildout.UserError(
+                "Invalid value for include-site-packages option: %s" %
+                (value,))
+        self.include_site_packages = (value == 'true')
+        python = options.setdefault('python', b_options['python'])
         options['executable'] = buildout[python]['executable']
 
     def working_set(self, extra=()):
@@ -73,7 +78,9 @@ class Eggs(object):
         if self.buildout['buildout'].get('offline') == 'true':
             ws = zc.buildout.easy_install.working_set(
                 distributions, options['executable'],
-                [options['develop-eggs-directory'], options['eggs-directory']]
+                [options['develop-eggs-directory'],
+                 options['eggs-directory']],
+                include_site_packages = self.include_site_packages,
                 )
         else:
             kw = {}
@@ -87,6 +94,7 @@ class Eggs(object):
                 path=[options['develop-eggs-directory']],
                 newest=self.buildout['buildout'].get('newest') == 'true',
                 allow_hosts=self.allow_hosts,
+                include_site_packages = self.include_site_packages,
                 **kw)
 
         return orig_distributions, ws
@@ -167,6 +175,7 @@ class Scripts(Eggs):
                 initialization=options.get('initialization', ''),
                 arguments=options.get('arguments', ''),
                 relative_paths=self._relative_paths,
+                include_site_packages = self.include_site_packages,
                 )
 
         return ()

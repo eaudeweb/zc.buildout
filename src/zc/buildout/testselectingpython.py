@@ -11,7 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-import os, re, sys, unittest
+import os, re, subprocess, sys, textwrap, unittest
 from zope.testing import doctest, renormalizing
 import zc.buildout.tests
 import zc.buildout.testing
@@ -31,7 +31,8 @@ We can specify a specific Python executable.
     >>> ws = zc.buildout.easy_install.install(
     ...     ['demo'], dest, links=[link_server],
     ...     index='http://www.python.org/pypi/',
-    ...     always_unzip=True, executable=other_executable)
+    ...     always_unzip=True, executable=other_executable,
+    ...     include_site_packages=False)
 
     >>> ls(dest)
     d  demo-0.3-py%(other_version)s.egg
@@ -43,6 +44,31 @@ We can specify a specific Python executable.
 
 def multi_python(test):
     other_executable = zc.buildout.testing.find_python(other_version)
+    command = textwrap.dedent('''\
+        try:
+            import setuptools
+        except ImportError:
+            import sys
+            sys.exit(1)
+        ''')
+    if subprocess.call([other_executable, '-c', command],
+                       env=os.environ):
+        # the other executable does not have setuptools.  Get setuptools.
+        # We will do this using the same tools we are testing, for better or
+        # worse.  Alternatively, we could try using bootstrap.
+        executable_dir = test.globs['tmpdir']('executable_dir')
+        ws = zc.buildout.easy_install.install(
+            ['setuptools'], executable_dir,
+            index='http://www.python.org/pypi/',
+            always_unzip=True, executable=other_executable)
+        zc.buildout.easy_install.scripts(
+            ['setuptools'], ws, other_executable, executable_dir,
+            interpreter='py')
+        original_executable = other_executable
+        other_executable = os.path.join(executable_dir, 'py')
+        assert not subprocess.call(
+            [other_executable, '-c', command], env=os.environ), (
+            'test set up failed')
     sample_eggs = test.globs['tmpdir']('sample_eggs')
     os.mkdir(os.path.join(sample_eggs, 'index'))
     test.globs['sample_eggs'] = sample_eggs

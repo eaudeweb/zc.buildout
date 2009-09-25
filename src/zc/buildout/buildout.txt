@@ -742,6 +742,10 @@ COMMAND_LINE_VALUE).
         DEFAULT_VALUE
     find-links=
         DEFAULT_VALUE
+    include-site-packages= true
+        DEFAULT_VALUE
+    include-site-packages-for-buildout= false
+        DEFAULT_VALUE
     install-from-cache= false
         DEFAULT_VALUE
     installed= .installed.cfg
@@ -2226,6 +2230,8 @@ database is shown.
     eggs-directory = /sample-buildout/eggs
     executable = python
     find-links =
+    include-site-packages = true
+    include-site-packages-for-buildout = false
     install-from-cache = false
     installed = /sample-buildout/.installed.cfg
     log-format =
@@ -2331,6 +2337,36 @@ find-links
           http://download.zope.org/distribution/
           /some/otherpath
           /some/path/someegg-1.0.0-py2.3.egg
+
+include-site-packages
+    By default, buildout will look for dependencies in the system's
+    site-packages.  For this purpose, paths outside of Python's standard
+    library--or more precisely, those that are not included when Python is
+    started with the -S argument--are loosely referred to as "site-packages"
+    here.  The include-site-packages buildout option can be used to override
+    the default behavior of using site packages
+    ("include-site-packages = false").
+
+include-site-packages-for-buildout
+    When buildout gets a recipe egg (as opposed to runs a recipe), it starts
+    with the current Python working set--the one that the bin/buildout script
+    uses itself. If this working set includes site-packages, and site-packages
+    includes an egg for a package that the recipe needs, *and* the recipe
+    specifies a newer version of that package, this can generate a version
+    conflict.
+
+    One solution to this is to not use site-packages
+    (``include-site-packages = false``).  However, if you want your scripts to
+    use site-packages, then you have to specify 'include-site-packages = true'
+    for all of them.
+
+    To make this use case easier to handle, you can instead specify
+    ``include-site-packages-with-buildout = false``, which indicates that the
+    bin/buildout should *not* use site-packages; and
+    ``include-site-packages = true``, which indicates that the rest of the
+    scripts should use site-packages.
+
+    This is the default configuration.
 
 install-from-cache
     A download cache can be used as the basis of application source releases.
@@ -2445,6 +2481,7 @@ local buildout scripts.
 
     >>> print system(buildout
     ...              +' -c'+os.path.join(sample_bootstrapped, 'setup.cfg')
+    ...              +' buildout:include-site-packages-for-buildout=true'
     ...              +' init'),
     Creating '/sample-bootstrapped/setup.cfg'.
     Creating directory '/sample-bootstrapped/bin'.
@@ -2486,6 +2523,7 @@ if there isn't a configuration file:
 
     >>> print system(buildout
     ...              +' -c'+os.path.join(sample_bootstrapped2, 'setup.cfg')
+    ...              +' buildout:include-site-packages-for-buildout=true'
     ...              +' bootstrap'),
     While:
       Initializing.
@@ -2499,6 +2537,7 @@ if there isn't a configuration file:
 
     >>> print system(buildout
     ...              +' -c'+os.path.join(sample_bootstrapped2, 'setup.cfg')
+    ...              +' buildout:include-site-packages-for-buildout=true'
     ...              +' bootstrap'),
     Creating directory '/sample-bootstrapped2/bin'.
     Creating directory '/sample-bootstrapped2/parts'.

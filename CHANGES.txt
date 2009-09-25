@@ -6,6 +6,42 @@ Change History
 
 New Features:
 
+- Support and bugfixes for using a system Python with buildout.
+
+  In all of these descriptions, "site-packages" is an imprecise term for a
+  precise definition: the packages that are added by the Python's site.py.
+  Practically, this is the difference of the set of paths normally used by
+  Python minus those used when Python is started with the -S flag.
+
+  * A new boolean option, 'include-site-packages', includes or excludes site
+    packages from finding requirements, and from generated scripts.
+    zc.buildout's own buildout.cfg dogfoods this option.  This defaults
+    to 'true', which is very similar to buildout's previous behavior.
+
+  * A new boolean option, 'include-site-packages-for-buildout', does the
+    same thing but only for the bin/buildout script.  This can be important
+    for getting recipes and their dependencies without conflicts.  This
+    defaults to 'false', which is different from buildout's previous behavior.
+
+  * Script generation pushes dependency paths that are in site-packages to
+    the end of the dependency paths in sys.path (but, as before, these
+    are still before extra paths and the rest of the site-package paths).
+
+  * Fix an error when at least two dependencies were in a shared location like
+    site-packages, and the first one met the "versions" setting.  The first
+    dependency would be added, but subsequent dependencies from the same
+    location (e.g., site-packages) would use the version of the package found
+    in the shared location, ignoring the version setting.
+
+- The generated interpreter scripts now have a few more similarities to a
+  real Python interpreter.
+
+  * -m and -c incorporates all subsequent arguments as part of the command.
+
+  * -V returns the version.
+
+  * -S causes the script to not modify the standard path (for tests)
+
 - Improve bootstrap.
 
   * New options let you specify where to find ez_setup.py and where to find
