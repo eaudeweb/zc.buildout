@@ -27,6 +27,10 @@ New Features:
     the end of the dependency paths in sys.path (but, as before, these
     are still before extra paths and the rest of the site-package paths).
 
+  * Running "bin/buildout -v" will include output alerting you to selected eggs
+    that came from site-packages, using the pattern
+    "Egg from site-packages: ...".
+
   * Fix an error when at least two dependencies were in a shared location like
     site-packages, and the first one met the "versions" setting.  The first
     dependency would be added, but subsequent dependencies from the same

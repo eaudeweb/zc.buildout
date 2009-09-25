@@ -384,6 +384,70 @@ buildout will tell us who's asking for something that we can't find.
     Error: Couldn't find a distribution for 'demoneeded'.
     """
 
+def show_eggs_from_site_packages():
+    """
+Sometimes you want to know what eggs are coming from site-packages.  This
+might be for a diagnostic, or so that you can get a starting value for the
+allowed-eggs-from-site-packages option.  The -v flag will also include this
+information.
+
+Our "primed_executable" has the "demoneeded," "other," and "setuptools"
+packages available.  We'll ask for "other" and "bigdemo".
+
+Here's our set up.
+
+    >>> primed_executable = get_executable_with_site_packages()
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... prefer-final = true
+    ... find-links = %(link_server)s
+    ...
+    ... [primed_python]
+    ... executable = %(primed_executable)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... python = primed_python
+    ... eggs = other
+    ...        bigdemo
+    ... ''' % globals())
+
+Now here is the output.  The lines that begin with "Egg from site-packages:"
+indicate the eggs from site-packages that have been selected.  You'll see
+we have two: other 1.0 and demoneeded 1.1.
+
+    >>> print system(primed_executable+" "+buildout+" -v")
+    Installing 'zc.buildout', 'setuptools'.
+    We have a develop egg: zc.buildout V
+    We have the best distribution that satisfies 'setuptools'.
+    Picked: setuptools = V
+    Installing 'zc.recipe.egg'.
+    We have a develop egg: zc.recipe.egg V
+    Installing eggs.
+    Installing 'other', 'bigdemo'.
+    We have the best distribution that satisfies 'other'.
+    Picked: other = 1.0
+    We have no distributions for bigdemo that satisfies 'bigdemo'.
+    Getting distribution for 'bigdemo'.
+    Got bigdemo 0.1.
+    Picked: bigdemo = 0.1
+    Egg from site-packages: other 1.0
+    Getting required 'demo'
+      required by bigdemo 0.1.
+    We have no distributions for demo that satisfies 'demo'.
+    Getting distribution for 'demo'.
+    Got demo 0.3.
+    Picked: demo = 0.3
+    Getting required 'demoneeded'
+      required by demo 0.3.
+    We have the best distribution that satisfies 'demoneeded'.
+    Picked: demoneeded = 1.1
+    Egg from site-packages: demoneeded 1.1
+    <BLANKLINE>
+
+    """
 
 def test_comparing_saved_options_with_funny_characters():
     """
