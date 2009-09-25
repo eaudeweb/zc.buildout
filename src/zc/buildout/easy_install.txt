@@ -785,9 +785,6 @@ run other scripts with the path set on the working set:
     ...                 os.path.join(bin, 'py')]
     True
 
-The py script simply runs the Python interactive interpreter with
-the path set:
-
 The py script can run the Python interactive interpreter, supporting some of
 the interpreter's usual options, with the path set:
 
