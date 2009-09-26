@@ -114,6 +114,7 @@ def _unannotate(data):
 _buildout_default_options = _annotate_section({
     'allow-hosts': '*',
     'allow-picked-versions': 'true',
+    'allowed-eggs-from-site-packages': '*',
     'bin-directory': 'bin',
     'develop-eggs-directory': 'develop-eggs',
     'eggs-directory': 'eggs',
@@ -292,6 +293,12 @@ class Buildout(UserDict.DictMixin):
                         include_site_packages)
         zc.buildout.easy_install.include_site_packages(
             include_site_packages=='true')
+
+        allowed_eggs_from_site_packages = tuple(
+            name.strip() for name in
+            options['allowed-eggs-from-site-packages'].split('\n'))
+        zc.buildout.easy_install.allowed_eggs_from_site_packages(
+            allowed_eggs_from_site_packages)
 
         include_site_packages_for_buildout = options[
             'include-site-packages-for-buildout']

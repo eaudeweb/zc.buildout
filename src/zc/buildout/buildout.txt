@@ -728,6 +728,8 @@ COMMAND_LINE_VALUE).
         DEFAULT_VALUE
     allow-picked-versions= true
         DEFAULT_VALUE
+    allowed-eggs-from-site-packages= *
+        DEFAULT_VALUE
     bin-directory= bin
         DEFAULT_VALUE
     develop= recipes
@@ -2224,6 +2226,7 @@ database is shown.
     [buildout]
     allow-hosts = *
     allow-picked-versions = true
+    allowed-eggs-from-site-packages = *
     bin-directory = /sample-buildout/bin
     develop-eggs-directory = /sample-buildout/develop-eggs
     directory = /sample-buildout
@@ -2281,6 +2284,39 @@ allow-picked-versions
     "allow-picked-versions" being set to its default value, "true".  If
     "allow-picked-versions" is "false," instead of picking the best match,
     buildout will raise an error.  This helps enforce repeatability.
+
+allowed-eggs-from-site-packages
+    Sometimes you need or want to control what eggs from site-packages are
+    used. The allowed-eggs-from-site-packages option allows you to specify a
+    whitelist of project names that may be included from site-packages.  You
+    can use globs to specify the value.  It defaults to a single value of '*',
+    indicating that any package may come from site-packages.
+
+    Here's a usage example::
+
+        [buildout]
+        ...
+
+        allowed-eggs-from-site-packages =
+            demo
+            bigdemo
+            zope.*
+
+    This option interacts with the ``include-site-packages`` option in the
+    following ways.
+
+    If ``include-site-packages`` is true, then
+    ``allowed-eggs-from-site-packages`` filters what eggs from site-packages
+    may be chosen.  Therefore, if ``allowed-eggs-from-site-packages`` is an
+    empty list, then no eggs from site-packages are chosen, but site-packages
+    will still be included at the end of path lists.
+
+    If ``include-site-packages`` is false, the value of
+    ``allowed-eggs-from-site-packages`` is irrelevant.
+
+    The same pattern holds true for the ``include-site-packages-for-buildout``
+    option, except only the bin/buildout script is affected by that
+    interaction.
 
 bin-directory
    The directory path where scripts are written.  This can be a
@@ -2565,6 +2601,7 @@ requirements of the buildout will always be used.
 
 You can also specify more locations to search for distributions using
 the `find-links` option. See its description above.
+
 
 Controlling the installation database
 -------------------------------------

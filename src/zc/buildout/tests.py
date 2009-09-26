@@ -3030,6 +3030,249 @@ Now we'll show that a value that is not 'true' or 'false' generates an error.
 
     """
 
+def allowed_eggs_from_site_packages():
+    """
+Sometimes you need or want to control what eggs from site-packages are used.
+The allowed-eggs-from-site-packages option allows you to specify a whitelist of
+project names that may be included from site-packages.  You can use globs to
+specify the value.  It defaults to a single value of '*', indicating that any
+package may come from site-packages.
+
+This option interacts with include-site-packages in the following ways.
+
+If include-site-packages is true, then allowed-eggs-from-site-packages filters
+what eggs from site-packages may be chosen.  If allowed-eggs-from-site-packages
+is an empty list, then no eggs from site-packages are chosen, but site-packages
+will still be included at the end of path lists.
+
+If include-site-packages is false, allowed-eggs-from-site-packages is
+irrelevant.
+
+This test shows the interaction with the zc.buildout.easy_install API.  Another
+test below (allow_site_package_eggs_option) shows using it with a buildout.cfg.
+
+Our "primed_executable" has the "demoneeded," "other," and "setuptools"
+packages available.  We'll simply be asking for "other" here.
+
+    >>> primed_executable = get_executable_with_site_packages()
+
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
+    ...     index=None,
+    ...     allowed_eggs_from_site_packages=['demoneeded', 'other'])
+    >>> [dist.project_name for dist in workingset]
+    ['other']
+
+That worked fine.  It would work fine for a glob too.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
+    ...     index=None,
+    ...     allowed_eggs_from_site_packages=['demoneeded', '?th*'])
+    >>> [dist.project_name for dist in workingset]
+    ['other']
+
+But now let's try again with 'other' not allowed.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
+    ...     index=None,
+    ...     allowed_eggs_from_site_packages=['demoneeded'])
+    Traceback (most recent call last):
+        ...
+    MissingDistribution: Couldn't find a distribution for 'other'.
+
+Here's the same, but with an empty list.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
+    ...     index=None,
+    ...     allowed_eggs_from_site_packages=[])
+    Traceback (most recent call last):
+        ...
+    MissingDistribution: Couldn't find a distribution for 'other'.
+
+Of course, this doesn't stop us from getting a package from elsewhere.  Here,
+we add a link server.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, executable=primed_executable,
+    ...     links=[link_server], index=link_server+'index/',
+    ...     allowed_eggs_from_site_packages=['demoneeded'])
+    >>> [dist.project_name for dist in workingset]
+    ['other']
+    >>> [dist.location for dist in workingset]
+    ['/site-packages-example-install/other-1.0-py2.6.egg']
+
+Finally, here's an example of an interaction we described above: we say that it
+is OK to allow the "other" egg to come from site-packages, but we don't
+include-site-packages.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir(example_dest)
+    >>> example_dest = tmpdir('site-packages-example-install')
+    >>> workingset = zc.buildout.easy_install.install(
+    ...     ['other'], example_dest, links=[], executable=primed_executable,
+    ...     index=None, include_site_packages=False,
+    ...     allowed_eggs_from_site_packages=['other'])
+    Traceback (most recent call last):
+        ...
+    MissingDistribution: Couldn't find a distribution for 'other'.
+
+    """
+
+def allowed_eggs_from_site_packages_option():
+    """
+As introduced in the previous test, the allowed-eggs-from-site-packages option
+allows you to specify a whitelist of project names that may be included from
+site-packages.
+
+This test shows the option being used in a buildout.  We try to limit these
+tests to those that test additional parts of the code beyond those tested in
+the test above.
+
+The buildout defaults to a whitelist of ('*',), or any project name.  The
+buildout configuration option defaults are managed separately from the
+zc.buildout.easy_install API defaults, so we show this here.
+
+    >>> from zc.buildout.buildout import Buildout
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... ''')
+    >>> buildout_instance = Buildout('buildout.cfg', ())
+    >>> buildout_instance['buildout']['allowed-eggs-from-site-packages']
+    '*'
+    >>> zc.buildout.easy_install.allowed_eggs_from_site_packages()
+    ('*',)
+
+In the test below, our "primed_executable" has the "demoneeded," "other," and "se
+packages available.  We'll simply be asking for "other" here.  The default
+value of '*' will allow it.  This confirms behaviorally what we saw above.
+
+    >>> primed_executable = get_executable_with_site_packages()
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links =
+    ...
+    ... [primed_python]
+    ... executable = %(primed_executable)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... python = primed_python
+    ... eggs = other
+    ... ''' % globals())
+
+    >>> print system(primed_executable+" "+buildout)
+    Installing eggs.
+    <BLANKLINE>
+
+Here we explicitly use a "*" for the same result.  This also shows that we
+correctly parse a single-line value.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links =
+    ... allowed-eggs-from-site-packages = *
+    ...
+    ... [primed_python]
+    ... executable = %(primed_executable)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... python = primed_python
+    ... eggs = other
+    ... ''' % globals())
+
+    >>> print system(primed_executable+" "+buildout)
+    Updating eggs.
+    <BLANKLINE>
+
+Specifying the egg exactly will work as well.  This shows we correctly
+parse a multi-line value.
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links =
+    ... allowed-eggs-from-site-packages = demoneeded
+    ...                                   other
+    ...
+    ... [primed_python]
+    ... executable = %(primed_executable)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... python = primed_python
+    ... eggs = other
+    ... ''' % globals())
+
+    >>> print system(primed_executable+" "+buildout)
+    Updating eggs.
+    <BLANKLINE>
+
+It will also work if we use a glob ("*" or "?").  (We won't show that here
+because we already tested it in the previous doctest.)
+
+However, if we do not include "other" in the "allowed-eggs-from-site-packages"
+key, we get an error, because the packages are not available in any links, and
+they are not allowed to come from the executable's site packages. (We won't
+show that here because we already tested it in the previous doctest.)
+
+Finally, here's a test with an empty value.  It shows that we parse an empty
+value correctly, and verifies that we really are controlling what eggs are
+allowed, because we see that we were unable to get "other".
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... find-links =
+    ... allowed-eggs-from-site-packages =
+    ...
+    ... [primed_python]
+    ... executable = %(primed_executable)s
+    ...
+    ... [eggs]
+    ... recipe = zc.recipe.egg:eggs
+    ... eggs = other
+    ... ''' % globals())
+    >>> print system(primed_executable+" "+buildout)
+    Uninstalling eggs.
+    Installing eggs.
+    Couldn't find index page for 'other' (maybe misspelled?)
+    Getting distribution for 'other'.
+    While:
+      Installing eggs.
+      Getting distribution for 'other'.
+    Error: Couldn't find a distribution for 'other'.
+    <BLANKLINE>
+
+    """
+
 def develop_with_modules():
     """
 Distribution setup scripts can import modules in the distribution directory:

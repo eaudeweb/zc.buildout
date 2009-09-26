@@ -75,15 +75,21 @@ class Eggs(object):
         orig_distributions = distributions[:]
         distributions.extend(extra)
 
+        kw = {
+            'allowed_eggs_from_site_packages': tuple(
+                name.strip() for name in
+                options.get(
+                    'allowed-eggs-from-site-packages',
+                    b_options['allowed-eggs-from-site-packages']).split('\n'))}
         if self.buildout['buildout'].get('offline') == 'true':
             ws = zc.buildout.easy_install.working_set(
                 distributions, options['executable'],
                 [options['develop-eggs-directory'],
                  options['eggs-directory']],
                 include_site_packages = self.include_site_packages,
+                **kw
                 )
         else:
-            kw = {}
             if 'unzip' in options:
                 kw['always_unzip'] = get_bool(options, 'unzip')
             ws = zc.buildout.easy_install.install(
