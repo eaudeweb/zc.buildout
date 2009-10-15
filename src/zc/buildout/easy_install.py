@@ -84,7 +84,7 @@ def _get_system_packages(executable):
     def get_sys_path(clean=False):
         cmd = [executable, "-c",
                "import sys, os;"
-               "print repr([os.path.normpath(p) for p in sys.path])"]
+               "print repr([os.path.normpath(p) for p in sys.path if p])"]
         if clean:
             cmd.insert(1, '-S')
         _proc = subprocess.Popen(
@@ -109,7 +109,7 @@ def _get_system_packages(executable):
     site_packages = [p for p in get_sys_path() if p not in stdlib]
     return (stdlib, site_packages)
 
-def _get_clean_sys_modules(executable):
+def get_clean_sys_modules(executable):
     cmd = [executable, '-S', '-c',
            'import sys; print repr(sys.modules.keys())']
     _proc = subprocess.Popen(
@@ -1116,8 +1116,9 @@ def scripts(reqs, working_set, executable, dest,
             ):
     stdlib, eggs, site_dirs = get_path(
         working_set, executable, extra_paths, include_site_packages)
-    clean_modules = set(_get_clean_sys_modules(executable))
+    clean_modules = set(get_clean_sys_modules(executable))
     clean_modules.add('site')
+    clean_modules.add('sitecustomize')
     clean_modules.add('sys')
 
     generated = []
@@ -1301,10 +1302,10 @@ for k in sys.modules.keys():
         del sys.modules[k]
 
 sys.path[:] = [
-    %(stdlib)s
+    %(eggs)s
     ]
 sys.path.extend([
-    %(eggs)s
+    %(stdlib)s
     ])
 site_dirs = [
     %(site_dirs)s
@@ -1433,10 +1434,9 @@ site_dirs = [
     %(site_dirs)s
     ]
 
-sys.path[:] = stdlib
-
 if options.import_site:
-    sys.path.extend(egg_paths)
+    sys.path[:] = egg_paths
+    sys.path.extend(stdlib)
     # Add the site_dirs before `addsitedir` in case it has setuptools.
     sys.path.extend(site_dirs)
     # Process all buildout-controlled eggs before site-packages by importing
@@ -1449,24 +1449,30 @@ if options.import_site:
     # Process .pth files.
     for p in site_dirs:
         site.addsitedir(p)
-sys.path.insert(0, '.')
+else:
+    sys.path[:] = stdlib
 pythonpath = os.environ.get('PYTHONPATH', '')
 sys.path[0:0] = filter(None, (p.strip() for p in pythonpath.split(':')))
 
 interactive = options.inspect
 if getattr(options, 'command', False):
+    sys.path.insert(0, os.getcwd())
     sys.argv[:] = options.sys_argv
     exec options.runnable in globs
 elif getattr(options, 'module', False):
+    sys.path.insert(0, os.getcwd())
     # runpy is only available in Python >= 2.5, so only try if we're asked
     import runpy
     sys.argv[:] = options.sys_argv
     runpy.run_module(options.runnable, {}, "__main__", alter_sys=True)
 elif args:
+    filename = args[0]
+    sys.path.insert(0, os.path.abspath(os.path.dirname(filename)))
     sys.argv[:] = args
-    globs['__file__'] = args[0]
-    execfile(args[0], globs)
+    globs['__file__'] = filename
+    execfile(filename, globs)
 else:
+    sys.path.insert(0, '.')
     interactive = True
 
 if interactive:

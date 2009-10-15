@@ -382,17 +382,20 @@ Let's look at the script that was generated:
     # Clean out sys.modules from site's processing of .pth files.
     clean_modules = [
         ...
+        'site',
+        'sitecustomize',
+        ...
         ]
     for k in sys.modules.keys():
         if k not in clean_modules:
             del sys.modules[k]
     <BLANKLINE>
     sys.path[:] = [
-        ...
-        ]
-    sys.path.extend([
         '/sample-buildout/eggs/demo-0.4c1-pyN.N.egg',
         '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg'
+        ]
+    sys.path.extend([
+        ...
         ])
     site_dirs = [
         '/foo/bar',
@@ -464,17 +467,20 @@ Let's look at the script that was generated:
     # Clean out sys.modules from site's processing of .pth files.
     clean_modules = [
         ...
+        'site',
+        'sitecustomize',
+        ...
         ]
     for k in sys.modules.keys():
         if k not in clean_modules:
             del sys.modules[k]
     <BLANKLINE>
     sys.path[:] = [
-        ...
-        ]
-    sys.path.extend([
         join(base, 'eggs/demo-0.4c1-pyN.N.egg'),
         join(base, 'eggs/demoneeded-1.2c1-pyN.N.egg')
+        ]
+    sys.path.extend([
+        ...
         ])
     site_dirs = [
         '/foo/bar',
@@ -498,6 +504,7 @@ Let's look at the script that was generated:
     <BLANKLINE>
     if __name__ == '__main__':
         eggrecipedemo.main()
+
 
 You can specify relative paths in the buildout section, rather than in
 each individual script section:
@@ -539,17 +546,20 @@ each individual script section:
     # Clean out sys.modules from site's processing of .pth files.
     clean_modules = [
         ...
+        'site',
+        'sitecustomize',
+        ...
         ]
     for k in sys.modules.keys():
         if k not in clean_modules:
             del sys.modules[k]
     <BLANKLINE>
     sys.path[:] = [
-        ...
-        ]
-    sys.path.extend([
         join(base, 'eggs/demo-0.4c1-pyN.N.egg'),
         join(base, 'eggs/demoneeded-1.2c1-pyN.N.egg')
+        ]
+    sys.path.extend([
+        ...
         ])
     site_dirs = [
         '/foo/bar',
@@ -580,7 +590,6 @@ Specifying initialialization code and arguments
 Sometimes, we need to do more than just calling entry points.  We can
 use the initialialization and arguments options to specify extra code
 to be included in generated scripts:
-
 
     >>> write(sample_buildout, 'buildout.cfg',
     ... """
@@ -615,17 +624,20 @@ to be included in generated scripts:
     # Clean out sys.modules from site's processing of .pth files.
     clean_modules = [
         ...
+        'site',
+        'sitecustomize',
+        ...
         ]
     for k in sys.modules.keys():
         if k not in clean_modules:
             del sys.modules[k]
     <BLANKLINE>
     sys.path[:] = [
-        ...
-        ]
-    sys.path.extend([
         '/sample-buildout/eggs/demo-0.4c1-pyN.N.egg',
         '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg'
+        ]
+    sys.path.extend([
+        ...
         ])
     site_dirs = [
         '/foo/bar',
@@ -702,17 +714,20 @@ declare entry points using the entry-points option:
     # Clean out sys.modules from site's processing of .pth files.
     clean_modules = [
         ...
+        'site',
+        'sitecustomize',
+        ...
         ]
     for k in sys.modules.keys():
         if k not in clean_modules:
             del sys.modules[k]
     <BLANKLINE>
     sys.path[:] = [
-        ...
-        ]
-    sys.path.extend([
         '/sample-buildout/eggs/demo-0.4c1-pyN.N.egg',
         '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg'
+        ]
+    sys.path.extend([
+        ...
         ])
     site_dirs = [
         '/foo/bar',

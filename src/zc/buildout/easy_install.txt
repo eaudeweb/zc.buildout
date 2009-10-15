@@ -656,17 +656,20 @@ The demo script run the entry point defined in the demo egg:
     # Clean out sys.modules from site's processing of .pth files.
     clean_modules = [
         ...
+        'site',
+        'sitecustomize',
+        ...
         ]
     for k in sys.modules.keys():
         if k not in clean_modules:
             del sys.modules[k]
     <BLANKLINE>
     sys.path[:] = [
-        ...
-        ]
-    sys.path.extend([
         '/sample-install/demo-0.3-pyN.N.egg',
         '/sample-install/demoneeded-1.1-pyN.N.egg'
+        ]
+    sys.path.extend([
+        ...
         ])
     site_dirs = [
         ...
@@ -725,17 +728,20 @@ rather than passing a requirement:
     # Clean out sys.modules from site's processing of .pth files.
     clean_modules = [
         ...
+        'site',
+        'sitecustomize',
+        ...
         ]
     for k in sys.modules.keys():
         if k not in clean_modules:
             del sys.modules[k]
     <BLANKLINE>
     sys.path[:] = [
-        ...
-        ]
-    sys.path.extend([
         '/sample-install/demo-0.3-pyN.N.egg',
         '/sample-install/demoneeded-1.1-pyN.N.egg'
+        ]
+    sys.path.extend([
+        ...
         ])
     site_dirs = [
         ...
@@ -804,6 +810,9 @@ the interpreter's usual options, with the path set:
     # Clean out sys.modules from site's processing of .pth files.
     clean_modules = [
         ...
+        'site',
+        'sitecustomize',
+        ...
         ]
     for k in sys.modules.keys():
         if k not in clean_modules:
@@ -861,10 +870,9 @@ the interpreter's usual options, with the path set:
         ...
         ]
     <BLANKLINE>
-    sys.path[:] = stdlib
-    <BLANKLINE>
     if options.import_site:
-        sys.path.extend(egg_paths)
+        sys.path[:] = egg_paths
+        sys.path.extend(stdlib)
         # Add the site_dirs before `addsitedir` in case it has setuptools.
         sys.path.extend(site_dirs)
         # Process all buildout-controlled eggs before site-packages by importing
@@ -877,24 +885,30 @@ the interpreter's usual options, with the path set:
         # Process .pth files.
         for p in site_dirs:
             site.addsitedir(p)
-    sys.path.insert(0, '.')
+    else:
+        sys.path[:] = stdlib
     pythonpath = os.environ.get('PYTHONPATH', '')
     sys.path[0:0] = filter(None, (p.strip() for p in pythonpath.split(':')))
     <BLANKLINE>
     interactive = options.inspect
     if getattr(options, 'command', False):
+        sys.path.insert(0, os.getcwd())
         sys.argv[:] = options.sys_argv
         exec options.runnable in globs
     elif getattr(options, 'module', False):
+        sys.path.insert(0, os.getcwd())
         # runpy is only available in Python >= 2.5, so only try if we're asked
         import runpy
         sys.argv[:] = options.sys_argv
         runpy.run_module(options.runnable, {}, "__main__", alter_sys=True)
     elif args:
+        filename = args[0]
+        sys.path.insert(0, os.path.abspath(os.path.dirname(filename)))
         sys.argv[:] = args
-        globs['__file__'] = args[0]
-        execfile(args[0], globs)
+        globs['__file__'] = filename
+        execfile(filename, globs)
     else:
+        sys.path.insert(0, '.')
         interactive = True
     <BLANKLINE>
     if interactive:
@@ -962,17 +976,20 @@ to be included in the a generated script:
     # Clean out sys.modules from site's processing of .pth files.
     clean_modules = [
         ...
+        'site',
+        'sitecustomize',
+        ...
         ]
     for k in sys.modules.keys():
         if k not in clean_modules:
             del sys.modules[k]
     <BLANKLINE>
     sys.path[:] = [
-        ...
-        ]
-    sys.path.extend([
         '/sample-install/demo-0.3-pyN.N.egg',
         '/sample-install/demoneeded-1.1-pyN.N.egg'
+        ]
+    sys.path.extend([
+        ...
         ])
     site_dirs = [
         '/foo',
@@ -1087,17 +1104,20 @@ parentheses in the call:
     # Clean out sys.modules from site's processing of .pth files.
     clean_modules = [
         ...
+        'site',
+        'sitecustomize',
+        ...
         ]
     for k in sys.modules.keys():
         if k not in clean_modules:
             del sys.modules[k]
     <BLANKLINE>
     sys.path[:] = [
-        ...
-        ]
-    sys.path.extend([
         '/sample-install/demo-0.3-pyN.N.egg',
         '/sample-install/demoneeded-1.1-pyN.N.egg'
+        ]
+    sys.path.extend([
+        ...
         ])
     site_dirs = [
         ...
@@ -1139,17 +1159,20 @@ You can also pass script initialization code:
     # Clean out sys.modules from site's processing of .pth files.
     clean_modules = [
         ...
+        'site',
+        'sitecustomize',
+        ...
         ]
     for k in sys.modules.keys():
         if k not in clean_modules:
             del sys.modules[k]
     <BLANKLINE>
     sys.path[:] = [
-        ...
-        ]
-    sys.path.extend([
         '/sample-install/demo-0.3-pyN.N.egg',
         '/sample-install/demoneeded-1.1-pyN.N.egg'
+        ]
+    sys.path.extend([
+        ...
         ])
     site_dirs = [
         ...
@@ -1214,17 +1237,20 @@ to pass a common base directory of the scripts and eggs:
     # Clean out sys.modules from site's processing of .pth files.
     clean_modules = [
         ...
+        'site',
+        'sitecustomize',
+        ...
         ]
     for k in sys.modules.keys():
         if k not in clean_modules:
             del sys.modules[k]
     <BLANKLINE>
     sys.path[:] = [
-        ...
-        ]
-    sys.path.extend([
         join(base, 'eggs/demo-0.3-pyN.N.egg'),
         join(base, 'eggs/demoneeded-1.1-pyN.N.egg')
+        ]
+    sys.path.extend([
+        ...
         ])
     site_dirs = [
         '/ba',
@@ -1277,6 +1303,9 @@ We specified an interpreter and its paths are adjusted too:
     <BLANKLINE>
     # Clean out sys.modules from site's processing of .pth files.
     clean_modules = [
+        ...
+        'site',
+        'sitecustomize',
         ...
         ]
     for k in sys.modules.keys():
@@ -1337,10 +1366,9 @@ We specified an interpreter and its paths are adjusted too:
         ...
         ]
     <BLANKLINE>
-    sys.path[:] = stdlib
-    <BLANKLINE>
     if options.import_site:
-        sys.path.extend(egg_paths)
+        sys.path[:] = egg_paths
+        sys.path.extend(stdlib)
         # Add the site_dirs before `addsitedir` in case it has setuptools.
         sys.path.extend(site_dirs)
         # Process all buildout-controlled eggs before site-packages by importing
@@ -1353,24 +1381,30 @@ We specified an interpreter and its paths are adjusted too:
         # Process .pth files.
         for p in site_dirs:
             site.addsitedir(p)
-    sys.path.insert(0, '.')
+    else:
+        sys.path[:] = stdlib
     pythonpath = os.environ.get('PYTHONPATH', '')
     sys.path[0:0] = filter(None, (p.strip() for p in pythonpath.split(':')))
     <BLANKLINE>
     interactive = options.inspect
     if getattr(options, 'command', False):
+        sys.path.insert(0, os.getcwd())
         sys.argv[:] = options.sys_argv
         exec options.runnable in globs
     elif getattr(options, 'module', False):
+        sys.path.insert(0, os.getcwd())
         # runpy is only available in Python >= 2.5, so only try if we're asked
         import runpy
         sys.argv[:] = options.sys_argv
         runpy.run_module(options.runnable, {}, "__main__", alter_sys=True)
     elif args:
+        filename = args[0]
+        sys.path.insert(0, os.path.abspath(os.path.dirname(filename)))
         sys.argv[:] = args
-        globs['__file__'] = args[0]
-        execfile(args[0], globs)
+        globs['__file__'] = filename
+        execfile(filename, globs)
     else:
+        sys.path.insert(0, '.')
         interactive = True
     <BLANKLINE>
     if interactive:

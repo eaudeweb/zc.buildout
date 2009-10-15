@@ -89,17 +89,20 @@ Our buildout script has been updated to use the new eggs:
     # Clean out sys.modules from site's processing of .pth files.
     clean_modules = [
         ...
+        'site',
+        'sitecustomize',
+        ...
         ]
     for k in sys.modules.keys():
         if k not in clean_modules:
             del sys.modules[k]
     <BLANKLINE>
     sys.path[:] = [
-        ...
-        ]
-    sys.path.extend([
         '/sample-buildout/eggs/zc.buildout-NINETYNINE.NINETYNINE-pyN.N.egg',
         '/sample-buildout/eggs/setuptools-NINETYNINE.NINETYNINE-pyN.N.egg'
+        ]
+    sys.path.extend([
+        ...
         ])
     site_dirs = [
         ...
