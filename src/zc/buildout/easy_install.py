@@ -296,8 +296,17 @@ class Installer:
 
         tmp = tempfile.mkdtemp(dir=dest)
         try:
+            # Detecting setuptools variant (which can also be distribute)
+            # including version number to prevent in-place upgrades that
+            # recurse.
+            found_setuptools = pkg_resources.working_set.find(
+                pkg_resources.Requirement.parse('setuptools'))
+            setuptools_requirement = '%s==%s' % (
+                found_setuptools.project_name,
+                found_setuptools.version)
             path = self._get_dist(
-                self._constrain(pkg_resources.Requirement.parse('setuptools')),
+                self._constrain(pkg_resources.Requirement.parse(
+                    setuptools_requirement)),
                 ws, False,
                 )[0].location
 
