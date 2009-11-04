@@ -20,8 +20,27 @@ use the -c option to specify an alternate configuration file.
 $Id$
 """
 
-import os, shutil, sys, tempfile, urllib2
+import os, shutil, sys, tempfile
 from optparse import OptionParser
+
+try:
+    from urllib2 import urlopen
+except ImportError:
+    from urllib.request import urlopen
+
+
+def execute(source, globals=None, locals=None, filename="<string>"):
+    code = compile(source, filename, "exec")
+    if globals is None:
+        globals = {}
+    if locals is None:
+        locals = globals
+    if sys.version_info[0] == 2:
+        run = compile("exec code in globals, locals ", "<string>", "exec")
+        exec(run)
+    else:
+        exec(code, globals, locals)
+
 
 tmpeggs = tempfile.mkdtemp()
 
@@ -61,15 +80,15 @@ try:
         raise ImportError
 except ImportError:
     ez = {}
+    opts = {"to_dir": tmpeggs, "download_delay": 0}
     if USE_DISTRIBUTE:
-        exec urllib2.urlopen('http://python-distribute.org/distribute_setup.py'
-                         ).read() in ez
-        ez['use_setuptools'](to_dir=tmpeggs, download_delay=0, no_fake=True)
+        url = 'http://python-distribute.org/distribute_setup.py'
+        opts["no_fake"] = True
     else:
-        exec urllib2.urlopen('http://peak.telecommunity.com/dist/ez_setup.py'
-                             ).read() in ez
-        ez['use_setuptools'](to_dir=tmpeggs, download_delay=0)
+        url = 'http://peak.telecommunity.com/dist/ez_setup.py'
 
+    execute(urlopen(url).read(), ez, filename=url)
+    ez['use_setuptools'](**opts)
     if to_reload:
         reload(pkg_resources)
     else:

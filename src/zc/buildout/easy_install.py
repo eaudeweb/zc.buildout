@@ -658,8 +658,8 @@ class Installer:
         while 1:
             try:
                 ws.resolve(requirements)
-            except pkg_resources.DistributionNotFound, err:
-                [requirement] = err
+            except pkg_resources.DistributionNotFound:
+                [requirement] = sys.exc_info()[2]
                 requirement = self._constrain(requirement)
                 if dest:
                     logger.debug('Getting required %r', str(requirement))
@@ -672,8 +672,8 @@ class Installer:
 
                     ws.add(dist)
                     self._maybe_add_setuptools(ws, dist)
-            except pkg_resources.VersionConflict, err:
-                raise VersionConflict(err, ws)
+            except pkg_resources.VersionConflict:
+                raise VersionConflict(sys.exc_info()[2], ws)
             else:
                 break
 
@@ -915,7 +915,7 @@ def scripts(reqs, working_set, executable, dest,
 
     path = [dist.location for dist in working_set]
     path.extend(extra_paths)
-    path = map(realpath, path)
+    path = [realpath(p) for p in path]
 
     generated = []
 
@@ -1056,7 +1056,7 @@ def _script(module_name, attrs, path, dest, executable, arguments,
         logger.info("Generated script %r.", script)
 
         try:
-            os.chmod(dest, 0755)
+            os.chmod(dest, int("0755", 8))
         except (AttributeError, os.error):
             pass
 
@@ -1108,7 +1108,7 @@ def _pyscript(path, dest, executable, rsetup):
     if changed:
         open(dest, 'w').write(contents)
         try:
-            os.chmod(dest,0755)
+            os.chmod(dest, int("0755", 8))
         except (AttributeError, os.error):
             pass
         logger.info("Generated interpreter %r.", script)
