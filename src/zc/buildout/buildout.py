@@ -14,14 +14,20 @@
 """Buildout main script
 """
 
-from rmtree import rmtree
+from zc.buildout.py3k import write
+from zc.buildout.rmtree import rmtree
+
 try:
     from hashlib import md5
 except ImportError:
     # Python 2.4 and older
     from md5 import md5
 
-import ConfigParser
+try:
+    from ConfigParser import ConfigParser
+except ImportError:
+    from configparser import ConfigParser
+
 import copy
 import distutils.errors
 import glob
@@ -33,7 +39,7 @@ import re
 import shutil
 import sys
 import tempfile
-import UserDict
+#import UserDict
 import zc.buildout
 import zc.buildout.download
 import zc.buildout.easy_install
@@ -76,18 +82,18 @@ def _annotate(data, note):
 def _print_annotate(data):
     sections = data.keys()
     sections.sort()
-    print
-    print "Annotated sections"
-    print "="*len("Annotated sections")
+    write()
+    write("Annotated sections")
+    write("="*len("Annotated sections"))
     for section in sections:
-        print
-        print '[%s]' % section
+        write()
+        write('[%s]' % section)
         keys = data[section].keys()
         keys.sort()
         for key in keys:
             value, notes = data[section][key]
             keyvalue = "%s= %s" % (key, value)
-            print keyvalue
+            write(keyvalue)
             line = '   '
             for note in notes.split():
                 if note == '[+]':
@@ -95,9 +101,9 @@ def _print_annotate(data):
                 elif note == '[-]':
                     line = '-= '
                 else:
-                    print line, note
+                    write(line, note)
                     line = '   '
-    print
+    write()
 
 
 def _unannotate_section(section):
@@ -124,7 +130,7 @@ _buildout_default_options = _annotate_section({
     }, 'DEFAULT_VALUE')
 
 
-class Buildout(UserDict.DictMixin):
+class Buildout(dict):
 
     def __init__(self, config_file, cloptions,
                  user_defaults=True, windows_restart=False, command=None):
@@ -142,7 +148,7 @@ class Buildout(UserDict.DictMixin):
             base = os.path.dirname(config_file)
             if not os.path.exists(config_file):
                 if command == 'init':
-                    print 'Creating %r.' % config_file
+                    write('Creating %r.' % config_file)
                     open(config_file, 'w').write('[buildout]\nparts = \n')
                 elif command == 'setup':
                     # Sigh. this model of a buildout nstance
@@ -186,7 +192,7 @@ class Buildout(UserDict.DictMixin):
 
         self._annotated = copy.deepcopy(data)
         self._raw = _unannotate(data)
-        self._data = {}
+        super(Buildout, self).__init__()
         self._parts = []
         # provide some defaults before options are parsed
         # because while parsing options those attributes might be
@@ -420,11 +426,11 @@ class Buildout(UserDict.DictMixin):
         if self._log_level < logging.DEBUG:
             sections = list(self)
             sections.sort()
-            print
-            print 'Configuration data:'
-            for section in self._data:
+            write()
+            write('Configuration data:')
+            for section in self:
                 _save_options(section, self[section], sys.stdout)
-            print
+            write()
 
 
         # compute new part recipe signatures
@@ -587,7 +593,7 @@ class Buildout(UserDict.DictMixin):
                 recipe, 'zc.buildout.uninstall', entry, self)
             self._logger.info('Running uninstall recipe.')
             uninstaller(part, installed_part_options[part])
-        except (ImportError, pkg_resources.DistributionNotFound), v:
+        except (ImportError, pkg_resources.DistributionNotFound):
             pass
 
         # remove created files and directories
@@ -742,7 +748,7 @@ class Buildout(UserDict.DictMixin):
         f = open(installed, 'w')
         _save_options('buildout', installed_options['buildout'], f)
         for part in installed_options['buildout']['parts'].split():
-            print >>f
+            write(file=f)
             _save_options(part, installed_options[part], f)
         f.close()
 
@@ -950,7 +956,7 @@ class Buildout(UserDict.DictMixin):
     def __getitem__(self, section):
         __doing__ = 'Getting section %s.', section
         try:
-            return self._data[section]
+            return super(Buildout. self).__getitem__(section)
         except KeyError:
             pass
 
@@ -960,7 +966,7 @@ class Buildout(UserDict.DictMixin):
             raise MissingSection(section)
 
         options = Options(self, section, data)
-        self._data[section] = options
+        super(Buildout, self).__setitem__(section, options)
         options._initialize()
         return options
 
@@ -1008,21 +1014,22 @@ def _install_and_load(spec, group, entry, buildout):
         return pkg_resources.load_entry_point(
             req.project_name, group, entry)
 
-    except Exception, v:
+    except Exception:
+        v = sys.exc_info()[2]
         buildout._logger.log(
             1,
             "Could't load %s entry point %s\nfrom %s:\n%s.",
             group, entry, spec, v)
         raise
 
-class Options(UserDict.DictMixin):
+class Options(dict):
 
     def __init__(self, buildout, section, data):
         self.buildout = buildout
         self.name = section
         self._raw = data
         self._cooked = {}
-        self._data = {}
+        super(Options, self).__init__()
 
     def _initialize(self):
         name = self.name
@@ -1043,7 +1050,7 @@ class Options(UserDict.DictMixin):
         if not recipe:
             return
 
-        reqs, entry = _recipe(self._data)
+        reqs, entry = _recipe(super(Options, self))
         buildout = self.buildout
         recipe_class = _install_and_load(reqs, 'zc.buildout', entry, buildout)
 
@@ -1086,7 +1093,7 @@ class Options(UserDict.DictMixin):
 
     def get(self, option, default=None, seen=None):
         try:
-            return self._data[option]
+            return super(Options, self).__getitem__(option)
         except KeyError:
             pass
 
@@ -1111,7 +1118,7 @@ class Options(UserDict.DictMixin):
             v = '$$'.join([self._sub(s, seen) for s in v.split('$$')])
             seen.pop()
 
-        self._data[option] = v
+        super(Options, self).__setitem__(option, v)
         return v
 
     _template_split = re.compile('([$]{[^}]*})').split
@@ -1159,7 +1166,7 @@ class Options(UserDict.DictMixin):
 
     def __getitem__(self, key):
         try:
-            return self._data[key]
+            return super(Options, self).__getitem__(key)
         except KeyError:
             pass
 
@@ -1171,28 +1178,30 @@ class Options(UserDict.DictMixin):
     def __setitem__(self, option, value):
         if not isinstance(value, str):
             raise TypeError('Option values must be strings', value)
-        self._data[option] = value
+        super(Options, self).__setitem__(option, value)
 
     def __delitem__(self, key):
         if key in self._raw:
             del self._raw[key]
-            if key in self._data:
-                del self._data[key]
+            if key in self:
+                super(Options, self).__delitem__(key)
             if key in self._cooked:
                 del self._cooked[key]
-        elif key in self._data:
-            del self._data[key]
+        elif super(Options, self).__contains__(key):
+            super(Options, self).__delitem__(key)
         else:
-            raise KeyError, key
+            raise KeyError(key)
 
     def keys(self):
         raw = self._raw
-        return list(self._raw) + [k for k in self._data if k not in raw]
+        return list(raw) + [
+            k for k in super(Options, self).keys() if k not in raw
+            ]
 
     def copy(self):
         result = self._raw.copy()
         result.update(self._cooked)
-        result.update(self._data)
+        result.update(super(Options, self))
         return result
 
     def _call(self, f):
@@ -1259,10 +1268,10 @@ def _save_option(option, value, f):
         value = '%(__buildout_space_n__)s' + value[2:]
     if value.endswith('\n\t'):
         value = value[:-2] + '%(__buildout_space_n__)s'
-    print >>f, option, '=', value
+    write(option, '=', value, file=f)
 
 def _save_options(section, options, f):
-    print >>f, '[%s]' % section
+    write('[%s]' % section, file=f)
     items = options.items()
     items.sort()
     for option, value in items:
@@ -1561,7 +1570,7 @@ Commands:
 
 """
 def _help():
-    print _usage
+    write(_usage)
     sys.exit(0)
 
 def main(args=None):
@@ -1622,7 +1631,7 @@ def main(args=None):
                         _error("No timeout value must be numeric", orig_op)
 
                     import socket
-                    print 'Setting socket time out to %d seconds' % timeout
+                    write('Setting socket time out to %d seconds' % timeout)
                     socket.setdefaulttimeout(timeout)
 
             elif op:
@@ -1660,7 +1669,8 @@ def main(args=None):
             getattr(buildout, command)(args)
         except SystemExit:
             pass
-        except Exception, v:
+        except Exception:
+            v = sys.exc_info()[2]
             _doing()
             exc_info = sys.exc_info()
             import pdb, traceback
