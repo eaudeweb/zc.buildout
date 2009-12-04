@@ -1072,7 +1072,7 @@ dependency available, "demoneeded," and "other," but not "demo" or "bigdemo".
     >>> pprint.pprint(dir_paths) # doctest: +ELLIPSIS
     ['/executable/eggs/other-1.0-py...egg',
      '/executable/eggs/demoneeded-1.1-py...egg',
-     '/executable/eggs/setuptools-0.6c9-py...egg',
+     '/executable/eggs/setuptools-...-py...egg',
      ...]
     >>> zc.buildout.easy_install.clear_index_cache() # clean up
 
