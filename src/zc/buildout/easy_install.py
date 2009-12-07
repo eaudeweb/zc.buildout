@@ -976,7 +976,7 @@ def _relative_path_and_setup(sname, path, relative_paths):
             )
         rpsetup = relative_paths_setup
         for i in range(_relative_depth(relative_paths, sname)):
-            rpsetup += "base = os.path.dirname(base)\n"
+            rpsetup += "\nbase = os.path.dirname(base)"
     else:
         spath = repr(path)[1:-1].replace(', ', ',\n  ')
         rpsetup = ''
@@ -1021,11 +1021,9 @@ def _relativitize(path, script, relative_paths):
 
 
 relative_paths_setup = """
-import os
-
 join = os.path.join
-base = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
-"""
+base = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))"""
+
 
 def _script(module_name, attrs, path, dest, executable, arguments,
             initialization, rsetup):
@@ -1033,7 +1031,10 @@ def _script(module_name, attrs, path, dest, executable, arguments,
     script = dest
     if is_win32:
         dest += '-script.py'
-
+    if rsetup:
+        relative_paths_import = '\nimport os'
+    else:
+        relative_paths_import = ''
     contents = script_template % dict(
         python = _safe_arg(executable),
         path = path,
@@ -1041,6 +1042,7 @@ def _script(module_name, attrs, path, dest, executable, arguments,
         attrs = attrs,
         arguments = arguments,
         initialization = initialization,
+        relative_paths_import = relative_paths_import,
         relative_paths_setup = rsetup,
         )
     changed = not (os.path.exists(dest) and open(dest).read() == contents)
@@ -1072,10 +1074,10 @@ else:
     script_header = '#!%(python)s'
 
 
-script_template = script_header + '''\
-
-%(relative_paths_setup)s
+script_template = script_header + ''' -S
+%(relative_paths_import)s
 import sys
+%(relative_paths_setup)s
 sys.path[0:0] = [
   %(path)s,
   ]
@@ -1119,39 +1121,18 @@ def _pyscript(path, dest, executable, rsetup):
     generated.append(dest)
     return generated
 
-py_script_template = script_header + '''\
+py_script_template = script_header + '''
 
-%(relative_paths_setup)s
+import os
 import sys
-
-sys.path[0:0] = [
+%(relative_paths_setup)s
+pythonpath = [
   %(path)s,
   ]
-
-_interactive = True
-if len(sys.argv) > 1:
-    _options, _args = __import__("getopt").getopt(sys.argv[1:], 'ic:m:')
-    _interactive = False
-    for (_opt, _val) in _options:
-        if _opt == '-i':
-            _interactive = True
-        elif _opt == '-c':
-            exec _val
-        elif _opt == '-m':
-            sys.argv[1:] = _args
-            _args = []
-            __import__("runpy").run_module(
-                 _val, {}, "__main__", alter_sys=True)
-
-    if _args:
-        sys.argv[:] = _args
-        __file__ = _args[0]
-        del _options, _args
-        execfile(__file__)
-
-if _interactive:
-    del _interactive
-    __import__("code").interact(banner="", local=globals())
+argv = [sys.executable, '-S'] + sys.argv[1:]
+environ = os.environ.copy()
+environ['PYTHONPATH'] = os.pathsep.join(pythonpath)
+os.execve(sys.executable, argv, environ)
 '''
 
 runsetup_template = """

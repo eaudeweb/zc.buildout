@@ -81,12 +81,13 @@ new versions found in new releases:
 Our buildout script has been updated to use the new eggs:
 
     >>> cat(sample_buildout, 'bin', 'buildout')
-    #!/usr/local/bin/python2.4
+    #!/usr/local/bin/python2.4 -S
     <BLANKLINE>
     import sys
+    <BLANKLINE>
     sys.path[0:0] = [
-      '/sample-buildout/eggs/zc.buildout-99.99-py2.4.egg',
-      '/sample-buildout/eggs/setuptools-99.99-py2.4.egg',
+      '/sample-buildout/eggs/zc.buildout-NINETYNINE.NINETYNINE-pyN.N.egg',
+      '/sample-buildout/eggs/setuptools-NINETYNINE.NINETYNINE-pyN.N.egg',
       ]
     <BLANKLINE>
     import zc.buildout.buildout

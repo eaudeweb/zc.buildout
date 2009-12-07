@@ -373,12 +373,13 @@ extra-paths option:
 Let's look at the script that was generated:
 
     >>> cat(sample_buildout, 'bin', 'foo') # doctest: +NORMALIZE_WHITESPACE
-    #!/usr/local/bin/python2.4
+    #!/usr/local/bin/python2.4 -S
     <BLANKLINE>
     import sys
+    <BLANKLINE>
     sys.path[0:0] = [
-      '/sample-buildout/eggs/demo-0.4c1-py2.4.egg',
-      '/sample-buildout/eggs/demoneeded-1.2c1-py2.4.egg',
+      '/sample-buildout/eggs/demo-0.4c1-pyN.N.egg',
+      '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg',
       '/foo/bar',
       '/sample-buildout/spam',
       ]
@@ -387,6 +388,7 @@ Let's look at the script that was generated:
     <BLANKLINE>
     if __name__ == '__main__':
         eggrecipedemo.main()
+
 
 Relative egg paths
 ------------------
@@ -420,15 +422,14 @@ breaking scripts.
 Let's look at the script that was generated:
 
     >>> cat(sample_buildout, 'bin', 'foo') # doctest: +NORMALIZE_WHITESPACE
-    #!/usr/local/bin/python2.4
+    #!/usr/local/bin/python2.4 -S
     <BLANKLINE>
     import os
+    import sys
     <BLANKLINE>
     join = os.path.join
     base = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
     base = os.path.dirname(base)
-    <BLANKLINE>
-    import sys
     sys.path[0:0] = [
       join(base, 'eggs/demo-0.4c1-pyN.N.egg'),
       join(base, 'eggs/demoneeded-1.2c1-pyN.N.egg'),
@@ -467,15 +468,14 @@ each individual script section:
     Generated script '/sample-buildout/bin/foo'.
 
     >>> cat(sample_buildout, 'bin', 'foo') # doctest: +NORMALIZE_WHITESPACE
-    #!/usr/local/bin/python2.4
+    #!/usr/local/bin/python2.4 -S
     <BLANKLINE>
     import os
+    import sys
     <BLANKLINE>
     join = os.path.join
     base = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
     base = os.path.dirname(base)
-    <BLANKLINE>
-    import sys
     sys.path[0:0] = [
       join(base, 'eggs/demo-0.4c1-pyN.N.egg'),
       join(base, 'eggs/demoneeded-1.2c1-pyN.N.egg'),
@@ -487,6 +487,7 @@ each individual script section:
     <BLANKLINE>
     if __name__ == '__main__':
         eggrecipedemo.main()
+
 
 Specifying initialialization code and arguments
 -----------------------------------------------
@@ -520,12 +521,13 @@ to be included in generated scripts:
     Generated script '/sample-buildout/bin/foo'.
 
     >>> cat(sample_buildout, 'bin', 'foo') # doctest: +NORMALIZE_WHITESPACE
-    #!/usr/local/bin/python2.4
+    #!/usr/local/bin/python2.4 -S
     <BLANKLINE>
     import sys
+    <BLANKLINE>
     sys.path[0:0] = [
-      '/sample-buildout/eggs/demo-0.4c1-py2.4.egg',
-      '/sample-buildout/eggs/demoneeded-1.2c1-py2.4.egg',
+      '/sample-buildout/eggs/demo-0.4c1-pyN.N.egg',
+      '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg',
       '/foo/bar',
       '/sample-buildout/spam',
       ]
@@ -537,6 +539,7 @@ to be included in generated scripts:
     <BLANKLINE>
     if __name__ == '__main__':
         eggrecipedemo.main(a, 2)
+
 
 Here we see that the initialization code we specified was added after
 setting the path.  Note, as mentioned above, that leading whitespace
@@ -578,12 +581,13 @@ declare entry points using the entry-points option:
     -  other
 
     >>> cat(sample_buildout, 'bin', 'other')
-    #!/usr/local/bin/python2.4
+    #!/usr/local/bin/python2.4 -S
     <BLANKLINE>
     import sys
+    <BLANKLINE>
     sys.path[0:0] = [
-      '/sample-buildout/eggs/demo-0.4c1-py2.4.egg',
-      '/sample-buildout/eggs/demoneeded-1.2c1-py2.4.egg',
+      '/sample-buildout/eggs/demo-0.4c1-pyN.N.egg',
+      '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg',
       '/foo/bar',
       '/sample-buildout/spam',
       ]
@@ -592,6 +596,7 @@ declare entry points using the entry-points option:
     <BLANKLINE>
     if __name__ == '__main__':
         foo.bar.a.b.c()
+
 
 Generating all scripts
 ----------------------
