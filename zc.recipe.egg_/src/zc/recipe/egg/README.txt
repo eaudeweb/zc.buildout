@@ -375,6 +375,7 @@ Let's look at the script that was generated:
     >>> cat(sample_buildout, 'bin', 'foo')
     ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
+    import encodings.utf_8 # Hack to fix sys.modules approach.
     <BLANKLINE>
     import site
     import sys
@@ -454,6 +455,7 @@ Let's look at the script that was generated:
     >>> cat(sample_buildout, 'bin', 'foo')
     ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
+    import encodings.utf_8 # Hack to fix sys.modules approach.
     <BLANKLINE>
     import os
     <BLANKLINE>
@@ -533,6 +535,7 @@ each individual script section:
     >>> cat(sample_buildout, 'bin', 'foo')
     ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
+    import encodings.utf_8 # Hack to fix sys.modules approach.
     <BLANKLINE>
     import os
     <BLANKLINE>
@@ -617,6 +620,7 @@ to be included in generated scripts:
     >>> cat(sample_buildout, 'bin', 'foo')
     ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
+    import encodings.utf_8 # Hack to fix sys.modules approach.
     <BLANKLINE>
     import site
     import sys
@@ -707,6 +711,7 @@ declare entry points using the entry-points option:
     >>> cat(sample_buildout, 'bin', 'other')
     ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
+    import encodings.utf_8 # Hack to fix sys.modules approach.
     <BLANKLINE>
     import site
     import sys

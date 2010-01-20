@@ -82,6 +82,7 @@ Our buildout script has been updated to use the new eggs:
 
     >>> cat(sample_buildout, 'bin', 'buildout') # doctest: +ELLIPSIS
     #!/usr/local/bin/python2.4
+    import encodings.utf_8 # Hack to fix sys.modules approach.
     <BLANKLINE>
     import site
     import sys

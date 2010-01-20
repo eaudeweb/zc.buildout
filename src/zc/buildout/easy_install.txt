@@ -649,6 +649,7 @@ The demo script run the entry point defined in the demo egg:
 
     >>> cat(bin, 'demo') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
+    import encodings.utf_8 # Hack to fix sys.modules approach.
     <BLANKLINE>
     import site
     import sys
@@ -721,6 +722,7 @@ rather than passing a requirement:
 
     >>> cat(bin, 'demo') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
+    import encodings.utf_8 # Hack to fix sys.modules approach.
     <BLANKLINE>
     import site
     import sys
@@ -799,6 +801,7 @@ the interpreter's usual options, with the path set:
 
     >>> cat(bin, 'py') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
+    import encodings.utf_8 # Hack to fix sys.modules approach.
     # Get a clean copy of globals before import or variable definition.
     globs = globals().copy()
     <BLANKLINE>
@@ -969,6 +972,7 @@ to be included in the a generated script:
 
     >>> cat(bin, 'run') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
+    import encodings.utf_8 # Hack to fix sys.modules approach.
     <BLANKLINE>
     import site
     import sys
@@ -1097,6 +1101,7 @@ parentheses in the call:
 
     >>> cat(bin, 'run') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
+    import encodings.utf_8 # Hack to fix sys.modules approach.
     <BLANKLINE>
     import site
     import sys
@@ -1152,6 +1157,7 @@ You can also pass script initialization code:
 
     >>> cat(bin, 'run') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     #!/usr/local/bin/python2.4
+    import encodings.utf_8 # Hack to fix sys.modules approach.
     <BLANKLINE>
     import site
     import sys
@@ -1224,6 +1230,7 @@ to pass a common base directory of the scripts and eggs:
 
     >>> cat(bo, 'bin', 'run') # doctest: +ELLIPSIS
     #!/usr/local/bin/python2.4
+    import encodings.utf_8 # Hack to fix sys.modules approach.
     <BLANKLINE>
     import os
     <BLANKLINE>
@@ -1287,6 +1294,7 @@ We specified an interpreter and its paths are adjusted too:
 
     >>> cat(bo, 'bin', 'py') # doctest: +ELLIPSIS
     #!/usr/local/bin/python2.4
+    import encodings.utf_8 # Hack to fix sys.modules approach.
     # Get a clean copy of globals before import or variable definition.
     globs = globals().copy()
     <BLANKLINE>

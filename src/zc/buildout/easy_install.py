@@ -1287,8 +1287,8 @@ if is_jython and jython_os_name == 'linux':
 else:
     script_header = '#!%(python)s'
 
-script_template = script_header + '''\
-
+script_template = script_header + '''
+import encodings.utf_8 # Hack to fix sys.modules approach.
 %(relative_paths_setup)s
 import site
 import sys
@@ -1365,8 +1365,8 @@ def _pyscript(clean_modules, stdlib, eggs, site_dirs, dest, executable,
     generated.append(dest)
     return generated
 
-py_script_template = script_header + '''\
-
+py_script_template = script_header + '''
+import encodings.utf_8 # Hack to fix sys.modules approach.
 # Get a clean copy of globals before import or variable definition.
 globs = globals().copy()
 
