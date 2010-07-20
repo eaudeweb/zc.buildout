@@ -18,8 +18,12 @@ The script accepts buildout command-line options, so you can
 use the -c option to specify an alternate configuration file.
 """
 
-import os, shutil, sys, tempfile, urllib2
+import os, shutil, sys, tempfile
 from optparse import OptionParser
+try: # py3K compat hack:
+    from urllib import urlopen
+except ImportError:
+    from urllib.request import urlopen
 
 tmpeggs = tempfile.mkdtemp()
 
@@ -49,6 +53,9 @@ else:
     VERSION = ''
 
 USE_DISTRIBUTE = options.distribute
+if sys.version > '3':
+    USE_DISTRIBUTE = True
+    
 args = args + ['bootstrap']
 
 try:
@@ -59,12 +66,12 @@ try:
 except ImportError:
     ez = {}
     if USE_DISTRIBUTE:
-        exec urllib2.urlopen('http://python-distribute.org/distribute_setup.py'
-                         ).read() in ez
+        exec(urlopen('http://python-distribute.org/distribute_setup.py'
+                     ).read(), ez)
         ez['use_setuptools'](to_dir=tmpeggs, download_delay=0, no_fake=True)
     else:
-        exec urllib2.urlopen('http://peak.telecommunity.com/dist/ez_setup.py'
-                             ).read() in ez
+        exec(urlopen('http://peak.telecommunity.com/dist/ez_setup.py'
+                     ).read(), ez)
         ez['use_setuptools'](to_dir=tmpeggs, download_delay=0)
 
     reload(sys.modules['pkg_resources'])

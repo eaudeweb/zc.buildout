@@ -98,7 +98,7 @@ def _get_system_paths(executable):
         cmd.extend(args)
         cmd.extend([
             "-c", "import sys, os;"
-            "print repr([os.path.normpath(p) for p in sys.path if p])"])
+            "print(repr([os.path.normpath(p) for p in sys.path if p]))"])
         # Windows needs some (as yet to be determined) part of the real env.
         env = os.environ.copy()
         # We need to make sure that PYTHONPATH, which will often be set
@@ -124,7 +124,8 @@ def _get_system_paths(executable):
     return (stdlib, site_paths)
 
 def _get_version_info(executable):
-    cmd = [executable, '-Sc', 'import sys; print repr(sys.version_info)']
+    # py3 hack: sys.version_info is not a tuple anymore, force it to be a list
+    cmd = [executable, '-Sc', 'import sys; print(repr(tuple(x for x in sys.version_info)))']
     _proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = _proc.communicate();
@@ -871,7 +872,9 @@ class Installer:
                 if dist is None:
                     try:
                         dist = best[req.key] = env.best_match(req, ws)
-                    except pkg_resources.VersionConflict, err:
+                    except pkg_resources.VersionConflict:
+                        #py3k hack
+                        err = sys.exc_info()[1]
                         raise VersionConflict(err, ws)
                     if dist is None:
                         if destination:
@@ -1097,12 +1100,13 @@ def develop(setup, dest,
         undo.append(lambda: os.remove(tsetup))
         undo.append(lambda: os.close(fd))
 
-        os.write(fd, runsetup_template % dict(
+        template = runsetup_template % dict(
             setuptools=setuptools_loc,
             setupdir=directory,
             setup=setup,
             __file__ = setup,
-            ))
+        )
+        os.write(fd, template.encode()) #py3 hack: Convert to binary
 
         tmp3 = tempfile.mkdtemp('build', dir=dest)
         undo.append(lambda : shutil.rmtree(tmp3))
@@ -1377,7 +1381,7 @@ def _write_script(full_name, contents, logged_type):
     if changed:
         open(script_name, 'w').write(contents)
         try:
-            os.chmod(script_name, 0755)
+            os.chmod(script_name, 493) #py3k hack: 493 == 0755
         except (AttributeError, os.error):
             pass
         logger.info("Generated %s %r.", logged_type, full_name)
@@ -1473,7 +1477,7 @@ if len(sys.argv) > 1:
         sys.argv[:] = _args
         __file__ = _args[0]
         del _options, _args
-        execfile(__file__)
+        exec(open(__file__).read())
 
 if _interactive:
     del _interactive
@@ -1491,8 +1495,8 @@ def _get_module_file(executable, name):
     cmd = [executable, "-Sc",
            "import imp; "
            "fp, path, desc = imp.find_module(%r); "
-           "fp.close; "
-           "print path" % (name,)]
+           "fp.close(); "
+           "print(path)" % (name,)] #py3k hack, print()
     env = os.environ.copy()
     # We need to make sure that PYTHONPATH, which will often be set to
     # include a custom buildout-generated site.py, is not set, or else
@@ -1507,7 +1511,8 @@ def _get_module_file(executable, name):
             'Could not find file for module %s:\n%s', name, stderr)
         return None
     # else: ...
-    res = stdout.strip()
+    #py3k hack, in python 3 you get binary back, so encode to string
+    res = stdout.decode().strip()
     if res.endswith('.pyc') or res.endswith('.pyo'):
         raise RuntimeError('Cannot find uncompiled version of %s' % (name,))
     if not os.path.exists(res):
@@ -1577,6 +1582,7 @@ def _generate_site(dest, working_set, executable, extra_paths=(),
     addsitepackages_marker = 'def addsitepackages('
     enableusersite_marker = 'ENABLE_USER_SITE = '
     successful_rewrite = False
+
     real_site_path = _get_module_file(executable, 'site')
     real_site = open(real_site_path, 'r')
     site = open(site_path, 'w')
@@ -1719,7 +1725,7 @@ __file__ = %(__file__)r
 
 os.chdir(%(setupdir)r)
 sys.argv[0] = %(setup)r
-execfile(%(setup)r)
+exec(open(%(setup)r).read())
 """
 
 

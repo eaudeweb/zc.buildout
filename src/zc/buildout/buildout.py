@@ -14,14 +14,22 @@
 """Buildout main script
 """
 
-from rmtree import rmtree
+
+from zc.buildout.rmtree import rmtree
 try:
     from hashlib import md5
 except ImportError:
     # Python 2.4 and older
     from md5 import md5
 
-import ConfigParser
+try:
+    from ConfigParser import RawConfigParser
+    from UserDict import DictMixin
+except ImportError: # py3
+    from configparser import RawConfigParser
+    from collections import MutableMapping as DictMixin
+    
+import base64
 import copy
 import distutils.errors
 import glob
@@ -33,7 +41,6 @@ import re
 import shutil
 import sys
 import tempfile
-import UserDict
 import zc.buildout
 import zc.buildout.download
 import zc.buildout.easy_install
@@ -76,18 +83,19 @@ def _annotate(data, note):
 def _print_annotate(data):
     sections = data.keys()
     sections.sort()
-    print
-    print "Annotated sections"
-    print "="*len("Annotated sections")
+    
+    print()
+    print("Annotated sections")
+    print("="*len("Annotated sections"))
     for section in sections:
-        print
-        print '[%s]' % section
+        print()
+        print('[%s]' % section)
         keys = data[section].keys()
         keys.sort()
         for key in keys:
             value, notes = data[section][key]
             keyvalue = "%s= %s" % (key, value)
-            print keyvalue
+            print(keyvalue)
             line = '   '
             for note in notes.split():
                 if note == '[+]':
@@ -95,7 +103,7 @@ def _print_annotate(data):
                 elif note == '[-]':
                     line = '-= '
                 else:
-                    print line, note
+                    print(line, note)
                     line = '   '
     print
 
@@ -135,7 +143,7 @@ _buildout_default_options = _annotate_section({
     }, 'DEFAULT_VALUE')
 
 
-class Buildout(UserDict.DictMixin):
+class Buildout(DictMixin):
 
     def __init__(self, config_file, cloptions,
                  user_defaults=True, windows_restart=False, command=None):
@@ -153,7 +161,7 @@ class Buildout(UserDict.DictMixin):
             base = os.path.dirname(config_file)
             if not os.path.exists(config_file):
                 if command == 'init':
-                    print 'Creating %r.' % config_file
+                    print('Creating %r.' % config_file)
                     open(config_file, 'w').write('[buildout]\nparts = \n')
                 elif command == 'setup':
                     # Sigh. This model of a buildout instance
@@ -465,11 +473,11 @@ class Buildout(UserDict.DictMixin):
         if self._log_level < logging.DEBUG:
             sections = list(self)
             sections.sort()
-            print
-            print 'Configuration data:'
+            print()
+            print('Configuration data:')
             for section in self._data:
                 _save_options(section, self[section], sys.stdout)
-            print
+            print()
 
 
         # compute new part recipe signatures
@@ -632,7 +640,7 @@ class Buildout(UserDict.DictMixin):
                 recipe, 'zc.buildout.uninstall', entry, self)
             self._logger.info('Running uninstall recipe.')
             uninstaller(part, installed_part_options[part])
-        except (ImportError, pkg_resources.DistributionNotFound), v:
+        except (ImportError, pkg_resources.DistributionNotFound):
             pass
 
         # remove created files and directories
@@ -722,7 +730,7 @@ class Buildout(UserDict.DictMixin):
     def _read_installed_part_options(self):
         old = self['buildout']['installed']
         if old and os.path.isfile(old):
-            parser = ConfigParser.RawConfigParser()
+            parser = RawConfigParser()
             parser.optionxform = lambda s: s
             parser.read(old)
             result = {}
@@ -787,7 +795,9 @@ class Buildout(UserDict.DictMixin):
         f = open(installed, 'w')
         _save_options('buildout', installed_options['buildout'], f)
         for part in installed_options['buildout']['parts'].split():
-            print >>f
+            #print >>f # Won't work under py3, so:
+            f.write(os.linesep)
+            f.write('\n') # Needs to be fixed to add the right line ending
             _save_options(part, installed_options[part], f)
         f.close()
 
@@ -913,7 +923,8 @@ class Buildout(UserDict.DictMixin):
             reqs=['zc.buildout'])
 
         # Restart
-        args = map(zc.buildout.easy_install._safe_arg, sys.argv)
+        # py3 hack: map is a generator in python 3
+        args = list(map(zc.buildout.easy_install._safe_arg, sys.argv))
         if not __debug__:
             args.insert(0, '-O')
         args.insert(0, zc.buildout.easy_install._safe_arg(sys.executable))
@@ -1042,6 +1053,9 @@ class Buildout(UserDict.DictMixin):
 
     def __iter__(self):
         return iter(self._raw)
+    
+    def __len__(self):
+        raise NotImplementedError('__len__')        
 
 
 def _install_and_load(spec, group, entry, buildout):
@@ -1076,14 +1090,16 @@ def _install_and_load(spec, group, entry, buildout):
         return pkg_resources.load_entry_point(
             req.project_name, group, entry)
 
-    except Exception, v:
+    except Exception:
+        # py3 hack:
+        v = sys.exc_info()[1]
         buildout._logger.log(
             1,
             "Could't load %s entry point %s\nfrom %s:\n%s.",
             group, entry, spec, v)
         raise
 
-class Options(UserDict.DictMixin):
+class Options(DictMixin):
 
     def __init__(self, buildout, section, data):
         self.buildout = buildout
@@ -1251,11 +1267,18 @@ class Options(UserDict.DictMixin):
         elif key in self._data:
             del self._data[key]
         else:
-            raise KeyError, key
+            raise KeyError(key)
 
     def keys(self):
         raw = self._raw
         return list(self._raw) + [k for k in self._data if k not in raw]
+
+    def __iter__(self):
+        for each in self._raw:
+            yield each
+
+    def __len__(self):
+        return len(self._raw)
 
     def copy(self):
         result = self._raw.copy()
@@ -1327,12 +1350,17 @@ def _save_option(option, value, f):
         value = '%(__buildout_space_n__)s' + value[2:]
     if value.endswith('\n\t'):
         value = value[:-2] + '%(__buildout_space_n__)s'
-    print >>f, option, '=', value
+    # py3: print to file has different syntax in Python 3
+    # Also, join must take an iterable, not 3 arguments
+    f.write(' '.join((option, '=', value,)))
+    f.write(os.linesep)
 
 def _save_options(section, options, f):
-    print >>f, '[%s]' % section
+    # py3: print to file has different syntax in Python 3
+    f.write('[%s]' % section)
+    f.write(os.linesep)
     items = options.items()
-    items.sort()
+    items = sorted(items)
     for option, value in items:
         _save_option(option, value, f)
 
@@ -1376,7 +1404,7 @@ def _open(base, filename, seen, dl_options, override):
 
     result = {}
 
-    parser = ConfigParser.RawConfigParser()
+    parser = RawConfigParser()
     parser.optionxform = lambda s: s
     parser.readfp(fp)
     if is_temp:
@@ -1418,24 +1446,29 @@ def _open(base, filename, seen, dl_options, override):
 ignore_directories = '.svn', 'CVS'
 def _dir_hash(dir):
     hash = md5()
+    
     for (dirpath, dirnames, filenames) in os.walk(dir):
         dirnames[:] = [n for n in dirnames if n not in ignore_directories]
         filenames[:] = [f for f in filenames
                         if (not (f.endswith('pyc') or f.endswith('pyo'))
                             and os.path.exists(os.path.join(dirpath, f)))
                         ]
-        hash.update(' '.join(dirnames))
-        hash.update(' '.join(filenames))
+        # py3 hack: Hashes can't be made from unicode, so we encode them:
+        dir_names = ' '.join(dirnames)
+        hash.update(dir_names.encode())
+        file_names = ' '.join(filenames)
+        hash.update(file_names.encode())
         for name in filenames:
-            hash.update(open(os.path.join(dirpath, name)).read())
-    return hash.digest().encode('base64').strip()
+            hash.update(open(os.path.join(dirpath, name), 'rb').read())
+    return base64.b64encode(hash.digest()).strip()
 
 def _dists_sig(dists):
     result = []
     for dist in dists:
         location = dist.location
         if dist.precedence == pkg_resources.DEVELOP_DIST:
-            result.append(dist.project_name + '-' + _dir_hash(location))
+            # py3 hack: b64encode (and therefore _dir_hash) returns binary
+            result.append(dist.project_name + '-' + _dir_hash(location).decode())
         else:
             result.append(os.path.basename(location))
     return result
@@ -1629,7 +1662,8 @@ Commands:
 
 """
 def _help():
-    print _usage
+    # py3 hack
+    print(_usage)
     sys.exit(0)
 
 def main(args=None):
@@ -1690,7 +1724,7 @@ def main(args=None):
                         _error("No timeout value must be numeric", orig_op)
 
                     import socket
-                    print 'Setting socket time out to %d seconds' % timeout
+                    print('Setting socket time out to %d seconds' % timeout)
                     socket.setdefaulttimeout(timeout)
 
             elif op:
@@ -1728,7 +1762,8 @@ def main(args=None):
             getattr(buildout, command)(args)
         except SystemExit:
             pass
-        except Exception, v:
+        except Exception:
+            v = sys.exc_info()[1]
             _doing()
             exc_info = sys.exc_info()
             import pdb, traceback

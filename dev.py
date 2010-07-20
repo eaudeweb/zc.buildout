@@ -19,8 +19,12 @@ buildout egg itself is installed as a develop egg.
 $Id$
 """
 
-import os, shutil, sys, subprocess, urllib2
+import os, shutil, sys, subprocess
 from optparse import OptionParser
+try: # py3K import hack:
+    from urllib import urlopen
+except ImportError:
+    from urllib.request import urlopen
 
 if sys.platform == 'win32':
     def quote(c):
@@ -36,10 +40,10 @@ else:
 # particular because Python 2.6's distutils imports site, so starting
 # with the -S flag is not sufficient.  However, we'll start with that:
 if 'site' in sys.modules:
-    # We will restart with python -S.
     args = sys.argv[:]
     args[0:0] = [sys.executable, '-S']
-    args = map(quote, args)
+    # py3k hack: In python 3 map returns a generator.
+    args = list(map(quote, args))
     os.execv(sys.executable, args)
 # Now we are running with -S.  We'll get the clean sys.path, import site
 # because distutils will do it later, and then reset the path and clean
@@ -79,7 +83,7 @@ options, args = parser.parse_args()
 if args:
     parser.error('This script accepts no arguments other than its options.')
 
-if options.use_distribute:
+if options.use_distribute or sys.version > '3':
     setup_source = distribute_source
 else:
     setup_source = setuptools_source
@@ -98,9 +102,11 @@ try:
         raise ImportError
     import setuptools # A flag.  Sometimes pkg_resources is installed alone.
 except ImportError:
-    ez_code = urllib2.urlopen(setup_source).read().replace('\r\n', '\n')
+    # py3k: urlopen returns bytes in Python3, encode to string:
+    ez_code = urlopen(setup_source).read().decode('latin-1').replace('\r\n', '\n')
     ez = {}
-    exec ez_code in ez
+    # Py3K compat hack:
+    exec(ez_code, ez)
     setup_args = dict(to_dir='eggs', download_delay=0)
     if options.use_distribute:
         setup_args['no_fake'] = True
