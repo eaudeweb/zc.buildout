@@ -80,7 +80,7 @@ setup(
     packages = ['zc', 'zc.buildout'],
     package_dir = {'': 'src'},
     namespace_packages = ['zc'],
-    install_requires = 'setuptools',
+    install_requires = ['setuptools'],
     include_package_data = True,
     entry_points = entry_points,
     zip_safe=False,
@@ -90,4 +90,5 @@ setup(
        'Topic :: Software Development :: Build Tools',
        'Topic :: Software Development :: Libraries :: Python Modules',
        ],
+    #dependency_links = ['.'], # Needed until zope.testing 4.0 is released.
     )

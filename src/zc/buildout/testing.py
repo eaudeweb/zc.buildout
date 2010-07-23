@@ -50,7 +50,8 @@ def cat(dir, *names):
         and os.path.exists(path+'-script.py')
         ):
         path = path+'-script.py'
-    print open(path).read(),
+    out = open(path).read().strip()
+    print(out)
 
 def ls(dir, *subs):
     if subs:

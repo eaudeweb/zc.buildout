@@ -289,10 +289,11 @@ buildout:
     >>> import os
     >>> os.chdir(sample_buildout)
     >>> buildout = os.path.join(sample_buildout, 'bin', 'buildout')
-    >>> print system(buildout),
+    >>> print(system(buildout))
     Develop: '/sample-buildout/recipes'
     Installing data-dir.
     data-dir: Creating directory mystuff
+    <BLANKLINE>
 
 We see that the recipe created the directory, as expected:
 
@@ -313,6 +314,7 @@ about the part we installed:
     [buildout]
     installed_develop_eggs = /sample-buildout/develop-eggs/recipes.egg-link
     parts = data-dir
+    <BLANKLINE>
     <BLANKLINE>
     [data-dir]
     __buildout_installed__ = /sample-buildout/mystuff

@@ -84,11 +84,11 @@ def _print_annotate(data):
     sections = data.keys()
     sections.sort()
     
-    print()
+    print('')
     print("Annotated sections")
     print("="*len("Annotated sections"))
     for section in sections:
-        print()
+        print('')
         print('[%s]' % section)
         keys = data[section].keys()
         keys.sort()
@@ -103,7 +103,7 @@ def _print_annotate(data):
                 elif note == '[-]':
                     line = '-= '
                 else:
-                    print(line, note)
+                    print(line + ' ' + note)
                     line = '   '
     print
 
@@ -473,11 +473,11 @@ class Buildout(DictMixin):
         if self._log_level < logging.DEBUG:
             sections = list(self)
             sections.sort()
-            print()
+            print('')
             print('Configuration data:')
             for section in self._data:
                 _save_options(section, self[section], sys.stdout)
-            print()
+            print('')
 
 
         # compute new part recipe signatures
@@ -1276,6 +1276,9 @@ class Options(DictMixin):
     def __iter__(self):
         for each in self._raw:
             yield each
+        for each in self._data:
+            if each not in self._raw:
+                yield each
 
     def __len__(self):
         return len(self._raw)
@@ -1468,7 +1471,10 @@ def _dists_sig(dists):
         location = dist.location
         if dist.precedence == pkg_resources.DEVELOP_DIST:
             # py3 hack: b64encode (and therefore _dir_hash) returns binary
-            result.append(dist.project_name + '-' + _dir_hash(location).decode())
+            dhash = _dir_hash(location)
+            if not isinstance(dhash, str):
+                dhash = dhash.decode()
+            result.append(dist.project_name + '-' + dhash)
         else:
             result.append(os.path.basename(location))
     return result

@@ -187,9 +187,9 @@ else: # Windows prefers this, apparently; otherwise we would prefer subprocess
 if exitcode != 0:
     sys.stdout.flush()
     sys.stderr.flush()
-    print ("An error occurred when trying to install zc.buildout. "
-           "Look above this message for any errors that "
-           "were output by easy_install.")
+    print("An error occurred when trying to install zc.buildout. "
+          "Look above this message for any errors that "
+          "were output by easy_install.")
     sys.exit(exitcode)
 
 ws.add_entry(eggs_dir)
