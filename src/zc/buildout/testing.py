@@ -59,13 +59,15 @@ def ls(dir, *subs):
     names = os.listdir(dir)
     names.sort()
     for name in names:
+        res = []
         if os.path.isdir(os.path.join(dir, name)):
-            print 'd ',
+            res.append('d ')
         elif os.path.islink(os.path.join(dir, name)):
-            print 'l ',
+            res.append('l ')
         else:
-            print '- ',
-        print name
+            res.append('- ')
+        res.append(name)
+        print(' '.join(res))
 
 def mkdir(*path):
     os.mkdir(os.path.join(*path))
@@ -169,7 +171,7 @@ def find_python(version):
         if os.path.exists(e):
             return e
     else:
-        cmd = 'python%s -c "import sys; print sys.executable"' % version
+        cmd = 'python%s -c "import sys; print(sys.executable)"' % version
         p = subprocess.Popen(cmd,
                              shell=True,
                              stdin=subprocess.PIPE,
@@ -182,7 +184,7 @@ def find_python(version):
         o.close()
         if os.path.exists(e):
             return e
-        cmd = 'python -c "import sys; print \'%s.%s\' % sys.version_info[:2]"'
+        cmd = 'python -c "import sys; print(\'%s.%s\' % sys.version_info[:2])"'
         p = subprocess.Popen(cmd,
                              shell=True,
                              stdin=subprocess.PIPE,
@@ -194,7 +196,7 @@ def find_python(version):
         e = o.read().strip()
         o.close()
         if e == version:
-            cmd = 'python -c "import sys; print sys.executable"'
+            cmd = 'python -c "import sys; print(sys.executable)"'
             p = subprocess.Popen(cmd,
                                 shell=True,
                                 stdin=subprocess.PIPE,
@@ -492,7 +494,7 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def log_request(self, code):
         if self.__server.__log:
-            print '%s %s %s' % (self.command, code, self.path)
+            print('%s %s %s' % (self.command, code, self.path))
 
 def _run(tree, port):
     server_address = ('localhost', port)
