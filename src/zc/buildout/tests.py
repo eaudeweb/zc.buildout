@@ -2805,11 +2805,14 @@ We'll create a wacky buildout extension that is just another name for http:
     >>> src = tmpdir('src')
     >>> write(src, 'wacky_handler.py',
     ... '''
-    ... import urllib2
-    ... class Wacky(urllib2.HTTPHandler):
-    ...     wacky_open = urllib2.HTTPHandler.http_open
+    ... try:
+    ...     from urllib2 import HTTPHandler, build_opener, install_opener
+    ... except ImportError:
+    ...     from urllib.request import HTTPHandler, build_opener, install_opener
+    ... class Wacky(HTTPHandler):
+    ...     wacky_open = HTTPHandler.http_open
     ... def install(buildout=None):
-    ...     urllib2.install_opener(urllib2.build_opener(Wacky))
+    ...     install_opener(build_opener(Wacky))
     ... ''')
     >>> write(src, 'setup.py',
     ... '''

@@ -53,7 +53,7 @@ else:
     VERSION = ''
 
 USE_DISTRIBUTE = options.distribute
-if sys.version > '3':
+if sys.version >= '3':
     USE_DISTRIBUTE = True
     
 args = args + ['bootstrap']

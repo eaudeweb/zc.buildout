@@ -16,7 +16,13 @@
 $Id$
 """
 
-import BaseHTTPServer
+try:
+    import BaseHTTPServer
+    from urllib2 import urlopen
+except ImportError:
+    import http.server as BaseHTTPServer
+    from urllib.request import urlopen
+ 
 import errno
 import logging
 import os
@@ -31,7 +37,6 @@ import tempfile
 import textwrap
 import threading
 import time
-import urllib2
 
 import zc.buildout.buildout
 import zc.buildout.easy_install
@@ -124,7 +129,7 @@ def call_py(interpreter, cmd, flags=None):
             ' '.join(arg for arg in (interpreter, flags, '-c', cmd) if arg))
 
 def get(url):
-    return urllib2.urlopen(url).read()
+    return urlopen(url).read()
 
 def _runsetup(setup, executable, *args):
     if os.path.isdir(setup):
@@ -512,7 +517,7 @@ def get_port():
                 return port
         finally:
             s.close()
-    raise RuntimeError, "Can't find port"
+    raise RuntimeError("Can't find port")
 
 def _start_server(tree, name=''):
     port = get_port()
@@ -527,7 +532,7 @@ def start_server(tree):
 
 def stop_server(url, thread=None):
     try:
-        urllib2.urlopen(url+'__stop__')
+        urlopen(url+'__stop__')
     except Exception:
         pass
     if thread is not None:
@@ -543,7 +548,8 @@ def wait(port, up):
             s.close()
             if up:
                 break
-        except socket.error, e:
+        except socket.error:
+            e = sys.exc_info()[1]
             if e[0] not in (errno.ECONNREFUSED, errno.ECONNRESET):
                 raise
             s.close()

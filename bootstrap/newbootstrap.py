@@ -18,7 +18,11 @@ The script accepts buildout command-line options, so you can
 use the -c option to specify an alternate configuration file.
 """
 
-import os, shutil, sys, tempfile, textwrap, urllib, urllib2
+import os, shutil, sys, tempfile, textwrap
+try:
+    from urllib2 import urlopen, pathname2url
+except ImportError:
+    from urllib.request import urlopen, pathname2url
 from optparse import OptionParser
 
 if sys.platform == 'win32':
@@ -64,7 +68,7 @@ def normalize_to_url(option, opt_str, value, parser):
     if value:
         if '://' not in value: # It doesn't smell like a URL.
             value = 'file://%s' % (
-                urllib.pathname2url(
+                pathname2url(
                     os.path.abspath(os.path.expanduser(value))),)
         if opt_str == '--download-base' and not value.endswith('/'):
             # Download base needs a trailing slash to make the world happy.
@@ -137,7 +141,7 @@ try:
     if not hasattr(pkg_resources, '_distribute'):
         raise ImportError
 except ImportError:
-    ez_code = urllib2.urlopen(
+    ez_code = urlopen(
         options.setup_source).read().replace('\r\n', '\n')
     ez = {}
     exec ez_code in ez
