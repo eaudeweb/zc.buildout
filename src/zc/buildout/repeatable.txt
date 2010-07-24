@@ -82,11 +82,12 @@ and we'll configure a buildout to use it:
 
 If we run the buildout, it will use version 2:
 
-    >>> print system(buildout),
+    >>> print(system(buildout))
     Getting distribution for 'spam'.
     Got spam 2.
     Installing foo.
     recipe v2
+    <BLANKLINE>
 
 We can specify a versions section that lists our recipe and name it in
 the buildout section:
@@ -112,12 +113,13 @@ as in the versions option.
 
 Now, if we run the buildout, we'll use version 1 of the spam recipe:
 
-    >>> print system(buildout),
+    >>> print(system(buildout))
     Getting distribution for 'spam==1'.
     Got spam 1.
     Uninstalling foo.
     Installing foo.
     recipe v1
+    <BLANKLINE>
 
 Running the buildout in verbose mode will help us get information
 about versions used. If we run the buildout in verbose mode without

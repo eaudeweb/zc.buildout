@@ -63,7 +63,7 @@ zc.buildout used:
 Now if we run the buildout, the buildout will upgrade itself to the
 new versions found in new releases:
 
-    >>> print system(buildout),
+    >>> print(system(buildout))
     Getting distribution for 'zc.buildout'.
     Got zc.buildout 99.99.
     Getting distribution for 'setuptools'.
@@ -77,6 +77,7 @@ new versions found in new releases:
     Installing show-versions.
     zc.buildout 99.99
     setuptools 99.99
+    <BLANKLINE>
 
 Our buildout script's site.py has been updated to use the new eggs:
 
@@ -120,7 +121,7 @@ running the buildout will install earlier versions of these packages:
 
 Now we can see that we actually "upgrade" to an earlier version.
 
-    >>> print system(buildout),
+    >>> print(system(buildout))
     Upgraded:
       zc.buildout version 1.0.0,
       setuptools version 0.6;
@@ -129,6 +130,7 @@ Now we can see that we actually "upgrade" to an earlier version.
     Updating show-versions.
     zc.buildout 1.0.0
     setuptools 0.6
+    <BLANKLINE>
 
 There are a number of cases, described below, in which the updates
 don't happen.
@@ -175,7 +177,7 @@ directory:
     ... """ % dict(new_releases=new_releases))
 
     >>> cd(sample_buildout2)
-    >>> print system(buildout),
+    >>> print(system(buildout))
     Creating directory '/sample_buildout2/bin'.
     Creating directory '/sample_buildout2/parts'.
     Creating directory '/sample_buildout2/eggs'.
@@ -185,5 +187,6 @@ directory:
     Getting distribution for 'setuptools'.
     Got setuptools 99.99.
     Not upgrading because not running a local buildout command.
+    <BLANKLINE>
 
     >>> ls('bin')

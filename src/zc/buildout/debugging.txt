@@ -56,12 +56,13 @@ And create a buildout that uses it:
 
 If we run the buildout, we'll get an error:
 
-    >>> print system(buildout),
+    >>> print(system(buildout))
     Develop: '/sample-buildout/recipes'
     Installing data-dir.
     While:
       Installing data-dir.
     Error: Missing option: data-dir:directory
+    <BLANKLINE>
 
 
 If we want to debug the error, we can add the -D option. Here's we'll

@@ -90,5 +90,4 @@ setup(
        'Topic :: Software Development :: Build Tools',
        'Topic :: Software Development :: Libraries :: Python Modules',
        ],
-    #dependency_links = ['.'], # Needed until zope.testing 4.0 is released.
     )
