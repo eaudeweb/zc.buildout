@@ -775,7 +775,7 @@ the path set:
             sys.argv[:] = _args
             __file__ = _args[0]
             del _options, _args
-            execfile(__file__)
+            exec(open(__file__).read())
     <BLANKLINE>
     if _interactive:
         del _interactive
@@ -990,7 +990,7 @@ We specified an interpreter and its paths are adjusted too:
             sys.argv[:] = _args
             __file__ = _args[0]
             del _options, _args
-            execfile(__file__)
+            exec(open(__file__).read())
     <BLANKLINE>
     if _interactive:
         del _interactive
@@ -1065,7 +1065,8 @@ We didn't ask for any initialization, and we didn't ask to use the underlying
 sitecustomization, so sitecustomize.py is empty.
 
     >>> cat(sitecustomize_path)
-
+    <BLANKLINE>
+    
 The interpreter script is simple.  It puts the directory with the
 site.py and sitecustomize.py on the PYTHONPATH and (re)starts Python.
 

@@ -50,7 +50,7 @@ Now, if we run the buildout:
    >>> import os
    >>> os.chdir(sample_buildout)
    >>> buildout = os.path.join(sample_buildout, 'bin', 'buildout')
-   >>> print system(buildout),
+   >>> print(system(buildout))
    Installing demo.
    Getting distribution for 'demo<0.3'.
    Got demo 0.2.
@@ -58,7 +58,8 @@ Now, if we run the buildout:
    Got demoneeded 1.2c1.
    Generated script '/sample-buildout/bin/demo'.
    Generated interpreter '/sample-buildout/bin/py-demo'.
-
+   <BLANKLINE>
+    
 we'll get the Python 2.4 eggs for demo and demoneeded:
 
     >>> ls(sample_buildout, 'eggs')
@@ -131,7 +132,7 @@ And the generated scripts invoke Python 2.4:
             sys.argv[:] = _args
             __file__ = _args[0]
             del _options, _args
-            execfile(__file__)
+            exec(open(__file__).read())
     <BLANKLINE>
     if _interactive:
         del _interactive

@@ -16,7 +16,13 @@
 $Id$
 """
 
-import BaseHTTPServer
+try:
+    import BaseHTTPServer
+    from urllib2 import urlopen
+except ImportError:
+    import http.server as BaseHTTPServer
+    from urllib.request import urlopen
+ 
 import errno
 import logging
 import os
@@ -31,7 +37,6 @@ import tempfile
 import textwrap
 import threading
 import time
-import urllib2
 
 import zc.buildout.buildout
 import zc.buildout.easy_install
@@ -50,7 +55,8 @@ def cat(dir, *names):
         and os.path.exists(path+'-script.py')
         ):
         path = path+'-script.py'
-    print open(path).read(),
+    out = open(path).read().strip()
+    print(out)
 
 def ls(dir, *subs):
     if subs:
@@ -58,13 +64,15 @@ def ls(dir, *subs):
     names = os.listdir(dir)
     names.sort()
     for name in names:
+        res = []
         if os.path.isdir(os.path.join(dir, name)):
-            print 'd ',
+            res.append('d ')
         elif os.path.islink(os.path.join(dir, name)):
-            print 'l ',
+            res.append('l ')
         else:
-            print '- ',
-        print name
+            res.append('- ')
+        res.append(name)
+        print(' '.join(res))
 
 def mkdir(*path):
     os.mkdir(os.path.join(*path))
@@ -121,7 +129,7 @@ def call_py(interpreter, cmd, flags=None):
             ' '.join(arg for arg in (interpreter, flags, '-c', cmd) if arg))
 
 def get(url):
-    return urllib2.urlopen(url).read()
+    return urlopen(url).read()
 
 def _runsetup(setup, executable, *args):
     if os.path.isdir(setup):
@@ -168,7 +176,7 @@ def find_python(version):
         if os.path.exists(e):
             return e
     else:
-        cmd = 'python%s -c "import sys; print sys.executable"' % version
+        cmd = 'python%s -c "import sys; print(sys.executable)"' % version
         p = subprocess.Popen(cmd,
                              shell=True,
                              stdin=subprocess.PIPE,
@@ -181,7 +189,7 @@ def find_python(version):
         o.close()
         if os.path.exists(e):
             return e
-        cmd = 'python -c "import sys; print \'%s.%s\' % sys.version_info[:2]"'
+        cmd = 'python -c "import sys; print(\'%s.%s\' % sys.version_info[:2])"'
         p = subprocess.Popen(cmd,
                              shell=True,
                              stdin=subprocess.PIPE,
@@ -193,7 +201,7 @@ def find_python(version):
         e = o.read().strip()
         o.close()
         if e == version:
-            cmd = 'python -c "import sys; print sys.executable"'
+            cmd = 'python -c "import sys; print(sys.executable)"'
             p = subprocess.Popen(cmd,
                                 shell=True,
                                 stdin=subprocess.PIPE,
@@ -491,7 +499,7 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def log_request(self, code):
         if self.__server.__log:
-            print '%s %s %s' % (self.command, code, self.path)
+            print('%s %s %s' % (self.command, code, self.path))
 
 def _run(tree, port):
     server_address = ('localhost', port)
@@ -509,7 +517,7 @@ def get_port():
                 return port
         finally:
             s.close()
-    raise RuntimeError, "Can't find port"
+    raise RuntimeError("Can't find port")
 
 def _start_server(tree, name=''):
     port = get_port()
@@ -524,7 +532,7 @@ def start_server(tree):
 
 def stop_server(url, thread=None):
     try:
-        urllib2.urlopen(url+'__stop__')
+        urlopen(url+'__stop__')
     except Exception:
         pass
     if thread is not None:
@@ -540,7 +548,8 @@ def wait(port, up):
             s.close()
             if up:
                 break
-        except socket.error, e:
+        except socket.error:
+            e = sys.exc_info()[1]
             if e[0] not in (errno.ECONNREFUSED, errno.ECONNRESET):
                 raise
             s.close()

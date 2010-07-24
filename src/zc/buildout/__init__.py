@@ -21,4 +21,5 @@ class UserError(Exception):
     """
 
     def __str__(self):
-        return " ".join(map(str, self))
+        # py3 exceptions arenot iterable, use args instead:
+        return " ".join(map(str, self.args))

@@ -22,6 +22,10 @@ $Id$
 
 import os, shutil, sys, tempfile, textwrap, urllib, urllib2, subprocess
 from optparse import OptionParser
+try: # py3K compat hack:
+    from urllib import urlopen
+except ImportError:
+    from urllib.request import urlopen
 
 if sys.platform == 'win32':
     def quote(c):
@@ -137,6 +141,9 @@ if options.setup_source is None:
     else:
         options.setup_source = setuptools_source
 
+if sys.version >= '3':
+    USE_DISTRIBUTE = True
+    
 args = args + ['bootstrap']
 
 

@@ -59,8 +59,9 @@ and we'll configure a buildout to use it:
     ... recipe = spam
     ... ''' % join('recipe', 'dist'))
 
-    >>> print system(buildout),
+    >>> print(system(buildout))
     Getting distribution for 'spam'.
     Got spam 1.
     Installing foo.
     can't remove read only files
+    <BLANKLINE>

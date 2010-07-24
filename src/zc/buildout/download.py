@@ -24,13 +24,17 @@ import os.path
 import re
 import shutil
 import tempfile
-import urllib
-import urlparse
+try:
+    import urllib as urlrequest
+    from urlparse import urlparse
+except ImportError: #py3
+    import urllib.request as urlrequest
+    from urllib.parse import urlparse
 import zc.buildout
 
 
-class URLOpener(urllib.FancyURLopener):
-    http_error_default = urllib.URLopener.http_error_default
+class URLOpener(urlrequest.FancyURLopener):
+    http_error_default = urlrequest.URLopener.http_error_default
 
 
 class ChecksumError(zc.buildout.UserError):
@@ -151,7 +155,7 @@ class Download(object):
         """
         if re.match(r"^[A-Za-z]:\\", url):
             url = 'file:' + url
-        parsed_url = urlparse.urlparse(url, 'file')
+        parsed_url = urlparse(url, 'file')
         url_scheme, _, url_path = parsed_url[:3]
         if url_scheme == 'file':
             self.logger.debug('Using local resource %s' % url)
@@ -166,11 +170,11 @@ class Download(object):
                 "Couldn't download %r in offline mode." % url)
 
         self.logger.info('Downloading %s' % url)
-        urllib._urlopener = url_opener
+        urlrequest._urlopener = url_opener
         handle, tmp_path = tempfile.mkstemp(prefix='buildout-')
         try:
             try:
-                tmp_path, headers = urllib.urlretrieve(url, tmp_path)
+                tmp_path, headers = urlrequest.urlretrieve(url, tmp_path)
                 if not check_md5sum(tmp_path, md5sum):
                     raise ChecksumError(
                         'MD5 checksum mismatch downloading %r' % url)
@@ -195,7 +199,7 @@ class Download(object):
         else:
             if re.match(r"^[A-Za-z]:\\", url):
                 url = 'file:' + url
-            parsed = urlparse.urlparse(url, 'file')
+            parsed = urlparse(url, 'file')
             url_path = parsed[2]
 
             if parsed[0] == 'file':
