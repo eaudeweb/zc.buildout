@@ -200,7 +200,7 @@ the default entry point for the zc.recipe.egg egg.
    Installing demo.
    Generated script '/sample-buildout/bin/demo'.
    Generated interpreter '/sample-buildout/bin/py-demo'.
-    <BLANKLINE>
+   <BLANKLINE>
 
 Now we also get a py-demo script for giving us a Python prompt with
 the path for demo and any eggs it depends on included in sys.path.
