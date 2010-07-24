@@ -1055,7 +1055,7 @@ class Buildout(DictMixin):
         return iter(self._raw)
     
     def __len__(self):
-        raise NotImplementedError('__len__')        
+        raise len(self._raw)
 
 
 def _install_and_load(spec, group, entry, buildout):
@@ -1281,7 +1281,7 @@ class Options(DictMixin):
                 yield each
 
     def __len__(self):
-        return len(self._raw)
+        return len(self.keys())
 
     def copy(self):
         result = self._raw.copy()

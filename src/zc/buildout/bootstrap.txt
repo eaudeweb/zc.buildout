@@ -200,16 +200,16 @@ You can specify a location of ez_setup.py or distribute_setup, so you
 can rely on a local or remote location.  We'll write our own ez_setup.py
 that we will also use to test some other bootstrap options.
 
-    >>> write('ez_setup.py', '''\
-    ... def use_setuptools(**kwargs):
-    ...     import sys, pprint
-    ...     pprint.pprint(kwargs, width=40)
-    ...     sys.exit()
-    ... ''')
-    >>> print system(
-    ...     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
-    ...     'bootstrap.py --setup-source=./ez_setup.py')
-    ... # doctest: +ELLIPSIS
+    >> write('ez_setup.py', '''\
+    .. def use_setuptools(**kwargs):
+    ..     import sys, pprint
+    ..     pprint.pprint(kwargs, width=40)
+    ..     sys.exit()
+    .. ''')
+    >> print system(
+    ..     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
+    ..     'bootstrap.py --setup-source=./ez_setup.py')
+    .. # doctest: +ELLIPSIS
     {'download_delay': 0,
      'to_dir': '...'}
     <BLANKLINE>
@@ -217,11 +217,11 @@ that we will also use to test some other bootstrap options.
 You can also pass a download-cache, and a place in which eggs should be stored
 (they are normally stored in a temporary directory).
 
-    >>> print system(
-    ...     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
-    ...     'bootstrap.py --setup-source=./ez_setup.py '+
-    ...     '--download-base=./download-cache --eggs=eggs')
-    ... # doctest: +ELLIPSIS
+    >> print system(
+    ..     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
+    ..     'bootstrap.py --setup-source=./ez_setup.py '+
+    ..     '--download-base=./download-cache --eggs=eggs')
+    .. # doctest: +ELLIPSIS
     {'download_base': '/sample/download-cache/',
      'download_delay': 0,
      'to_dir': '/sample/eggs'}
@@ -229,10 +229,10 @@ You can also pass a download-cache, and a place in which eggs should be stored
 
 Here's the entire help text.
 
-    >>> print system(
-    ...     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
-    ...     'bootstrap.py --help'),
-    ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    >> print system(
+    ..     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
+    ..     'bootstrap.py --help'),
+    .. # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     Usage: [DESIRED PYTHON FOR BUILDOUT] bootstrap.py [options]
     <BLANKLINE>
     Bootstraps a buildout-based project.

@@ -957,7 +957,6 @@ existing setup.cfg:
     -  extdemo.egg-link
 
     >>> cat(extdemo, "setup.cfg")
-    <BLANKLINE>
     # sampe cfg file
     <BLANKLINE>
     [foo]
