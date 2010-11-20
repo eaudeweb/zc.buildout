@@ -23,7 +23,8 @@ class Base(ScriptBase):
 
     def __init__(self, buildout, name, options):
         if 'extends' in options:
-            options.update(buildout[options['extends']])
+            for key, value in buildout[options['extends']].items():
+                options.setdefault(key, value)
         super(Base, self).__init__(buildout, name, options)
         self.default_eggs = '' # Disables feature from zc.recipe.egg.
         b_options = buildout['buildout']
@@ -32,26 +33,16 @@ class Base(ScriptBase):
 
         value = options.setdefault(
             'allowed-eggs-from-site-packages',
-            '*')
+            b_options.get('allowed-eggs-from-site-packages', '*'))
         self.allowed_eggs = tuple(name.strip() for name in value.split('\n'))
 
-        value = options.setdefault(
+        self.include_site_packages = options.query_bool(
             'include-site-packages',
-            b_options.get('include-site-packages', 'false'))
-        if value not in ('true', 'false'):
-            raise zc.buildout.UserError(
-                "Invalid value for include-site-packages option: %s" %
-                (value,))
-        self.include_site_packages = (value == 'true')
+            default=b_options.get('include-site-packages', 'false'))
 
-        value = options.setdefault(
+        self.exec_sitecustomize = options.query_bool(
             'exec-sitecustomize',
-            b_options.get('exec-sitecustomize', 'false'))
-        if value not in ('true', 'false'):
-            raise zc.buildout.UserError(
-                "Invalid value for exec-sitecustomize option: %s" %
-                (value,))
-        self.exec_sitecustomize = (value == 'true')
+            default=b_options.get('exec-sitecustomize', 'false'))
 
 
 class Interpreter(Base):

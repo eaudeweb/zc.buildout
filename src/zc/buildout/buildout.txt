@@ -289,11 +289,10 @@ buildout:
     >>> import os
     >>> os.chdir(sample_buildout)
     >>> buildout = os.path.join(sample_buildout, 'bin', 'buildout')
-    >>> print(system(buildout).decode())
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Installing data-dir.
     data-dir: Creating directory mystuff
-    <BLANKLINE>
 
 We see that the recipe created the directory, as expected:
 
@@ -314,7 +313,6 @@ about the part we installed:
     [buildout]
     installed_develop_eggs = /sample-buildout/develop-eggs/recipes.egg-link
     parts = data-dir
-    <BLANKLINE>
     <BLANKLINE>
     [data-dir]
     __buildout_installed__ = /sample-buildout/mystuff
@@ -340,12 +338,11 @@ we'll see that the directory gets removed and recreated:
     ... path = mydata
     ... """)
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Uninstalling data-dir.
     Installing data-dir.
     data-dir: Creating directory mydata
-    <BLANKLINE>
 
     >>> ls(sample_buildout)
     -  .installed.cfg
@@ -361,12 +358,11 @@ If any of the files or directories created by a recipe are removed,
 the part will be reinstalled:
 
     >>> rmdir(sample_buildout, 'mydata')
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Uninstalling data-dir.
     Installing data-dir.
     data-dir: Creating directory mydata
-    <BLANKLINE>
 
 Error reporting
 ---------------
@@ -393,7 +389,7 @@ non-existent directory to create the directory in:
 
 We'll get a user error, not a traceback.
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     data-dir: Cannot create /xxx/mydata. /xxx is not a directory.
     While:
@@ -401,7 +397,6 @@ We'll get a user error, not a traceback.
       Getting section data-dir.
       Initializing part data-dir.
     Error: Invalid Path
-    <BLANKLINE>
 
 
 Recipe Error Handling
@@ -459,7 +454,7 @@ leave previously created paths in place:
     ... path = foo bin
     ... """)
 
-    >>> print(system(buildout)) # doctest: +ELLIPSIS
+    >>> print system(buildout), # doctest: +ELLIPSIS
     Develop: '/sample-buildout/recipes'
     Uninstalling data-dir.
     Installing data-dir.
@@ -473,7 +468,6 @@ leave previously created paths in place:
     Traceback (most recent call last):
       ...
     OSError: [Errno 17] File exists: '/sample-buildout/bin'
-    <BLANKLINE>
 
 We meant to create a directory bins, but typed bin.  Now foo was
 left behind.
@@ -494,7 +488,7 @@ If we fix the typo:
     ... path = foo bins
     ... """)
 
-    >>> print(system(buildout)) # doctest: +ELLIPSIS
+    >>> print system(buildout), # doctest: +ELLIPSIS
     Develop: '/sample-buildout/recipes'
     Installing data-dir.
     data-dir: Creating directory foo
@@ -506,7 +500,6 @@ If we fix the typo:
     Traceback (most recent call last):
     ...
     OSError: [Errno 17] File exists: '/sample-buildout/foo'
-    <BLANKLINE>
 
 Now they fail because foo exists, because it was left behind.
 
@@ -571,7 +564,7 @@ And put back the typo:
 
 When we rerun the buildout:
 
-    >>> print(system(buildout)) # doctest: +ELLIPSIS
+    >>> print system(buildout), # doctest: +ELLIPSIS
     Develop: '/sample-buildout/recipes'
     Installing data-dir.
     data-dir: Creating directory foo
@@ -584,7 +577,6 @@ When we rerun the buildout:
     Traceback (most recent call last):
     ...
     OSError: [Errno 17] File exists: '/sample-buildout/bin'
-    <BLANKLINE>
 
 .. Wait for the file to really disappear. My linux is weird.
 
@@ -653,7 +645,7 @@ It would be simpler just to return the paths as before.
 If we rerun the buildout, again, we'll get the error and no
 directories will be created:
 
-    >>> print(system(buildout)) # doctest: +ELLIPSIS
+    >>> print system(buildout), # doctest: +ELLIPSIS
     Develop: '/sample-buildout/recipes'
     Installing data-dir.
     data-dir: Creating directory foo
@@ -666,7 +658,6 @@ directories will be created:
     Traceback (most recent call last):
     ...
     OSError: [Errno 17] File exists: '/sample-buildout/bin'
-    <BLANKLINE>
 
     >>> os.path.exists('foo')
     False
@@ -684,12 +675,11 @@ Now, we'll fix the typo again and we'll get the directories we expect:
     ... path = foo bins
     ... """)
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Installing data-dir.
     data-dir: Creating directory foo
     data-dir: Creating directory bins
-    <BLANKLINE>
 
     >>> os.path.exists('foo')
     True
@@ -739,9 +729,13 @@ COMMAND_LINE_VALUE).
     ==================
     <BLANKLINE>
     [buildout]
+    accept-buildout-test-releases= false
+        DEFAULT_VALUE
     allow-hosts= *
         DEFAULT_VALUE
     allow-picked-versions= true
+        DEFAULT_VALUE
+    allowed-eggs-from-site-packages= *
         DEFAULT_VALUE
     bin-directory= bin
         DEFAULT_VALUE
@@ -753,9 +747,13 @@ COMMAND_LINE_VALUE).
         COMPUTED_VALUE
     eggs-directory= eggs
         DEFAULT_VALUE
+    exec-sitecustomize= true
+        DEFAULT_VALUE
     executable= ...
         DEFAULT_VALUE
     find-links=
+        DEFAULT_VALUE
+    include-site-packages= true
         DEFAULT_VALUE
     install-from-cache= false
         DEFAULT_VALUE
@@ -869,7 +867,7 @@ and option name joined by a colon.
 Now, if we run the buildout, we'll see the options with the values
 substituted.
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Uninstalling data-dir.
     Installing data-dir.
@@ -878,7 +876,6 @@ substituted.
     File 1 /sample-buildout/mydata/file
     File 2 /sample-buildout/mydata/file/log
     recipe recipes:debug
-    <BLANKLINE>
 
 Note that the substitution of the data-dir path option reflects the
 update to the option performed by the mkdir recipe.
@@ -889,14 +886,13 @@ The buildout system didn't know if this module could effect the mkdir
 recipe, so it assumed it could and reinstalled mydata.  If we rerun
 the buildout:
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Updating data-dir.
     Updating debug.
     File 1 /sample-buildout/mydata/file
     File 2 /sample-buildout/mydata/file/log
     recipe recipes:debug
-    <BLANKLINE>
 
 We can see that mydata was not recreated.
 
@@ -929,7 +925,7 @@ _buildout_section_name_ to get the current section name.
     ... path = mydata
     ... """)
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Uninstalling debug.
     Updating data-dir.
@@ -938,7 +934,6 @@ _buildout_section_name_ to get the current section name.
     File 2 /sample-buildout/mydata/file/log
     my_name debug
     recipe recipes:debug
-    <BLANKLINE>
 
 Automatic part selection and ordering
 -------------------------------------
@@ -968,7 +963,7 @@ example, we can leave data-dir out of the parts list:
 
 It will still be treated as a part:
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Uninstalling debug.
     Updating data-dir.
@@ -976,7 +971,6 @@ It will still be treated as a part:
     File 1 /sample-buildout/mydata/file
     File 2 /sample-buildout/mydata/file/log
     recipe recipes:debug
-    <BLANKLINE>
 
     >>> cat('.installed.cfg') # doctest: +ELLIPSIS
     [buildout]
@@ -1008,14 +1002,13 @@ the data-dir part after the debug part, it will be included before:
 
 It will still be treated as a part:
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Updating data-dir.
     Updating debug.
     File 1 /sample-buildout/mydata/file
     File 2 /sample-buildout/mydata/file/log
     recipe recipes:debug
-    <BLANKLINE>
 
     >>> cat('.installed.cfg') # doctest: +ELLIPSIS
     [buildout]
@@ -1058,7 +1051,7 @@ of the current section allows sections to be used as macros.
     ... path = mydata
     ... """)
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Uninstalling debug.
     Uninstalling data-dir.
@@ -1068,7 +1061,6 @@ of the current section allows sections to be used as macros.
     file2 mydata/file2
     path mydata
     recipe recipes:debug
-    <BLANKLINE>
 
 In this example, the debug, with_file1 and with_file2 sections act as
 macros. In particular, the variable substitutions are performed
@@ -1276,12 +1268,11 @@ To see how this works, we use an example:
     ... op = base
     ... """)
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Installing debug.
     op buildout
     recipe recipes:debug
-    <BLANKLINE>
 
 The example is pretty trivial, but the pattern it illustrates is
 pretty common.  In a more practical example, the base buildout might
@@ -1347,7 +1338,7 @@ Here is a more elaborate example.
     ... name = base
     ... """)
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Uninstalling debug.
     Installing debug.
@@ -1359,7 +1350,6 @@ Here is a more elaborate example.
     op4 b3 4
     op5 b3base 5
     recipe recipes:debug
-    <BLANKLINE>
 
 There are several things to note about this example:
 
@@ -1483,7 +1473,7 @@ delimiter.)
     ... """)
 
     >>> os.environ['HOME'] = home
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Uninstalling debug.
     Installing debug.
@@ -1496,7 +1486,6 @@ delimiter.)
     op5 b3base 5
     op7 7
     recipe recipes:debug
-    <BLANKLINE>
 
 A buildout command-line argument, -U, can be used to suppress reading
 user defaults:
@@ -1530,13 +1519,12 @@ set the logging level to WARNING
     ... extends = b1.cfg b2.cfg
     ... """)
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     name base
     op1 b1 1
     op2 b2 2
     op3 b2 3
     recipe recipes:debug
-    <BLANKLINE>
 
 Uninstall recipes
 -----------------
@@ -1921,7 +1909,7 @@ the buildout in the usual way:
     ... recipe = recipes:debug
     ... """)
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Uninstalling debug.
     Installing debug.
@@ -1932,7 +1920,6 @@ the buildout in the usual way:
     d2: Creating directory d2
     Installing d3.
     d3: Creating directory d3
-    <BLANKLINE>
 
     >>> ls(sample_buildout)
     -  .installed.cfg
@@ -2077,7 +2064,7 @@ directories are still there.
 
 Now, if we run the buildout without the install command:
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Uninstalling d2.
     Uninstalling d1.
@@ -2089,7 +2076,6 @@ Now, if we run the buildout without the install command:
     d2: Creating directory data2
     Updating d3.
     Updating d4.
-    <BLANKLINE>
 
 We see the output of the debug recipe and that data2 was created.  We
 also see that d1 and d2 have gone away:
@@ -2135,7 +2121,7 @@ provide alternate locations, and even names for these directories.
     ...    work = os.path.join(alt, 'work'),
     ... ))
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Creating directory '/sample-alt/scripts'.
     Creating directory '/sample-alt/work'.
     Creating directory '/sample-alt/basket'.
@@ -2145,7 +2131,6 @@ provide alternate locations, and even names for these directories.
     Uninstalling d3.
     Uninstalling d2.
     Uninstalling debug.
-    <BLANKLINE>
 
     >>> ls(alt)
     d  basket
@@ -2172,13 +2157,12 @@ You can also specify an alternate buildout directory:
     ...    recipes=os.path.join(sample_buildout, 'recipes'),
     ...    ))
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Creating directory '/sample-alt/bin'.
     Creating directory '/sample-alt/parts'.
     Creating directory '/sample-alt/eggs'.
     Creating directory '/sample-alt/develop-eggs'.
     Develop: '/sample-buildout/recipes'
-    <BLANKLINE>
 
     >>> ls(alt)
     -  .installed.cfg
@@ -2225,9 +2209,8 @@ can be a numeric value and that the verbosity can be specified in the
 configuration file.  Because the verbosity is subtracted from the log
 level, we get a final log level of 20, which is the INFO level.
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     INFO Develop: '/sample-buildout/recipes'
-    <BLANKLINE>
 
 Predefined buildout options
 ---------------------------
@@ -2252,14 +2235,18 @@ database is shown.
     <BLANKLINE>
     Configuration data:
     [buildout]
+    accept-buildout-test-releases = false
     allow-hosts = *
     allow-picked-versions = true
+    allowed-eggs-from-site-packages = *
     bin-directory = /sample-buildout/bin
     develop-eggs-directory = /sample-buildout/develop-eggs
     directory = /sample-buildout
     eggs-directory = /sample-buildout/eggs
+    exec-sitecustomize = true
     executable = python
     find-links =
+    include-site-packages = true
     install-from-cache = false
     installed = /sample-buildout/.installed.cfg
     log-format =
@@ -2281,6 +2268,37 @@ All of these options can be overridden by configuration files or by
 command-line assignments.  We've discussed most of these options
 already, but let's review them and touch on some we haven't discussed:
 
+allowed-eggs-from-site-packages
+    Sometimes you need or want to control what eggs from site-packages are
+    used. The allowed-eggs-from-site-packages option allows you to specify a
+    whitelist of project names that may be included from site-packages.  You
+    can use globs to specify the value.  It defaults to a single value of '*',
+    indicating that any package may come from site-packages.
+
+    Here's a usage example::
+
+        [buildout]
+        ...
+
+        allowed-eggs-from-site-packages =
+            demo
+            bigdemo
+            zope.*
+
+    This option interacts with the ``include-site-packages`` option in the
+    following ways.
+
+    If ``include-site-packages`` is true, then
+    ``allowed-eggs-from-site-packages`` filters what eggs from site-packages
+    may be chosen.  Therefore, if ``allowed-eggs-from-site-packages`` is an
+    empty list, then no eggs from site-packages are chosen, but site-packages
+    will still be included at the end of path lists.
+
+    If ``include-site-packages`` is false, the value of
+    ``allowed-eggs-from-site-packages`` is irrelevant.
+
+    See the ``include-site-packages`` description for more information.
+
 bin-directory
    The directory path where scripts are written.  This can be a
    relative path, which is interpreted relative to the directory
@@ -2301,9 +2319,26 @@ eggs-directory
    *never* be modified.  This can be a relative path, which is
    interpreted relative to the directory option.
 
+exec-sitecustomize
+    Normally the Python's real sitecustomize module is processed.
+    If you do not want it to be processed in order to increase the
+    repeatability of your buildout, set this value to 'false'.  This will
+    be honored irrespective of the setting for include-site-packages.
+    This option will be honored by some recipes and not others.
+    z3c.recipe.scripts honors this and zc.recipe.egg does not, for
+    instance.
+
 executable
    The Python executable used to run the buildout.  See the python
    option below.
+
+include-site-packages
+    You can choose not to have the site-packages of the underlying Python
+    available to your script or interpreter, in addition to the packages
+    from your eggs.  This can increase repeatability for your buildout.
+    This option will be better used by some recipes than others.
+    z3c.recipe.scripts honors this fully and zc.recipe.egg only
+    partially, for instance.
 
 installed
    The file path where information about the results of the previous
@@ -2444,6 +2479,7 @@ If relative-paths is ``true``, the buildout script uses relative paths.
     path = sys.path[0]
     if os.environ.get('PYTHONPATH'):
         path = os.pathsep.join([path, os.environ['PYTHONPATH']])
+    os.environ['BUILDOUT_ORIGINAL_PYTHONPATH'] = os.environ.get('PYTHONPATH', '')
     os.environ['PYTHONPATH'] = path
     import site # imports custom buildout-generated site.py
     <BLANKLINE>
@@ -2509,25 +2545,33 @@ the buildout -o option.
 Preferring Final Releases
 -------------------------
 
-Currently, when searching for new releases, the newest available
-release is used.  This isn't usually ideal, as you may get a
-development release or alpha releases not ready to be widely used.
-You can request that final releases be preferred using the prefer
-final option in the buildout section::
+Currently, when searching for new releases of your project's
+dependencies, the newest available release is used.  This isn't usually
+ideal, as you may get a development release or alpha releases not ready
+to be widely used. You can request that final releases be preferred
+using the ``prefer-final`` option in the buildout section::
 
   [buildout]
   ...
   prefer-final = true
 
-When the prefer-final option is set to true, then when searching for
+When the ``prefer-final`` option is set to true, then when searching for
 new releases, final releases are preferred.  If there are final
 releases that satisfy distribution requirements, then those releases
-are used even if newer non-final releases are available.  The buildout
-prefer-final option can be used to override this behavior.
+are used even if newer non-final releases are available.
 
-In buildout version 2, final releases will be preferred by default.
-You will then need to use a false value for prefer-final to get the
-newest releases.
+In buildout version 2, all final releases will be preferred by
+default--that is ``prefer-final`` will also default to 'true'. You will
+then need to use a 'false' value for ``prefer-final`` to get the newest
+releases.
+
+A separate option controls the behavior of the build system itself.
+When buildout looks for recipes, extensions, and for updates to itself,
+it does prefer final releases by default, as of the 1.5.0 release.  The
+``accept-buildout-test-releases`` option will let you override this behavior.
+However, it is typically changed by the --accept-buildout-test-releases
+option to the bootstrap script, since bootstrapping is the first step to
+selecting a buildout.
 
 Finding distributions
 ---------------------

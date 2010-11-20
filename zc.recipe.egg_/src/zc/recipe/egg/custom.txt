@@ -137,10 +137,9 @@ the egg:
     ...
     ... """ % dict(server=link_server))
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Installing extdemo.
     zip_safe flag not set; analyzing archive contents...
-    <BLANKLINE>
 
 We got the zip_safe warning because the source distribution we used
 wasn't setuptools based and thus didn't set the option.
@@ -195,12 +194,11 @@ Let's define a script that uses out ext demo:
     ... entry-points = demo=demo:main
     ... """ % dict(server=link_server))
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/demo'
     Updating extdemo.
     Installing demo.
     Generated script '/sample-buildout/bin/demo'.
-    <BLANKLINE>
 
 When we run the script, we'll 42 printed:
 
@@ -241,13 +239,12 @@ But if we run the buildout in the default on-line and newest modes, we
 will. This time we also get the test-variable message again, because the new
 version is imported:
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/demo'
     Updating extdemo.
     zip_safe flag not set; analyzing archive contents...
     Updating demo.
     Generated script '/sample-buildout/bin/demo'.
-    <BLANKLINE>
 
     >>> ls(sample_buildout, 'develop-eggs')
     -  demo.egg-link
@@ -358,7 +355,7 @@ Create our buildout:
     ... recipe = recipes:environ
     ...
     ... """ % dict(server=link_server))
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Uninstalling demo.
     Uninstalling extdemo.
@@ -367,7 +364,6 @@ Create our buildout:
     zip_safe flag not set; analyzing archive contents...
     Installing checkenv.
     checkenv: test-variable left over: False
-    <BLANKLINE>
 
 
 The setup.py also printed out that we have set the environment `test-variable`
@@ -379,12 +375,11 @@ the original value will be restored:
 
     >>> import os
     >>> os.environ['test-variable'] = 'bar'
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Updating extdemo.
     Updating checkenv.
     checkenv: test-variable left over: True
-    <BLANKLINE>
 
     >>> os.environ['test-variable']
     'bar'
@@ -414,7 +409,7 @@ are interpolated with os.environ before the're set:
     ... recipe = recipes:environ
     ...
     ... """ % dict(server=link_server))
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Uninstalling extdemo.
     Installing extdemo.
@@ -422,7 +417,6 @@ are interpolated with os.environ before the're set:
     zip_safe flag not set; analyzing archive contents...
     Updating checkenv.
     checkenv: test-variable left over: True
-    <BLANKLINE>
 
     >>> os.environ['test-variable']
     'bar'
@@ -444,13 +438,12 @@ Create a clean buildout.cfg w/o the checkenv recipe, and delete the recipe:
     ... include-dirs = include
     ...
     ... """ % dict(server=link_server))
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/recipes'
     Uninstalling checkenv.
     Uninstalling extdemo.
     Installing extdemo.
     zip_safe flag not set; analyzing archive contents...
-    <BLANKLINE>
 
     >>> rmdir(sample_buildout, 'recipes')
 
@@ -552,13 +545,12 @@ Note that we added a define option to cause the preprocessor variable
 TWO to be defined.  This will cause the module-variable, 'val', to be
 set with a value of 2.
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Develop: '/sample-buildout/demo'
     Uninstalling extdemo.
     Installing extdemo.
     Installing demo.
     Generated script '/sample-buildout/bin/demo'.
-    <BLANKLINE>
 
 Our develop-eggs now includes an egg link for extdemo:
 

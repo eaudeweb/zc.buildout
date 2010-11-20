@@ -775,7 +775,7 @@ the path set:
             sys.argv[:] = _args
             __file__ = _args[0]
             del _options, _args
-            exec(open(__file__).read())
+            execfile(__file__)
     <BLANKLINE>
     if _interactive:
         del _interactive
@@ -990,7 +990,7 @@ We specified an interpreter and its paths are adjusted too:
             sys.argv[:] = _args
             __file__ = _args[0]
             del _options, _args
-            exec(open(__file__).read())
+            execfile(__file__)
     <BLANKLINE>
     if _interactive:
         del _interactive
@@ -1065,8 +1065,7 @@ We didn't ask for any initialization, and we didn't ask to use the underlying
 sitecustomization, so sitecustomize.py is empty.
 
     >>> cat(sitecustomize_path)
-    <BLANKLINE>
-    
+
 The interpreter script is simple.  It puts the directory with the
 site.py and sitecustomize.py on the PYTHONPATH and (re)starts Python.
 
@@ -1278,6 +1277,7 @@ this is very straightforward.
         """Add site packages, as determined by zc.buildout.
     <BLANKLINE>
         See original_addsitepackages, below, for the original version."""
+        setuptools_path = None
         buildout_paths = [
             '/interpreter/eggs/demo-0.3-pyN.N.egg',
             '/interpreter/eggs/demoneeded-1.1-pyN.N.egg'
@@ -1292,7 +1292,8 @@ this is very straightforward.
             ...
             ]
         for path in original_paths:
-            addsitedir(path, known_paths)
+            if path == setuptools_path or path not in known_paths:
+                addsitedir(path, known_paths)
         return known_paths
     <BLANKLINE>
     def original_addsitepackages(known_paths):...
@@ -1369,7 +1370,8 @@ call to another text fixture to create.
             ...
             ]
         for path in original_paths:
-            addsitedir(path, known_paths)
+            if path == setuptools_path or path not in known_paths:
+                addsitedir(path, known_paths)
         return known_paths
     <BLANKLINE>
     def original_addsitepackages(known_paths):...
@@ -1433,7 +1435,8 @@ at that result.
             ...
             ]
         for path in original_paths:
-            addsitedir(path, known_paths)
+            if path == setuptools_path or path not in known_paths:
+                addsitedir(path, known_paths)
         return known_paths
     <BLANKLINE>
     def original_addsitepackages(known_paths):...
@@ -1508,6 +1511,7 @@ The demo script runs the entry point defined in the demo egg:
     path = sys.path[0]
     if os.environ.get('PYTHONPATH'):
         path = os.pathsep.join([path, os.environ['PYTHONPATH']])
+    os.environ['BUILDOUT_ORIGINAL_PYTHONPATH'] = os.environ.get('PYTHONPATH', '')
     os.environ['PYTHONPATH'] = path
     import site # imports custom buildout-generated site.py
     <BLANKLINE>
@@ -1552,6 +1556,7 @@ Let's see ``script_arguments`` and ``script_initialization`` in action.
     path = sys.path[0]
     if os.environ.get('PYTHONPATH'):
         path = os.pathsep.join([path, os.environ['PYTHONPATH']])
+    os.environ['BUILDOUT_ORIGINAL_PYTHONPATH'] = os.environ.get('PYTHONPATH', '')
     os.environ['PYTHONPATH'] = path
     import site # imports custom buildout-generated site.py
     import os

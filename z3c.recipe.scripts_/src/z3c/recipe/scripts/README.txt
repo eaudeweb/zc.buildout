@@ -37,7 +37,8 @@ include-site-packages
     You can choose to have the site-packages of the underlying Python
     available to your script or interpreter, in addition to the packages
     from your eggs.  See the section on this option for motivations and
-    warnings.
+    warnings.  As of zc.buildout 1.5.2, this defaults to true, for increased
+    backwards compatibility with pre 1.5 recipes and buildouts.
 
 allowed-eggs-from-site-packages
     Sometimes you need or want to control what eggs from site-packages are
@@ -153,6 +154,7 @@ You can also generate an interpreter alone with the ``interpreter`` recipe.
     ... """
     ... [buildout]
     ... parts = py
+    ... include-site-packages = false
     ...
     ... [py]
     ... recipe = z3c.recipe.scripts:interpreter
@@ -244,18 +246,19 @@ and the site_packages_path will be in the Python's path.
     >>> print site_packages_path
     /executable_buildout/site-packages
 
-Now let's take a look at include-site-packages.  The default is false,
-so we will set it to true.
+Now let's take a look at include-site-packages.
+
+The default is value true (as of zc.buildout 1.5.2).
 
     >>> write(sample_buildout, 'buildout.cfg',
     ... """
     ... [buildout]
     ... parts = py
     ... executable = %(py_path)s
+    ... exec-sitecustomize = false
     ...
     ... [py]
     ... recipe = z3c.recipe.scripts:interpreter
-    ... include-site-packages = true
     ... eggs = demo<0.3
     ... find-links = %(server)s
     ... index = %(server)s/index
@@ -278,6 +281,38 @@ Now executable_buildout/site-packages is included in sys.path.
      '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg',
      '/executable_buildout/eggs/setuptools-X-pyN.N.egg',
      '/executable_buildout/site-packages']
+    <BLANKLINE>
+
+If you set it to false, they are excluded.
+
+    >>> write(sample_buildout, 'buildout.cfg',
+    ... """
+    ... [buildout]
+    ... parts = py
+    ... executable = %(py_path)s
+    ... exec-sitecustomize = false
+    ...
+    ... [py]
+    ... recipe = z3c.recipe.scripts:interpreter
+    ... include-site-packages = false
+    ... eggs = demo<0.3
+    ... find-links = %(server)s
+    ... index = %(server)s/index
+    ... """ % dict(server=link_server, py_path=py_path))
+
+    >>> print system(buildout),
+    Uninstalling py.
+    Installing py.
+    Generated interpreter '/sample-buildout/bin/py'.
+
+    >>> print system(join(sample_buildout, 'bin', 'py') +
+    ...              ''' -c "import sys, pprint; pprint.pprint(sys.path)"''')
+    ... # doctest: +ELLIPSIS
+    ['',
+     '/sample-buildout/parts/py',
+     ...,
+     '/sample-buildout/eggs/demo-0.2-pyN.N.egg',
+     '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg']
     <BLANKLINE>
 
 As described above, the allowed-eggs-from-site-packages option lets us
@@ -320,16 +355,14 @@ document do not affect this example.)
     ...
     ... [eggs]
     ... recipe = z3c.recipe.scripts
-    ... include-site-packages = true
     ... python = primed_python
     ... eggs = demoneeded
     ... ''' % globals())
 
-    >>> print system(buildout)
+    >>> print system(buildout),
     Creating directory '/sample-buildout/tmpeggs'.
     Uninstalling py.
     Installing eggs.
-    <BLANKLINE>
 
 That succeeds fine, getting demoneeded from the Python site-packages.
 
@@ -350,11 +383,11 @@ is not allowed to come from site-packages, and the buildout fails.
     ...
     ... [eggs]
     ... recipe = z3c.recipe.scripts
-    ... include-site-packages = true
+    ... python = primed_python
     ... allowed-eggs-from-site-packages =
     ... eggs = demoneeded
     ... ''' % globals())
-    >>> print system(buildout)
+    >>> print system(buildout),
     Creating directory '/sample-buildout/tmpeggs'.
     Uninstalling eggs.
     Installing eggs.
@@ -364,7 +397,68 @@ is not allowed to come from site-packages, and the buildout fails.
       Installing eggs.
       Getting distribution for 'demoneeded'.
     Error: Couldn't find a distribution for 'demoneeded'.
-    <BLANKLINE>
+
+The include-sitepackages and allowed-eggs-from-site-packages options both
+can be obtained from the buildout section if they are not set locally.
+
+.. ReST comment: PyPI readers don't need the demonstration, but here it is.
+
+   This succeeds:
+
+    >>> from zc.buildout.tests import create_sample_sys_install
+    >>> create_sample_sys_install(site_packages_path)
+    >>> import zc.buildout.easy_install
+    >>> zc.buildout.easy_install.clear_index_cache()
+
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... eggs-directory = tmpeggs
+    ... find-links =
+    ...
+    ... [primed_python]
+    ... executable = %(py_path)s
+    ...
+    ... [eggs]
+    ... recipe = z3c.recipe.scripts
+    ... python = primed_python
+    ... eggs = demoneeded
+    ... ''' % globals())
+
+    >>> print system(buildout),
+    Installing eggs.
+
+   This fails:
+
+    >>> zc.buildout.easy_install.clear_index_cache()
+    >>> rmdir('tmpeggs')
+    >>> write('buildout.cfg',
+    ... '''
+    ... [buildout]
+    ... parts = eggs
+    ... eggs-directory = tmpeggs
+    ... allowed-eggs-from-site-packages =
+    ... find-links =
+    ...
+    ... [primed_python]
+    ... executable = %(py_path)s
+    ...
+    ... [eggs]
+    ... recipe = z3c.recipe.scripts
+    ... python = primed_python
+    ... eggs = demoneeded
+    ... ''' % globals())
+    >>> print system(buildout),
+    Creating directory '/sample-buildout/tmpeggs'.
+    Uninstalling eggs.
+    Installing eggs.
+    Couldn't find index page for 'demoneeded' (maybe misspelled?)
+    Getting distribution for 'demoneeded'.
+    While:
+      Installing eggs.
+      Getting distribution for 'demoneeded'.
+    Error: Couldn't find a distribution for 'demoneeded'.
 
 Remember that you can provide multiple lines to the
 allowed-eggs-from-site-packages option, each specifying a whitelist of
@@ -407,6 +501,42 @@ into the sitecustomize.
     foo bar baz shazam
     <BLANKLINE>
 
+It also will be honored in the buildout section if it is not set locally.
+
+.. ReST comment: PyPI users don't need to see this test.  This verifies that
+   exec-sitecustomize is honored if it is in the buildout section.
+
+    >>> write(sample_buildout, 'buildout.cfg',
+    ... """
+    ... [buildout]
+    ... parts = py
+    ... executable = %(py_path)s
+    ... exec-sitecustomize = true
+    ...
+    ... [py]
+    ... recipe = z3c.recipe.scripts:interpreter
+    ... eggs = demo<0.3
+    ... find-links = %(server)s
+    ... index = %(server)s/index
+    ... """ % dict(server=link_server, py_path=py_path))
+
+    >>> print system(buildout),
+    Updating py.
+
+    >>> cat(sample_buildout, 'parts', 'py', 'sitecustomize.py')
+    ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
+    <BLANKLINE>
+    # The following is from
+    # /executable_buildout/parts/py/sitecustomize.py
+    ...
+    import os
+    os.environ['zc.buildout'] = 'foo bar baz shazam'
+
+    >>> print system(join(sample_buildout, 'bin', 'py') +
+    ...              ''' -c "import os; print os.environ['zc.buildout']"''')
+    foo bar baz shazam
+    <BLANKLINE>
+
 Options
 -------
 
@@ -423,8 +553,12 @@ Let's look at the ``extends`` option first.
     ... [demo]
     ... recipe = z3c.recipe.scripts
     ... eggs = demo<0.3
+    ... include-site-packages = false
     ... find-links = %(server)s
     ... index = %(server)s/index
+    ... initialization =
+    ...     import os
+    ...     os.environ['zc.buildout'] = 'sha boo bop bazoodle'
     ...
     ... [python]
     ... recipe = z3c.recipe.scripts:interpreter

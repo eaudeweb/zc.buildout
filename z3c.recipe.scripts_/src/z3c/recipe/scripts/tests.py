@@ -209,6 +209,7 @@ paths into sys.path.
     ... recipe = z3c.recipe.scripts:interpreter
     ... find-links = %(server)s
     ... index = %(server)s/index
+    ... include-site-packages = false
     ... relative-paths = true
     ... extra-paths =
     ...    /foo/bar
@@ -245,10 +246,14 @@ can be used to fulfill direct and indirect dependencies of your package.  If
 it did not, it might fail to exclude site-packages because one of the
 dependencies actually was supposed to be fulfilled with it.
 
-The default is ``include-site-packages = false``.  This makes it possible to
-easily use a system Python.  As a demonstration, we will start with a
-Python executable that has the "demoneeded" and "demo" eggs installed.
-The eggs are not found.
+The default is ``include-site-packages = true``.  This is backwards
+compatible with previous versions of zc.buildout.
+
+As a demonstration, we will start with a Python executable that has the
+"demoneeded" and "demo" eggs installed.  With the value of
+include-site-packages to true in the default, the package will be found.
+Notice we do not set find-links, but the eggs are still found because
+they are in the executable's path.
 
     >>> from zc.buildout.tests import create_sample_sys_install
     >>> py_path, site_packages_path = make_py()
@@ -265,21 +270,16 @@ The eggs are not found.
     ... [eggs]
     ... recipe = z3c.recipe.scripts
     ... python = primed_python
+    ... include-site-packages = true
     ... eggs = demoneeded
     ... ''' % globals())
-    >>> print system(buildout)
-    Installing eggs.
-    Couldn't find index page for 'demoneeded' (maybe misspelled?)
-    Getting distribution for 'demoneeded'.
-    While:
-      Installing eggs.
-      Getting distribution for 'demoneeded'.
-    Error: Couldn't find a distribution for 'demoneeded'.
-    <BLANKLINE>
 
-However, if we set include-site-packages to true, the package will be found.
-Notice we do not set find-links, but the eggs are still found because
-they are in the executable's path.
+    >>> print system(buildout),
+    Installing eggs.
+
+You can set the value false explicitly.  This makes it possible to
+get a more repeatable build from a system Python.  In our example, the
+eggs are not found, even though the system Python provides them.
 
     >>> write('buildout.cfg',
     ... '''
@@ -292,13 +292,19 @@ they are in the executable's path.
     ...
     ... [eggs]
     ... recipe = z3c.recipe.scripts
+    ... include-site-packages = false
     ... python = primed_python
-    ... include-site-packages = true
     ... eggs = demoneeded
     ... ''' % globals())
-
     >>> print system(buildout)
+    Uninstalling eggs.
     Installing eggs.
+    Couldn't find index page for 'demoneeded' (maybe misspelled?)
+    Getting distribution for 'demoneeded'.
+    While:
+      Installing eggs.
+      Getting distribution for 'demoneeded'.
+    Error: Couldn't find a distribution for 'demoneeded'.
     <BLANKLINE>
 
 We get an error if we specify anything but true or false:
@@ -416,24 +422,26 @@ def test_suite():
             'README.txt',
             setUp=setUp, tearDown=zc.buildout.testing.buildoutTearDown,
             checker=renormalizing.RENormalizing([
-               zc.buildout.testing.normalize_path,
-               zc.buildout.testing.normalize_endings,
-               zc.buildout.testing.normalize_script,
-               zc.buildout.testing.normalize_egg_py,
-               zc.buildout.tests.normalize_bang,
-               (re.compile(r'zc.buildout(-\S+)?[.]egg(-link)?'),
-                'zc.buildout.egg'),
-               (re.compile('[-d]  (setuptools|distribute)-[^-]+-'), 'setuptools-X-'),
-               (re.compile(r'(setuptools|distribute)-[\w.]+-py'), 'setuptools-X-py'),
-               (re.compile(r'eggs\\\\demo'), 'eggs/demo'),
-               (re.compile(r'[a-zA-Z]:\\\\foo\\\\bar'), '/foo/bar'),
-               (re.compile(r'\#!\S+\bpython\S*'), '#!/usr/bin/python'),
-               # Normalize generate_script's Windows interpreter to UNIX:
-               (re.compile(r'\nimport subprocess\n'), '\n'),
-               (re.compile('subprocess\\.call\\(argv, env=environ\\)'),
-                'os.execve(sys.executable, argv, environ)'),
-               (re.compile('distribute'), 'setuptools'),
-               ])
+                zc.buildout.testing.normalize_path,
+                zc.buildout.testing.normalize_endings,
+                zc.buildout.testing.normalize_script,
+                zc.buildout.testing.normalize_egg_py,
+                zc.buildout.tests.normalize_bang,
+                zc.buildout.tests.hide_distribute_additions,
+                zc.buildout.tests.hide_first_index_page_message,
+                (re.compile(r'zc.buildout(-\S+)?[.]egg(-link)?'),
+                 'zc.buildout.egg'),
+                (re.compile('[-d]  (setuptools|distribute)-[^-]+-'), 'setuptools-X-'),
+                (re.compile(r'(setuptools|distribute)-[\w.]+-py'), 'setuptools-X-py'),
+                (re.compile(r'eggs\\\\demo'), 'eggs/demo'),
+                (re.compile(r'[a-zA-Z]:\\\\foo\\\\bar'), '/foo/bar'),
+                (re.compile(r'\#!\S+\bpython\S*'), '#!/usr/bin/python'),
+                # Normalize generate_script's Windows interpreter to UNIX:
+                (re.compile(r'\nimport subprocess\n'), '\n'),
+                (re.compile('subprocess\\.call\\(argv, env=environ\\)'),
+                 'os.execve(sys.executable, argv, environ)'),
+                (re.compile('distribute'), 'setuptools'),
+                ])
             ),
         doctest.DocTestSuite(
             setUp=setUp,
@@ -442,6 +450,8 @@ def test_suite():
                 zc.buildout.testing.normalize_path,
                 zc.buildout.testing.normalize_endings,
                 zc.buildout.testing.normalize_egg_py,
+                zc.buildout.tests.hide_distribute_additions,
+                zc.buildout.tests.hide_first_index_page_message,
                 (re.compile(r'[a-zA-Z]:\\\\foo\\\\bar'), '/foo/bar'),
                 ]),
             ),

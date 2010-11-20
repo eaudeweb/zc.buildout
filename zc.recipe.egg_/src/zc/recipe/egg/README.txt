@@ -67,13 +67,12 @@ specified where to find distributions using the find-links option.
 Let's run the buildout:
 
     >>> import os
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Installing demo.
     Getting distribution for 'demo<0.3'.
     Got demo 0.2.
     Getting distribution for 'demoneeded'.
     Got demoneeded 1.2c1.
-    <BLANKLINE>
 
 Now, if we look at the buildout eggs directory:
 
@@ -112,11 +111,10 @@ scripts recipe:
     ... index = %(server)s/index
     ... """ % dict(server=link_server))
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Uninstalling demo.
     Installing demo.
     Generated script '/sample-buildout/bin/demo'.
-    <BLANKLINE>
 
 Now we also see the script defined by the demo script:
 
@@ -195,12 +193,11 @@ Note that we omitted the entry point name from the recipe
 specification. We were able to do this because the scripts recipe is
 the default entry point for the zc.recipe.egg egg.
 
-   >>> print(system(buildout))
+   >>> print system(buildout),
    Uninstalling demo.
    Installing demo.
    Generated script '/sample-buildout/bin/demo'.
    Generated interpreter '/sample-buildout/bin/py-demo'.
-   <BLANKLINE>
 
 Now we also get a py-demo script for giving us a Python prompt with
 the path for demo and any eggs it depends on included in sys.path.
@@ -279,12 +276,11 @@ We didn't get an update for demo:
 If we run the buildout on the default online and newest modes,
 we'll get an update for demo:
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Updating demo.
     Getting distribution for 'demo'.
     Got demo 0.4c1.
     Generated script '/sample-buildout/bin/demo'.
-    <BLANKLINE>
 
 Then we'll get a new demo egg:
 
@@ -320,10 +316,9 @@ arguments:
     ... """ % dict(server=link_server))
 
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Uninstalling demo.
     Installing demo.
-    <BLANKLINE>
 
     >>> ls(sample_buildout, 'bin')
     -  buildout
@@ -342,11 +337,10 @@ You can also control the name used for scripts:
     ... scripts = demo=foo
     ... """ % dict(server=link_server))
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Uninstalling demo.
     Installing demo.
     Generated script '/sample-buildout/bin/foo'.
-    <BLANKLINE>
 
     >>> ls(sample_buildout, 'bin')
     -  buildout
@@ -373,11 +367,10 @@ extra-paths option:
     ...    ${buildout:directory}/spam
     ... """ % dict(server=link_server))
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Uninstalling demo.
     Installing demo.
     Generated script '/sample-buildout/bin/foo'.
-    <BLANKLINE>
 
 Let's look at the script that was generated:
 
@@ -421,11 +414,10 @@ breaking scripts.
     ...    ${buildout:directory}/spam
     ... """ % dict(server=link_server))
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Uninstalling demo.
     Installing demo.
     Generated script '/sample-buildout/bin/foo'.
-    <BLANKLINE>
 
 Let's look at the script that was generated:
 
@@ -471,11 +463,10 @@ each individual script section:
     ...    ${buildout:directory}/spam
     ... """ % dict(server=link_server))
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Uninstalling demo.
     Installing demo.
     Generated script '/sample-buildout/bin/foo'.
-    <BLANKLINE>
 
     >>> cat(sample_buildout, 'bin', 'foo') # doctest: +NORMALIZE_WHITESPACE
     #!/usr/local/bin/python2.4
@@ -525,11 +516,10 @@ to be included in generated scripts:
     ... arguments = a, 2
     ... """ % dict(server=link_server))
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Uninstalling demo.
     Installing demo.
     Generated script '/sample-buildout/bin/foo'.
-    <BLANKLINE>
 
     >>> cat(sample_buildout, 'bin', 'foo') # doctest: +NORMALIZE_WHITESPACE
     #!/usr/local/bin/python2.4
@@ -576,13 +566,12 @@ declare entry points using the entry-points option:
     ... entry-points = alt=eggrecipedemo:alt other=foo.bar:a.b.c
     ... """ % dict(server=link_server))
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Uninstalling demo.
     Installing demo.
     Generated script '/sample-buildout/bin/demo'.
     Generated script '/sample-buildout/bin/alt'.
     Generated script '/sample-buildout/bin/other'.
-    <BLANKLINE>
 
     >>> ls(sample_buildout, 'bin')
     -  alt
@@ -649,9 +638,8 @@ be made to contact an index server:
     ... scripts = demo=foo
     ... """ % dict(server=link_server))
 
-    >>> print(system(buildout))
+    >>> print system(buildout),
     Uninstalling bigdemo.
     Installing demo.
     Generated script '/sample-buildout/bin/foo'.
-    <BLANKLINE>
 
