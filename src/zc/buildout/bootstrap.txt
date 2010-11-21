@@ -20,7 +20,7 @@ Make sure the bootstrap script actually works::
     ... parts =
     ... ''')
     >>> write('bootstrap.py', open(bootstrap_py).read())
-    >>> print('X'); print(system(
+    >>> print('X'); bprint(system(
     ...     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
     ...     'bootstrap.py')); print('X') # doctest: +ELLIPSIS
     X...
@@ -115,7 +115,7 @@ Notice we are now using zc.buildout 100.0b1, a non-final release.
 The buildout script remembers the decision to accept early releases, and
 alerts the user.
 
-    >>> print(system(join('bin', 'buildout')), end=' ')
+    >>> bprint(system(join('bin', 'buildout')))
     ... # doctest: +NORMALIZE_WHITESPACE
     NOTE: Accepting early releases of build system packages.  Rerun bootstrap
           without --accept-buildout-test-releases (-t) to return to default
@@ -153,7 +153,7 @@ Now we will try the `--version` option, which lets you define a version for
 
 Let's try with an unknown version::
 
-    >>> print('XX'); print(system(
+    >>> print('XX'); bprint(system(
     ...     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
     ...     'bootstrap.py --version UNKNOWN')); print('X') # doctest: +ELLIPSIS
     ... 
@@ -163,7 +163,7 @@ Let's try with an unknown version::
 
 Now let's try with `1.1.2`, which happens to exist::
 
-    >>> print('X'); print(system(
+    >>> print('X'); bprint(system(
     ...     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
     ...     'bootstrap.py --version 1.1.2')); print('X')
     ... 
@@ -192,7 +192,7 @@ Let's make sure it was generated as we expect::
 
 Let's try with `1.2.1`::
 
-    >>> print('X'); print(system(
+    >>> print('X'); bprint(system(
     ...     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
     ...     'bootstrap.py --version 1.2.1')); print('X') # doctest: +ELLIPSIS
     ... 
@@ -221,7 +221,7 @@ Let's make sure the generated ``buildout`` script uses it::
 ``zc.buildout`` now can also run with `Distribute` with the `--distribute`
 option::
 
-    >>> print('X'); print(system(
+    >>> print('X'); bprint(system(
     ...     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
     ...     'bootstrap.py --distribute')); print('X') # doctest: +ELLIPSIS
     ... 
@@ -241,7 +241,7 @@ Let's make sure the generated ``site.py`` uses it::
 
 Make sure both options can be used together::
 
-    >>> print('X'); print(system(
+    >>> print('X'); bprint(system(
     ...     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
     ...     'bootstrap.py --distribute --version 1.2.1')); print('X')
     ... # doctest: +ELLIPSIS
@@ -275,7 +275,7 @@ Last, the -c option needs to work on bootstrap.py::
     >>> f = open(conf_file, 'w')
     >>> f.write('[buildout]\nparts=\n\n')
     >>> f.close()
-    >>> print('X'); print(system(
+    >>> print('X'); bprint(system(
     ...     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
     ...     'bootstrap.py -c %s --distribute' % conf_file)); print('X') # doctest: +ELLIPSIS
     ... 
@@ -294,7 +294,7 @@ that we will also use to test some other bootstrap options.
     ...     pprint.pprint(kwargs, width=40)
     ...     sys.exit()
     ... ''')
-    >>> print(system(
+    >>> bprint(system(
     ...     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
     ...     'bootstrap.py --setup-source=./ez_setup.py'))
     ... # doctest: +ELLIPSIS
@@ -305,7 +305,7 @@ that we will also use to test some other bootstrap options.
 You can also pass a download-cache, and a place in which eggs should be stored
 (they are normally stored in a temporary directory).
 
-    >>> print(system(
+    >>> bprint(system(
     ...     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
     ...     'bootstrap.py --setup-source=./ez_setup.py '+
     ...     '--download-base=./download-cache --eggs=eggs'))
@@ -317,9 +317,9 @@ You can also pass a download-cache, and a place in which eggs should be stored
 
 Here's the entire help text.
 
-    >>> print(system(
+    >>> bprint(system(
     ...     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
-    ...     'bootstrap.py --help'), end=' ')
+    ...     'bootstrap.py --help'))
     ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     Usage: [DESIRED PYTHON FOR BUILDOUT] bootstrap.py [options]
     <BLANKLINE>

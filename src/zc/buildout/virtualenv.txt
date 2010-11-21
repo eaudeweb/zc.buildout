@@ -157,7 +157,7 @@ First, let's try running bootstrap.
     ... parts =
     ... ''')
     >>> write('bootstrap.py', open(bootstrap_py).read())
-    >>> print('X'); print(system(
+    >>> print('X'); bprint(system(
     ...     _safe_arg(py_path)+' '+
     ...     'bootstrap.py')); print('X') # doctest: +ELLIPSIS
     X...
@@ -208,7 +208,7 @@ use local dev versions of zc.buildout and z3c.recipe.scripts.
     ... eggs = demo
     ... ''' % globals())
 
-    >>> print(system(buildout), end=' ') # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
+    >>> bprint(system(buildout)) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     Installing eggs.
     Getting distribution for 'demo'.
     Got demo 0.4c1.
@@ -232,12 +232,12 @@ So, it did what we asked as best it could, but gave a big warning.  If
 you don't want those warnings for those particular recipes that use the
 new features, you can use the "-s" option to squelch the warnings.
 
-    >>> print(system(buildout + ' -s'), end=' ')
+    >>> bprint(system(buildout + ' -s'))
     Updating eggs.
 
 A lower verbosity (one or more -q options) also quiets the warning.
 
-    >>> print(system(buildout + ' -q'), end=' ')
+    >>> bprint(system(buildout + ' -q'))
 
 Notice that, as we saw before with bin/buildout, the generated scripts
 are old-style, because the new-style feature gracefully degrades to the

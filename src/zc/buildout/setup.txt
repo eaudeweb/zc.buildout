@@ -28,14 +28,14 @@ We've created a super simple (stupid) setup script.  Note that it
 doesn't import setuptools.  Let's try running it to create an egg.
 We'll use the buildout script from our sample buildout:
 
-    >>> print(system(buildout+' setup'), end=' ')
+    >>> bprint(system(buildout+' setup'))
     ... # doctest: +NORMALIZE_WHITESPACE
     Error: The setup command requires the path to a setup script or
     directory containing a setup script, and its arguments.
 
 Oops, we forgot to give the name of the setup script:
 
-    >>> print(system(buildout+' setup setup.py bdist_egg'), end=' ')
+    >>> bprint(system(buildout+' setup setup.py bdist_egg'))
     ... # doctest: +ELLIPSIS
     Running setup script 'setup.py'.
     ...
@@ -46,7 +46,7 @@ Oops, we forgot to give the name of the setup script:
 Note that we can specify a directory name.  This is often shorter and
 preferred by the lazy :)
 
-    >>> print(system(buildout+' setup . bdist_egg'), end=' ') # doctest: +ELLIPSIS
+    >>> bprint(system(buildout+' setup . bdist_egg')) # doctest: +ELLIPSIS
     Running setup script './setup.py'.
     ...
 

@@ -35,6 +35,7 @@ import urllib.request, urllib.error, urllib.parse
 
 import zc.buildout.buildout
 import zc.buildout.easy_install
+from zc.buildout.pycompat import b
 from zc.buildout.rmtree import rmtree
 
 fsync = getattr(os, 'fsync', lambda fileno: None)
@@ -50,7 +51,7 @@ def cat(dir, *names):
         and os.path.exists(path+'-script.py')
         ):
         path = path+'-script.py'
-    print(open(path).read(), end=' ')
+    print(open(path).read().strip())
 
 def ls(dir, *subs):
     if subs:
@@ -103,7 +104,7 @@ def system(command, input=''):
                          )
     i, o, e = (p.stdin, p.stdout, p.stderr)
     if input:
-        i.write(input)
+        i.write(b(input))
     i.close()
     result = o.read() + e.read()
     o.close()
@@ -403,7 +404,8 @@ def buildoutSetUp(test):
         start_server = start_server,
         buildout = os.path.join(sample, 'bin', 'buildout'),
         wait_until = wait_until,
-        make_py = make_py
+        make_py = make_py,
+        bprint = zc.buildout.pycompat.bprint,
         ))
 
 def buildoutTearDown(test):

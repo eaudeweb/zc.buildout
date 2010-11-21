@@ -107,7 +107,7 @@ needed to meet the given requirements.
 
 We have a link server that has a number of eggs:
 
-    >>> print(get(link_server), end=' ')
+    >>> bprint(get(link_server))
     <html><body>
     <a href="bigdemo-0.1-py2.4.egg">bigdemo-0.1-py2.4.egg</a><br>
     <a href="demo-0.1-py2.4.egg">demo-0.1-py2.4.egg</a><br>
@@ -788,17 +788,17 @@ If invoked with a script name and arguments, it will run that script, instead.
     ... print(sys.argv)
     ... print(__name__, __file__, __doc__)
     ... ''')
-    >>> print(system(join(bin, 'py')+' ascript a b c'), end=' ')
+    >>> bprint(system(join(bin, 'py')+' ascript a b c'), )
     ['ascript', 'a', 'b', 'c']
     ('__main__', 'ascript', 'demo doc')
 
 For Python 2.5 and higher, you can also use the -m option to run a
 module:
 
-    >>> print(system(join(bin, 'py')+' -m pdb'), end=' ')
+    >>> bprint(system(join(bin, 'py')+' -m pdb'), )
     usage: pdb.py scriptfile [arg] ...
 
-    >>> print(system(join(bin, 'py')+' -m pdb what'), end=' ')
+    >>> bprint(system(join(bin, 'py')+' -m pdb what'), )
     Error: what does not exist
 
 An additional argument can be passed to define which scripts to install
@@ -818,7 +818,7 @@ original script names to new script names.
     >>> ls(bin)
     -  run
 
-    >>> print(system(os.path.join(bin, 'run')), end=' ')
+    >>> bprint(system(os.path.join(bin, 'run')), )
     3 1
 
 The ``scripts`` function: Including extra paths in scripts
@@ -948,7 +948,7 @@ passed as relative_paths wasn't converted to a relative path.
 
 Of course, running the script works:
 
-    >>> print(system(join(bo, 'bin', 'run')), end=' ')
+    >>> bprint(system(join(bo, 'bin', 'run')), )
     3 1
 
 We specified an interpreter and its paths are adjusted too:
@@ -1523,7 +1523,7 @@ The demo script runs the entry point defined in the demo egg:
     >>> demo_call = join(interpreter_bin_dir, 'demo')
     >>> if sys.platform == 'win32':
     ...     demo_call = '"%s"' % demo_call
-    >>> print(system(demo_call))
+    >>> bprint(system(demo_call))
     3 1
     <BLANKLINE>
 
@@ -1680,7 +1680,7 @@ Now if we look in our destination directory, we see we have an extdemo egg:
 Let's update our link server with a new version of extdemo:
 
     >>> update_extdemo()
-    >>> print(get(link_server), end=' ')
+    >>> bprint(get(link_server))
     <html><body>
     <a href="bigdemo-0.1-py2.4.egg">bigdemo-0.1-py2.4.egg</a><br>
     <a href="demo-0.1-py2.4.egg">demo-0.1-py2.4.egg</a><br>

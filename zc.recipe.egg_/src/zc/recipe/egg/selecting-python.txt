@@ -50,7 +50,7 @@ Now, if we run the buildout:
    >>> import os
    >>> os.chdir(sample_buildout)
    >>> buildout = os.path.join(sample_buildout, 'bin', 'buildout')
-   >>> print(system(buildout))
+   >>> bprint(system(buildout))
    Installing demo.
    Getting distribution for 'demo<0.3'.
    Got demo 0.2.

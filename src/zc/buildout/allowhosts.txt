@@ -55,7 +55,7 @@ local files::
 
 Now we can run the buildout and make sure all attempts to dist.plone.org fails::
 
-    >>> print(system(buildout)) # doctest: +ELLIPSIS
+    >>> bprint(system(buildout)) # doctest: +ELLIPSIS
     Develop: '/sample-buildout/allowdemo'
     ...
     Link to http://dist.plone.org ***BLOCKED*** by --allow-hosts
@@ -88,7 +88,7 @@ XXX (showcase with a svn:// file)
 
 Now we can run the buildout and make sure all attempts to dist.plone.org fails::
 
-    >>> print(system(buildout)) # doctest: +ELLIPSIS
+    >>> bprint(system(buildout)) # doctest: +ELLIPSIS
     Develop: '/sample-buildout/allowdemo'
     ...
     Link to http://dist.plone.org ***BLOCKED*** by --allow-hosts
@@ -115,7 +115,7 @@ Test for 1.0.5 breakage as in https://bugs.launchpad.net/zc.buildout/+bug/239212
     ... eggs=zc.buildout
     ... interpreter=python
     ... ''')
-    >>> print(system(buildout))
+    >>> bprint(system(buildout))
     Unused options for buildout: 'foo'.
     Installing python.
     Generated script '/sample-buildout/bin/buildout'.

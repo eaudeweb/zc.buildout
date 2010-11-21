@@ -1020,12 +1020,13 @@ class Buildout(MutableMapping):
         fd, tsetup = tempfile.mkstemp()
         exe = zc.buildout.easy_install._safe_arg(sys.executable)
         try:
-            os.write(fd, zc.buildout.easy_install.runsetup_template % dict(
+            data = zc.buildout.easy_install.runsetup_template % dict(
                 setuptools=pkg_resources_loc,
                 setupdir=os.path.dirname(setup),
                 setup=setup,
                 __file__ = setup,
-                ))
+            )
+            os.write(fd, data.encode())
             if is_jython:
                 arg_list = list()
 

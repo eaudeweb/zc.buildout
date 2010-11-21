@@ -64,7 +64,7 @@ zc.buildout used:
 Now if we run the buildout, the buildout will upgrade itself to the
 new versions found in new releases:
 
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Getting distribution for 'zc.buildout'.
     Got zc.buildout 99.99.
     Getting distribution for 'setuptools'.
@@ -140,7 +140,7 @@ running the buildout will install earlier versions of these packages:
 
 Now we can see that we actually "upgrade" to an earlier version.
 
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Upgraded:
       zc.buildout version 1.0.0,
       setuptools version 0.6;
@@ -167,7 +167,7 @@ We won't upgrade in offline mode:
     ... recipe = showversions
     ... """ % dict(new_releases=new_releases))
 
-    >>> print(system(buildout+' -o'), end=' ')
+    >>> bprint(system(buildout+' -o'))
     Develop: '/sample-buildout/showversions'
     Updating show-versions.
     zc.buildout 1.0.0
@@ -175,7 +175,7 @@ We won't upgrade in offline mode:
 
 Or in non-newest mode:
 
-    >>> print(system(buildout+' -N'), end=' ')
+    >>> bprint(system(buildout+' -N'))
     Develop: '/sample-buildout/showversions'
     Updating show-versions.
     zc.buildout 1.0.0
@@ -195,7 +195,7 @@ directory:
     ... """ % dict(new_releases=new_releases))
 
     >>> cd(sample_buildout2)
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Creating directory '/sample_buildout2/bin'.
     Creating directory '/sample_buildout2/parts'.
     Creating directory '/sample_buildout2/eggs'.
@@ -230,8 +230,8 @@ We'll mimic this by passing the argument actually in the command line.
     ... recipe = showversions
     ... """ % dict(new_releases=new_releases))
 
-    >>> print(system(buildout +
-    ...              ' buildout:accept-buildout-test-releases=true'), end=' ')
+    >>> bprint(system(buildout +
+    ...              ' buildout:accept-buildout-test-releases=true'), )
     ... # doctest: +NORMALIZE_WHITESPACE
     Getting distribution for 'zc.buildout'.
     Got zc.buildout 100.0b1.

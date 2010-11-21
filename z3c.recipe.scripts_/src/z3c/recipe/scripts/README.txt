@@ -111,7 +111,7 @@ are included to help make this document run as a test successfully.)
     ... index = %(server)s/index
     ... """ % dict(server=link_server))
 
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Installing demo.
     Getting distribution for 'demo<0.3'.
     Got demo 0.2.
@@ -119,7 +119,7 @@ are included to help make this document run as a test successfully.)
     Got demoneeded 1.2c1.
     Generated script '/sample-buildout/bin/demo'.
 
-    >>> print(system(join(sample_buildout, 'bin', 'demo')), end=' ')
+    >>> bprint(system(join(sample_buildout, 'bin', 'demo')))
     2 2
 
 Interpreter generation
@@ -142,7 +142,7 @@ This example will create both an entry point script and an interpreter.
     ... interpreter = py
     ... """ % dict(server=link_server))
 
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Uninstalling demo.
     Installing demo.
     Generated script '/sample-buildout/bin/demo'.
@@ -163,7 +163,7 @@ You can also generate an interpreter alone with the ``interpreter`` recipe.
     ... index = %(server)s/index
     ... """ % dict(server=link_server))
 
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Uninstalling demo.
     Installing py.
     Generated interpreter '/sample-buildout/bin/py'.
@@ -198,7 +198,7 @@ provided.
 
 Here's an example of using the generated interpreter.
 
-    >>> print(system(join(sample_buildout, 'bin', 'py') +
+    >>> bprint(system(join(sample_buildout, 'bin', 'py') +
     ...              ' -c "import sys, pprint; pprint.pprint(sys.path[-2:])"'))
     ['/sample-buildout/eggs/demo-0.2-pyN.N.egg',
      '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg']
@@ -264,14 +264,14 @@ The default is value true (as of zc.buildout 1.5.2).
     ... index = %(server)s/index
     ... """ % dict(server=link_server, py_path=py_path))
 
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Uninstalling py.
     Installing py.
     Generated interpreter '/sample-buildout/bin/py'.
 
 Now executable_buildout/site-packages is included in sys.path.
 
-    >>> print(system(join(sample_buildout, 'bin', 'py') +
+    >>> bprint(system(join(sample_buildout, 'bin', 'py') +
     ...              ''' -c "import sys, pprint; pprint.pprint(sys.path)"'''))
     ... # doctest: +ELLIPSIS
     ['',
@@ -300,12 +300,12 @@ If you set it to false, they are excluded.
     ... index = %(server)s/index
     ... """ % dict(server=link_server, py_path=py_path))
 
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Uninstalling py.
     Installing py.
     Generated interpreter '/sample-buildout/bin/py'.
 
-    >>> print(system(join(sample_buildout, 'bin', 'py') +
+    >>> bprint(system(join(sample_buildout, 'bin', 'py') +
     ...              ''' -c "import sys, pprint; pprint.pprint(sys.path)"'''))
     ... # doctest: +ELLIPSIS
     ['',
@@ -359,7 +359,7 @@ document do not affect this example.)
     ... eggs = demoneeded
     ... ''' % globals())
 
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Creating directory '/sample-buildout/tmpeggs'.
     Uninstalling py.
     Installing eggs.
@@ -387,7 +387,7 @@ is not allowed to come from site-packages, and the buildout fails.
     ... allowed-eggs-from-site-packages =
     ... eggs = demoneeded
     ... ''' % globals())
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Creating directory '/sample-buildout/tmpeggs'.
     Uninstalling eggs.
     Installing eggs.
@@ -426,7 +426,7 @@ can be obtained from the buildout section if they are not set locally.
     ... eggs = demoneeded
     ... ''' % globals())
 
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Installing eggs.
 
    This fails:
@@ -449,7 +449,7 @@ can be obtained from the buildout section if they are not set locally.
     ... python = primed_python
     ... eggs = demoneeded
     ... ''' % globals())
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Creating directory '/sample-buildout/tmpeggs'.
     Uninstalling eggs.
     Installing eggs.
@@ -483,7 +483,7 @@ into the sitecustomize.
     ... index = %(server)s/index
     ... """ % dict(server=link_server, py_path=py_path))
 
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Installing py.
     Generated interpreter '/sample-buildout/bin/py'.
 
@@ -496,7 +496,7 @@ into the sitecustomize.
     import os
     os.environ['zc.buildout'] = 'foo bar baz shazam'
 
-    >>> print(system(join(sample_buildout, 'bin', 'py') +
+    >>> bprint(system(join(sample_buildout, 'bin', 'py') +
     ...              ''' -c "import os; print(os.environ['zc.buildout'])"'''))
     foo bar baz shazam
     <BLANKLINE>
@@ -520,7 +520,7 @@ It also will be honored in the buildout section if it is not set locally.
     ... index = %(server)s/index
     ... """ % dict(server=link_server, py_path=py_path))
 
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Updating py.
 
     >>> cat(sample_buildout, 'parts', 'py', 'sitecustomize.py')
@@ -532,7 +532,7 @@ It also will be honored in the buildout section if it is not set locally.
     import os
     os.environ['zc.buildout'] = 'foo bar baz shazam'
 
-    >>> print(system(join(sample_buildout, 'bin', 'py') +
+    >>> bprint(system(join(sample_buildout, 'bin', 'py') +
     ...              ''' -c "import os; print(os.environ['zc.buildout'])"'''))
     foo bar baz shazam
     <BLANKLINE>
@@ -573,20 +573,20 @@ that is different than a script, while duplicating other configuration.
 
 Now let's put it in action.
 
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Uninstalling py.
     Installing demo.
     Generated script '/sample-buildout/bin/demo'.
     Installing python.
     Generated interpreter '/sample-buildout/bin/python'.
 
-    >>> print(system(join(sample_buildout, 'bin', 'python') +
+    >>> bprint(system(join(sample_buildout, 'bin', 'python') +
     ...              ' -c "import sys, pprint; pprint.pprint(sys.path[-2:])"'))
     ['/sample-buildout/eggs/demo-0.2-pyN.N.egg',
      '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg']
     <BLANKLINE>
-    >>> print(system(join(sample_buildout, 'bin', 'python') +
-    ...              ''' -c "import os; print(os.environ['zc.buildout'])"'''), end=' ')
+    >>> bprint(system(join(sample_buildout, 'bin', 'python') +
+    ...              ''' -c "import os; print(os.environ['zc.buildout'])"'''), )
     foo bar baz shazam
 
 Note that the parts/py directory has been cleaned up, and parts/python has
@@ -615,18 +615,18 @@ interpreter, you can use script-initialization.  Here's a demonstration.
     ...     print("Hi from the script")
     ... """ % dict(server=link_server))
 
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Uninstalling python.
     Uninstalling demo.
     Installing demo.
     Generated script '/sample-buildout/bin/demo'.
     Generated interpreter '/sample-buildout/bin/py'.
 
-    >>> print(system(join(sample_buildout, 'bin', 'py') +
-    ...              ''' -c "print('Hi from the interpreter')"'''), end=' ')
+    >>> bprint(system(join(sample_buildout, 'bin', 'py') +
+    ...              ''' -c "print('Hi from the interpreter')"'''))
     Hi from the interpreter
 
-    >>> print(system(join(sample_buildout, 'bin', 'demo')), end=' ')
+    >>> bprint(system(join(sample_buildout, 'bin', 'demo')))
     Hi from the script
     2 2
 
@@ -646,12 +646,12 @@ interpreter, so that you are not forced to use the name of the section.
     ... index = %(server)s/index
     ... """ % dict(server=link_server))
 
-    >>> print(system(buildout), end=' ')
+    >>> bprint(system(buildout))
     Uninstalling demo.
     Installing interpreter.
     Generated interpreter '/sample-buildout/bin/python2'.
 
-    >>> print(system(join(sample_buildout, 'bin', 'python2') +
+    >>> bprint(system(join(sample_buildout, 'bin', 'python2') +
     ...              ' -c "print(42)"'))
     42
     <BLANKLINE>

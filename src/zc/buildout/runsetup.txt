@@ -32,7 +32,7 @@ To illustrate this, we'll create a package in a sample buildout:
   
 We can use the buildout command to generate the hello egg:
 
-    >>> print(system(buildout +' setup hello -q bdist_egg'), end=' ')
+    >>> bprint(system(buildout +' setup hello -q bdist_egg'))
     Running setup script 'hello/setup.py'.
     zip_safe flag not set; analyzing archive contents...
 
