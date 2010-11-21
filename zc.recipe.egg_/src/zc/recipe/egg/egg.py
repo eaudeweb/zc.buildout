@@ -16,9 +16,13 @@
 $Id$
 """
 
-import UserDict, logging, os, re, zipfile
+import logging, os, re, zipfile
 import zc.buildout
 import zc.buildout.easy_install
+try:
+    from collections import MutableMapping
+except ImportError:
+    from UserDict import DictMixin as MutableMapping
 
 
 class Eggs(object):
@@ -198,7 +202,7 @@ class Scripts(ScriptBase):
 Egg = Scripts
 
 
-class _BackwardsSupportOption(UserDict.UserDict):
+class _BackwardsSupportOption(MutableMapping):
 
     def __init__(self, data):
         self.data = data # We want to show mutations to the underlying dict.

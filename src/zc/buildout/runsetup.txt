@@ -32,7 +32,7 @@ To illustrate this, we'll create a package in a sample buildout:
   
 We can use the buildout command to generate the hello egg:
 
-    >>> print system(buildout +' setup hello -q bdist_egg'),
+    >>> print(system(buildout +' setup hello -q bdist_egg'), end=' ')
     Running setup script 'hello/setup.py'.
     zip_safe flag not set; analyzing archive contents...
 
@@ -40,3 +40,4 @@ The hello directory now has a hello egg in it's dist directory:
 
     >>> ls('hello', 'dist')
     -  hello-1.0-py2.4.egg
+

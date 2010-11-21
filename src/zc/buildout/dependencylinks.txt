@@ -54,7 +54,7 @@ Now let's configure the buildout to use the develop egg.
 
 Now we can run the buildout.
 
-    >>> print system(buildout)
+    >>> print(system(buildout))
     GET 200 /
     GET 200 /demoneeded-1.2c1.zip
     Develop: '/sample-buildout/depdemo'
@@ -83,7 +83,7 @@ buildout to see where the egg comes from this time.
     ...     for egg in glob(join(sample_buildout, 'eggs', 'demoneeded*.egg')):
     ...         remove(sample_buildout, 'eggs', egg)
     >>> remove_demoneeded_egg()
-    >>> print system(buildout) # doctest: +ELLIPSIS
+    >>> print(system(buildout)) # doctest: +ELLIPSIS
     Develop: '/sample-buildout/depdemo'
     ...
     Getting distribution for 'demoneeded'.
@@ -111,7 +111,7 @@ to look for eggs.
     ... eggs = depdemo
     ... ''' % link_server)
 
-    >>> print system(buildout)
+    >>> print(system(buildout))
     Develop: '/sample-buildout/depdemo'
     Installing eggs.
     Getting distribution for 'demoneeded'.
@@ -133,7 +133,7 @@ specify different places to look for the dependency egg.
     ... '''  % link_server2)
 
     >>> remove_demoneeded_egg()
-    >>> print system(buildout) #doctest: +ELLIPSIS
+    >>> print(system(buildout)) #doctest: +ELLIPSIS
     GET 200 /...
     Develop: '/sample-buildout/depdemo'
     Updating eggs.
@@ -165,7 +165,7 @@ Here is an example of using this option to disable dependency_links.
     ... ''' % link_server)
 
     >>> remove_demoneeded_egg()
-    >>> print system(buildout)
+    >>> print(system(buildout))
     Develop: '/sample-buildout/depdemo'
     Updating eggs.
     Getting distribution for 'demoneeded'.
@@ -190,10 +190,11 @@ before. The dependency's are looked for first in the logging server.
     ... eggs = depdemo
     ... ''' % link_server)
     >>> remove_demoneeded_egg()
-    >>> print system(buildout) #doctest: +ELLIPSIS
+    >>> print(system(buildout)) #doctest: +ELLIPSIS
     GET 200 /...
     Develop: '/sample-buildout/depdemo'
     Updating eggs.
     Getting distribution for 'demoneeded'.
     Got demoneeded 1.2c1.
     <BLANKLINE>
+

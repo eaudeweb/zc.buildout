@@ -94,11 +94,11 @@ def _has_broken_dash_S(executable):
     stdout, stderr = subprocess.Popen(
         [executable, '-Sc',
          'try:\n'
-         '    import ConfigParser\n'
+         '    import pprint\n'
          'except ImportError:\n'
-         '    print 1\n'
+         '    print(1)\n'
          'else:\n'
-         '    print 0\n'],
+         '    print(0)\n'],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
     return bool(int(stdout.strip()))
 
@@ -129,7 +129,7 @@ def _get_system_paths(executable):
         cmd.extend(args)
         cmd.extend([
             "-c", "import sys, os;"
-            "print repr([os.path.normpath(p) for p in sys.path if p])"])
+            "print(repr([os.path.normpath(p) for p in sys.path if p]))"])
         # Windows needs some (as yet to be determined) part of the real env.
         env = os.environ.copy()
         # We need to make sure that PYTHONPATH, which will often be set
@@ -924,7 +924,7 @@ class Installer:
                 if dist is None:
                     try:
                         dist = best[req.key] = env.best_match(req, ws)
-                    except pkg_resources.VersionConflict, err:
+                    except pkg_resources.VersionConflict as err:
                         raise VersionConflict(err, ws)
                     if dist is None or (
                         dist.location in self._site_packages and not
@@ -1157,12 +1157,12 @@ def develop(setup, dest,
         undo.append(lambda: os.remove(tsetup))
         undo.append(lambda: os.close(fd))
 
-        os.write(fd, runsetup_template % dict(
+        os.write(fd, (runsetup_template % dict(
             setuptools=setuptools_loc,
             setupdir=directory,
             setup=setup,
             __file__ = setup,
-            ))
+            )).encode())
 
         tmp3 = tempfile.mkdtemp('build', dir=dest)
         undo.append(lambda : shutil.rmtree(tmp3))
@@ -1301,7 +1301,7 @@ def _get_path(working_set, extra_paths=()):
     """Given working set and extra paths, return a normalized path list."""
     path = [dist.location for dist in working_set]
     path.extend(extra_paths)
-    return map(realpath, path)
+    return list(map(realpath, path))
 
 def _generate_scripts(reqs, working_set, dest, path, scripts, relative_paths,
                       initialization, executable, arguments,
@@ -1459,7 +1459,7 @@ def _write_script(full_name, contents, logged_type):
     if changed:
         open(script_name, 'w').write(contents)
         try:
-            os.chmod(script_name, 0755)
+            os.chmod(script_name, 0o755)
         except (AttributeError, os.error):
             pass
         logger.info("Generated %s %r.", logged_type, full_name)
@@ -1555,7 +1555,7 @@ if len(sys.argv) > 1:
         sys.argv[:] = _args
         __file__ = _args[0]
         del _options, _args
-        execfile(__file__)
+        exec(open(__file__).read())
 
 if _interactive:
     del _interactive
@@ -1574,7 +1574,7 @@ def _get_module_file(executable, name, silent=False):
            "import imp; "
            "fp, path, desc = imp.find_module(%r); "
            "fp.close(); "
-           "print path" % (name,)]
+           "print(path)" % (name,)]
     env = os.environ.copy()
     # We need to make sure that PYTHONPATH, which will often be set to
     # include a custom buildout-generated site.py, is not set, or else
@@ -1591,7 +1591,7 @@ def _get_module_file(executable, name, silent=False):
         return None
     # else: ...
     res = stdout.strip()
-    if res.endswith('.pyc') or res.endswith('.pyo'):
+    if res.endswith(b'.pyc') or res.endswith(b'.pyo'):
         raise RuntimeError('Cannot find uncompiled version of %s' % (name,))
     if not os.path.exists(res):
         raise RuntimeError(
@@ -1812,7 +1812,7 @@ __file__ = %(__file__)r
 
 os.chdir(%(setupdir)r)
 sys.argv[0] = %(setup)r
-execfile(%(setup)r)
+exec(open(%(setup)r).read())
 """
 
 

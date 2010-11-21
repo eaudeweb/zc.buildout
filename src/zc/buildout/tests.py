@@ -2963,9 +2963,9 @@ def prefer_final_permutation(existing, available):
         )
 
     if dist.extras:
-        print 'downloaded', dist.version
+        print('downloaded', dist.version)
     else:
-        print 'had', dist.version
+        print('had', dist.version)
     sys.path_importer_cache.clear()
 
 def prefer_final():

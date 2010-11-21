@@ -19,7 +19,7 @@ buildout egg itself is installed as a develop egg.
 $Id$
 """
 
-import os, shutil, sys, subprocess, urllib2, subprocess
+import os, shutil, sys, subprocess, urllib.request, urllib.error, urllib.parse, subprocess
 from optparse import OptionParser
 
 if sys.platform == 'win32':
@@ -33,7 +33,7 @@ else:
 
 # Detect https://bugs.launchpad.net/virtualenv/+bug/572545 .
 has_broken_dash_S = subprocess.call(
-    [sys.executable, '-Sc', 'import ConfigParser'])
+    [sys.executable, '-Sc', 'import pprint'])
 
 # In order to be more robust in the face of system Pythons, we want to
 # run without site-packages loaded.  This is somewhat tricky, in
@@ -43,7 +43,7 @@ if not has_broken_dash_S and 'site' in sys.modules:
     # We will restart with python -S.
     args = sys.argv[:]
     args[0:0] = [sys.executable, '-S']
-    args = map(quote, args)
+    args = list(map(quote, args))
     os.execv(sys.executable, args)
 # Now we are running with -S.  We'll get the clean sys.path, import site
 # because distutils will do it later, and then reset the path and clean
@@ -52,7 +52,7 @@ if not has_broken_dash_S and 'site' in sys.modules:
 clean_path = sys.path[:]
 import site
 sys.path[:] = clean_path
-for k, v in sys.modules.items():
+for k, v in list(sys.modules.items()):
     if (hasattr(v, '__path__') and
         len(v.__path__)==1 and
         not os.path.exists(os.path.join(v.__path__[0],'__init__.py'))):
@@ -83,7 +83,7 @@ options, args = parser.parse_args()
 if args:
     parser.error('This script accepts no arguments other than its options.')
 
-if options.use_distribute:
+if options.use_distribute or sys.version > '3':
     setup_source = distribute_source
 else:
     setup_source = setuptools_source
@@ -102,9 +102,9 @@ try:
         raise ImportError
     import setuptools # A flag.  Sometimes pkg_resources is installed alone.
 except ImportError:
-    ez_code = urllib2.urlopen(setup_source).read().replace('\r\n', '\n')
+    ez_code = urllib.request.urlopen(setup_source).read().replace(b'\r\n', b'\n')
     ez = {}
-    exec ez_code in ez
+    exec(ez_code, ez)
     setup_args = dict(to_dir='eggs', download_delay=0)
     if options.use_distribute:
         setup_args['no_fake'] = True
