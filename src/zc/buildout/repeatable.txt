@@ -24,7 +24,7 @@ To see how this works, we'll create two versions of a recipe egg:
     ... class Recipe:
     ...     def __init__(*a): pass
     ...     def install(self):
-    ...         print 'recipe v1'
+    ...         print('recipe v1')
     ...         return ()
     ...     update = install
     ... ''')
@@ -50,7 +50,7 @@ To see how this works, we'll create two versions of a recipe egg:
     ... class Recipe:
     ...     def __init__(*a): pass
     ...     def install(self):
-    ...         print 'recipe v2'
+    ...         print('recipe v2')
     ...         return ()
     ...     update = install
     ... ''')

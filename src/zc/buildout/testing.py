@@ -168,7 +168,7 @@ def find_python(version):
         if os.path.exists(e):
             return e
     else:
-        cmd = 'python%s -c "import sys; print sys.executable"' % version
+        cmd = 'python%s -c "import sys; print(sys.executable)"' % version
         p = subprocess.Popen(cmd,
                              shell=True,
                              stdin=subprocess.PIPE,
@@ -181,7 +181,7 @@ def find_python(version):
         o.close()
         if os.path.exists(e):
             return e
-        cmd = 'python -c "import sys; print \'%s.%s\' % sys.version_info[:2]"'
+        cmd = 'python -c "import sys; print(\'%s.%s\' % sys.version_info[:2])"'
         p = subprocess.Popen(cmd,
                              shell=True,
                              stdin=subprocess.PIPE,
@@ -193,7 +193,7 @@ def find_python(version):
         e = o.read().strip()
         o.close()
         if e == version:
-            cmd = 'python -c "import sys; print sys.executable"'
+            cmd = 'python -c "import sys; print(sys.executable)"'
             p = subprocess.Popen(cmd,
                                 shell=True,
                                 stdin=subprocess.PIPE,

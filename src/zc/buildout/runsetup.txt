@@ -17,7 +17,7 @@ commands, like bdist_egg even with packages that don't use setuptools.
 To illustrate this, we'll create a package in a sample buildout:
 
     >>> mkdir('hello')
-    >>> write('hello', 'hello.py', 'print "Hello World!"')
+    >>> write('hello', 'hello.py', 'print("Hello World!")')
     >>> write('hello', 'README', 'This is hello')
     >>> write('hello', 'setup.py',
     ... """

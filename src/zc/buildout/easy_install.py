@@ -186,6 +186,8 @@ def _get_version(executable):
         i, o = (p.stdin, p.stdout)
         i.close()
         version = o.read().strip()
+        if not isinstance(version, str): # It's probably Python 3 and bytes so
+            version = version.decode()   # make it a string
         o.close()
         pystring, version = version.split()
         assert pystring == 'Python'

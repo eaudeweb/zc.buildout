@@ -91,7 +91,8 @@ parts:
     >>> cat(sample_buildout, 'buildout.cfg')
     [buildout]
     parts =
-
+    <BLANKLINE>
+    
 A part is simply something to be created by a buildout.  It can be
 almost anything, such as a Python package, a program, a directory, or
 even a configuration file.
@@ -811,7 +812,7 @@ allow us to see interactions with the buildout:
     ...         items = self.options.items()
     ...         items.sort()
     ...         for option, value in items:
-    ...             print option, value
+    ...             print(option, value)
     ...         return ()
     ...
     ...     update = install
@@ -1143,8 +1144,8 @@ extension that prints out the options.
     >>> write(sample_buildout, 'demo', 'demo.py',
     ... """
     ... def ext(buildout):
-    ...     print [part['option'] for name, part in buildout.items() \
-    ...           if name.startswith('part')]
+    ...     print([part['option'] for name, part in buildout.items() \
+    ...           if name.startswith('part')])
     ... """)
 
     >>> write(sample_buildout, 'demo', 'setup.py',
@@ -1562,7 +1563,7 @@ with an uninstall recipe that simulates removing the service.
     ...         self.options = options
     ...
     ...     def install(self):
-    ...         print "chkconfig --add %s" % self.options['script']
+    ...         print("chkconfig --add %s" % self.options['script'])
     ...         return ()
     ...
     ...     def update(self):
@@ -1570,7 +1571,7 @@ with an uninstall recipe that simulates removing the service.
     ...
     ...
     ... def uninstall_service(name, options):
-    ...     print "chkconfig --del %s" % options['script']
+    ...     print("chkconfig --del %s" % options['script'])
     ... """)
 
 To use these recipes we must register them using entry points. Make
@@ -1684,7 +1685,7 @@ mkdir recipe introduced earlier.
     ... def backup_directory(name, options):
     ...     path = options['path']
     ...     size = len(os.listdir(path))
-    ...     print "backing up directory %s of size %s" % (path, size)
+    ...     print("backing up directory %s of size %s" % (path, size))
     ... """)
 
 It must be registered with the zc.buildout.uninstall entry
@@ -2738,9 +2739,9 @@ previous section:
     >>> write(sample_bootstrapped, 'demo', 'demo.py',
     ... """
     ... def ext(buildout):
-    ...     print 'ext', list(buildout)
+    ...     print('ext ' + str(list(buildout)))
     ... def unload(buildout):
-    ...     print 'unload', list(buildout)
+    ...     print('unload ' + str(list(buildout)))
     ... """)
 
     >>> write(sample_bootstrapped, 'demo', 'setup.py',

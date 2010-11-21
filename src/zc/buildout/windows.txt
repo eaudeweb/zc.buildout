@@ -21,7 +21,7 @@ can't delete.
     ...              name)
     ...
     ...     def install(self):
-    ...         print "can't remove read only files"
+    ...         print("can't remove read only files")
     ...         if not os.path.exists (self.location):
     ...             os.makedirs (self.location)
     ...

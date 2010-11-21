@@ -785,8 +785,8 @@ If invoked with a script name and arguments, it will run that script, instead.
 
     >>> write('ascript', '''
     ... "demo doc"
-    ... print sys.argv
-    ... print (__name__, __file__, __doc__)
+    ... print(sys.argv)
+    ... print(__name__, __file__, __doc__)
     ... ''')
     >>> print(system(join(bin, 'py')+' ascript a b c'), end=' ')
     ['ascript', 'a', 'b', 'c']
@@ -1110,10 +1110,10 @@ buildout inserts, in the simplest case.
 
 Here are some examples of the interpreter in use.
 
-    >>> print(call_py(interpreter_path, "print 16+26"))
+    >>> print(call_py(interpreter_path, "print(16+26)"))
     42
     <BLANKLINE>
-    >>> res = call_py(interpreter_path, "import sys; print sys.path")
+    >>> res = call_py(interpreter_path, "import sys; print(sys.path)")
     >>> print(res) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ['',
      '/interpreter/parts/interpreter',
@@ -1144,7 +1144,7 @@ If you provide initialization, it goes in sitecustomize.py.
     >>> cat(sitecustomize_path)
     import os
     os.environ['FOO'] = 'bar baz bing shazam'
-    >>> print(call_py(interpreter_path, "import os; print os.environ['FOO']"))
+    >>> print(call_py(interpreter_path, "import os; print(os.environ['FOO'])"))
     bar baz bing shazam
     <BLANKLINE>
 
@@ -1305,7 +1305,7 @@ Here's an example of the new script in use.  Other documents and tests in
 this package give the feature a more thorough workout, but this should
 give you an idea of the feature.
 
-    >>> res = call_py(interpreter_path, "import sys; print sys.path")
+    >>> res = call_py(interpreter_path, "import sys; print(sys.path)")
     >>> print(res) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ['',
      '/interpreter/parts/interpreter',
@@ -1376,7 +1376,7 @@ call to another text fixture to create.
     <BLANKLINE>
     def original_addsitepackages(known_paths):...
 
-    >>> print(call_py(interpreter_path, "import sys; print sys.path"))
+    >>> print(call_py(interpreter_path, "import sys; print(sys.path)"))
     ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ['',
      '/interpreter/parts/interpreter',
@@ -1441,7 +1441,7 @@ at that result.
     <BLANKLINE>
     def original_addsitepackages(known_paths):...
 
-    >>> print(call_py(interpreter_path, "import sys; print sys.path"))
+    >>> print(call_py(interpreter_path, "import sys; print(sys.path)"))
     ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ['',
      '/interpreter/parts/interpreter',
