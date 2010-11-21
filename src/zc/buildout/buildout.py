@@ -22,7 +22,11 @@ except ImportError:
     from md5 import md5
     
 import base64
-import configparser
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+    
 import copy
 import distutils.errors
 import glob
@@ -798,7 +802,7 @@ class Buildout(MutableMapping):
         f = open(installed, 'w')
         _save_options('buildout', installed_options['buildout'], f)
         for part in installed_options['buildout']['parts'].split():
-            print(file=f)
+            f.write(os.linesep)
             _save_options(part, installed_options[part], f)
         f.close()
 
@@ -1269,6 +1273,7 @@ class Options(MutableMapping):
 
     def __setitem__(self, option, value):
         if not isinstance(value, str):
+            import pdb;pdb.set_trace()
             raise TypeError('Option values must be strings', value)
         self._data[option] = value
 
@@ -1390,10 +1395,12 @@ def _save_option(option, value, f):
         value = '%(__buildout_space_n__)s' + value[2:]
     if value.endswith('\n\t'):
         value = value[:-2] + '%(__buildout_space_n__)s'
-    print(option, '=', value, file=f)
+    f.write(' '.join((option, '=', value)))
+    f.write(os.linesep)
 
 def _save_options(section, options, f):
-    print('[%s]' % section, file=f)
+    f.write('[%s]' % section)
+    f.write(os.linesep)
     items = list(options.items())
     items.sort()
     for option, value in items:
@@ -1491,7 +1498,7 @@ def _dir_hash(dir):
         hash.update((' '.join(filenames)).encode())
         for name in filenames:
             hash.update(open(os.path.join(dirpath, name)).read().encode())
-    return base64.b64encode(hash.digest()).strip().decode()
+    return str(base64.b64encode(hash.digest()).strip())
 
 def _dists_sig(dists):
     result = []
