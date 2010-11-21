@@ -14,7 +14,7 @@
 """Buildout main script
 """
 
-from .rmtree import rmtree
+from zc.buildout.rmtree import rmtree
 try:
     from hashlib import md5
 except ImportError:
@@ -647,7 +647,7 @@ class Buildout(MutableMapping):
                 recipe, 'zc.buildout.uninstall', entry, self)
             self._logger.info('Running uninstall recipe.')
             uninstaller(part, installed_part_options[part])
-        except (ImportError, pkg_resources.DistributionNotFound) as v:
+        except (ImportError, pkg_resources.DistributionNotFound):
             pass
 
         # remove created files and directories
@@ -1110,11 +1110,11 @@ def _install_and_load(spec, group, entry, buildout):
         return pkg_resources.load_entry_point(
             req.project_name, group, entry)
 
-    except Exception as v:
+    except Exception:
         buildout._logger.log(
             1,
             "Could't load %s entry point %s\nfrom %s:\n%s.",
-            group, entry, spec, v)
+            group, entry, spec, sys.exc_info()[1])
         raise
 
 
@@ -1824,7 +1824,7 @@ def main(args=None):
             getattr(buildout, command)(args)
         except SystemExit:
             pass
-        except Exception as v:
+        except Exception:
             _doing()
             exc_info = sys.exc_info()
             import pdb, traceback
@@ -1833,6 +1833,7 @@ def main(args=None):
                 sys.stderr.write('\nStarting pdb:\n')
                 pdb.post_mortem(exc_info[2])
             else:
+                v = exc_info[1]
                 if isinstance(v, (zc.buildout.UserError,
                                   distutils.errors.DistutilsError
                                   )

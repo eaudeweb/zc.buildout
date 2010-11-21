@@ -36,6 +36,16 @@ if sys.platform == 'win32':
 else:
     quote = str
 
+# Utility to make a binary variable, used like the b'' literal
+# b('foo') will return str undet Python 2 and bytes under Python 3.
+if sys.version < '3':
+    def b(x):
+        return x
+else:
+    import codecs
+    def b(x):
+        return codecs.latin_1_encode(x)[0]
+
 # Detect https://bugs.launchpad.net/virtualenv/+bug/572545 .
 has_broken_dash_S = subprocess.call(
     [sys.executable, '-Sc', 'import pprint'])
@@ -107,7 +117,7 @@ try:
         raise ImportError
     import setuptools # A flag.  Sometimes pkg_resources is installed alone.
 except ImportError:
-    ez_code = urlopen(setup_source).read().replace(b'\r\n', b'\n')
+    ez_code = urlopen(setup_source).read().replace(b('\r\n'), b('\n'))
     ez = {}
     exec(ez_code, ez)
     setup_args = dict(to_dir='eggs', download_delay=0)

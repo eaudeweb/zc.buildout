@@ -35,6 +35,7 @@ import sys
 import tempfile
 import warnings
 import zc.buildout
+from zc.buildout.pycompat import b
 import zipimport
 
 _oprp = getattr(os.path, 'realpath', lambda path: path)
@@ -924,8 +925,8 @@ class Installer:
                 if dist is None:
                     try:
                         dist = best[req.key] = env.best_match(req, ws)
-                    except pkg_resources.VersionConflict as err:
-                        raise VersionConflict(err, ws)
+                    except pkg_resources.VersionConflict:
+                        raise VersionConflict(sys.exc_info()[1], ws)
                     if dist is None or (
                         dist.location in self._site_packages and not
                         self.allow_site_package_egg(dist.project_name)):
@@ -1459,7 +1460,7 @@ def _write_script(full_name, contents, logged_type):
     if changed:
         open(script_name, 'w').write(contents)
         try:
-            os.chmod(script_name, 0o755)
+            os.chmod(script_name, 493) #Octal: 755
         except (AttributeError, os.error):
             pass
         logger.info("Generated %s %r.", logged_type, full_name)
@@ -1591,7 +1592,7 @@ def _get_module_file(executable, name, silent=False):
         return None
     # else: ...
     res = stdout.strip()
-    if res.endswith(b'.pyc') or res.endswith(b'.pyo'):
+    if res.endswith(b('.pyc')) or res.endswith(b('.pyo')):
         raise RuntimeError('Cannot find uncompiled version of %s' % (name,))
     if not os.path.exists(res):
         raise RuntimeError(
