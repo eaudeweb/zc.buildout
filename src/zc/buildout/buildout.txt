@@ -808,8 +808,7 @@ allow us to see interactions with the buildout:
     ...         self.options = options
     ...
     ...     def install(self):
-    ...         items = self.options.items()
-    ...         items.sort()
+    ...         items = sorted(self.options.items())
     ...         for option, value in items:
     ...             print(option, value)
     ...         return ()

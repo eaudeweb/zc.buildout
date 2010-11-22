@@ -1274,7 +1274,6 @@ class Options(MutableMapping):
 
     def __setitem__(self, option, value):
         if not isinstance(value, str):
-            import pdb;pdb.set_trace()
             raise TypeError('Option values must be strings', value)
         self._data[option] = value
 

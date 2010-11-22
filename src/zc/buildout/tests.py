@@ -3773,16 +3773,45 @@ extdemo_c = """
 
 static PyMethodDef methods[] = {{NULL}};
 
+#if PY_MAJOR_VERSION >= 3
+  static struct PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT,
+    "extdemo",
+    "",
+    -1,
+    methods,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+  };
+#endif
+
+#ifndef PyInt_FromLong
+   #define PyInt_FromLong PyLong_FromLong
+#endif
+
 PyMODINIT_FUNC
 initextdemo(void)
 {
     PyObject *m;
+
+#if PY_MAJOR_VERSION >= 3
+    m = PyModule_Create(&moduledef);
+#else
     m = Py_InitModule3("extdemo", methods, "");
+#endif
+
 #ifdef TWO
     PyModule_AddObject(m, "val", PyInt_FromLong(2));
 #else
     PyModule_AddObject(m, "val", PyInt_FromLong(EXTDEMO));
 #endif
+
+#if PY_MAJOR_VERSION >= 3
+    return m;
+#endif
+
 }
 """
 

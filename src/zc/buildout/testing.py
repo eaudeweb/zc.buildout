@@ -463,7 +463,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_header('Content-Length', str(len(out)))
             self.send_header('Content-Type', 'text/html')
             self.end_headers()
-            self.wfile.write(out)
+            self.wfile.write(b(out))
             return
 
         self.send_response(200)
@@ -492,7 +492,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_header('Content-Type', 'text/html')
         self.end_headers()
 
-        self.wfile.write(out)
+        self.wfile.write(b(out))
 
     def log_request(self, code):
         if self.__server.__log:
