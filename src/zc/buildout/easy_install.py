@@ -1547,7 +1547,7 @@ if len(sys.argv) > 1:
         if _opt == '-i':
             _interactive = True
         elif _opt == '-c':
-            exec _val
+            exec(_val)
         elif _opt == '-m':
             sys.argv[1:] = _args
             _args = []

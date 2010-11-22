@@ -3704,7 +3704,7 @@ def _write_eggrecipedemo(tmp, minor_version, suffix=''):
         tmp, 'eggrecipedemo.py',
         'import eggrecipedemoneeded\n'
         'x=%s\n'
-        'def main(): print(x, eggrecipedemoneeded).y\n'
+        'def main(): print(x, eggrecipedemoneeded.y)\n'
         % minor_version)
     write(
         tmp, 'setup.py',

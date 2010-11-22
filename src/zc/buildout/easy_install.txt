@@ -129,7 +129,7 @@ Let's make a directory and install the demo egg to it, using the demo:
     >>> ws = zc.buildout.easy_install.install(
     ...     ['demo==0.2'], dest,
     ...     links=[link_server], index=link_server+'index/')
-
+    
 We requested version 0.2 of the demo distribution to be installed into
 the destination server.  We specified that we should search for links
 on the link server and that we should use the (empty) link server
@@ -313,13 +313,11 @@ we'll get an error:
     >>> import logging
     >>> logging.getLogger('zc.buildout.easy_install').propagate = False
 
-    >>> ws = zc.buildout.easy_install.install(
-    ...     ['demo >0.2'], dest, links=[link_server],
-    ...     index=link_server+'index/',
-    ...     versions = dict(demo='0.2', demoneeded='1.0'))
-    Traceback (most recent call last):
-    ...
-    IncompatibleVersionError: Bad version 0.2
+    >>> assertRaises(zc.buildout.easy_install.IncompatibleVersionError,
+    ...         zc.buildout.easy_install.install, 
+    ...         ['demo >0.2'], dest, links=[link_server],
+    ...         index=link_server+'index/',
+    ...         versions = dict(demo='0.2', demoneeded='1.0'))
 
     >>> print(handler)
     zc.buildout.easy_install DEBUG
@@ -362,12 +360,10 @@ We can request that we get an error if versions are picked:
 
 (The old setting is returned.)
 
-    >>> ws = zc.buildout.easy_install.install(
+    >>> assertRaises(zc.buildout.UserError, 
+    ...     zc.buildout.easy_install.install,
     ...     ['demo'], dest, links=[link_server], index=link_server+'index/',
     ...     )
-    Traceback (most recent call last):
-    ...
-    UserError: Picked: demo = 0.3
 
     >>> zc.buildout.easy_install.allow_picked_versions(True)
     False
@@ -455,13 +451,10 @@ changing the default value returns the previous value.
     >>> zc.buildout.easy_install.clear_index_cache()
     >>> rmdir(example_dest)
     >>> example_dest = tmpdir('site-packages-example-install')
-    >>> workingset = zc.buildout.easy_install.install(
+    >>> assertRaises(zc.buildout.easy_install.MissingDistribution,
+    ...     zc.buildout.easy_install.install,
     ...     ['demoneeded'], example_dest, links=[], executable=py_path,
     ...     index=None)
-    Traceback (most recent call last):
-        ...
-    MissingDistribution: Couldn't find a distribution for 'demoneeded'.
-    >>> zc.buildout.easy_install.clear_index_cache()
 
 Now we'll reset the default.
 
@@ -494,7 +487,7 @@ from it.
 
     >>> get(link_server2 + 'enable_server_logging')
     GET 200 /enable_server_logging
-    ''
+    b''
 
 Now we can create an egg that specifies that its dependencies are
 found on this server.
@@ -764,7 +757,7 @@ the path set:
             if _opt == '-i':
                 _interactive = True
             elif _opt == '-c':
-                exec _val
+                exec(_val)
             elif _opt == '-m':
                 sys.argv[1:] = _args
                 _args = []
@@ -786,7 +779,7 @@ If invoked with a script name and arguments, it will run that script, instead.
     >>> write('ascript', '''
     ... "demo doc"
     ... print(sys.argv)
-    ... print(__name__, __file__, __doc__)
+    ... print((__name__, __file__, __doc__))
     ... ''')
     >>> bprint(system(join(bin, 'py')+' ascript a b c'), )
     ['ascript', 'a', 'b', 'c']
@@ -979,7 +972,7 @@ We specified an interpreter and its paths are adjusted too:
             if _opt == '-i':
                 _interactive = True
             elif _opt == '-c':
-                exec _val
+                exec(_val)
             elif _opt == '-m':
                 sys.argv[1:] = _args
                 _args = []
@@ -1065,7 +1058,8 @@ We didn't ask for any initialization, and we didn't ask to use the underlying
 sitecustomization, so sitecustomize.py is empty.
 
     >>> cat(sitecustomize_path)
-
+    <BLANKLINE>
+    
 The interpreter script is simple.  It puts the directory with the
 site.py and sitecustomize.py on the PYTHONPATH and (re)starts Python.
 
@@ -1110,11 +1104,11 @@ buildout inserts, in the simplest case.
 
 Here are some examples of the interpreter in use.
 
-    >>> print(call_py(interpreter_path, "print(16+26)"))
+    >>> bprint(call_py(interpreter_path, "print(16+26)"))
     42
-    <BLANKLINE>
+    
     >>> res = call_py(interpreter_path, "import sys; print(sys.path)")
-    >>> print(res) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    >>> bprint(res) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ['',
      '/interpreter/parts/interpreter',
      ...,
@@ -1144,9 +1138,8 @@ If you provide initialization, it goes in sitecustomize.py.
     >>> cat(sitecustomize_path)
     import os
     os.environ['FOO'] = 'bar baz bing shazam'
-    >>> print(call_py(interpreter_path, "import os; print(os.environ['FOO'])"))
+    >>> bprint(call_py(interpreter_path, "import os; print(os.environ['FOO'])"))
     bar baz bing shazam
-    <BLANKLINE>
 
 If you use relative paths, this affects the interpreter and site.py.  (This is
 again the UNIX version; the Windows version uses subprocess instead of
@@ -1194,7 +1187,7 @@ paths join a base to a path, as with the use of this argument in the
 
 The paths resolve in practice as you would expect.
 
-    >>> print(call_py(interpreter_path,
+    >>> bprint(call_py(interpreter_path,
     ...               "import sys, pprint; pprint.pprint(sys.path)"))
     ... # doctest: +ELLIPSIS
     ['',
@@ -1202,7 +1195,6 @@ The paths resolve in practice as you would expect.
      ...,
      '/interpreter/eggs/demo-0.3-pyN.N.egg',
      '/interpreter/eggs/demoneeded-1.1-pyN.N.egg']
-    <BLANKLINE>
 
 The ``extra_paths`` argument affects the path in site.py.  Notice that
 /interpreter/other is added after the eggs.
@@ -1224,7 +1216,7 @@ The ``extra_paths`` argument affects the path in site.py.  Notice that
             '/interpreter/other'
             ]...
 
-    >>> print(call_py(interpreter_path,
+    >>> bprint(call_py(interpreter_path,
     ...               "import sys, pprint; pprint.pprint(sys.path)"))
     ... # doctest: +ELLIPSIS
     ['',
@@ -1233,7 +1225,6 @@ The ``extra_paths`` argument affects the path in site.py.  Notice that
      '/interpreter/eggs/demo-0.3-pyN.N.egg',
      '/interpreter/eggs/demoneeded-1.1-pyN.N.egg',
      '/interpreter/other']
-    <BLANKLINE>
 
 The ``sitepackage_safe_scripts`` function: using site-packages
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1306,14 +1297,13 @@ this package give the feature a more thorough workout, but this should
 give you an idea of the feature.
 
     >>> res = call_py(interpreter_path, "import sys; print(sys.path)")
-    >>> print(res) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    >>> bprint(res) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ['',
      '/interpreter/parts/interpreter',
      ...,
      '/interpreter/eggs/demo-0.3-py2.4.egg',
      '/interpreter/eggs/demoneeded-1.1-py2.4.egg',
      ...]
-    <BLANKLINE>
 
 The clean_paths gathered earlier is a subset of this full list of paths.
 
@@ -1376,7 +1366,7 @@ call to another text fixture to create.
     <BLANKLINE>
     def original_addsitepackages(known_paths):...
 
-    >>> print(call_py(interpreter_path, "import sys; print(sys.path)"))
+    >>> bprint(call_py(interpreter_path, "import sys; print(sys.path)"))
     ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ['',
      '/interpreter/parts/interpreter',
@@ -1441,7 +1431,7 @@ at that result.
     <BLANKLINE>
     def original_addsitepackages(known_paths):...
 
-    >>> print(call_py(interpreter_path, "import sys; print(sys.path)"))
+    >>> bprint(call_py(interpreter_path, "import sys; print(sys.path)"))
     ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ['',
      '/interpreter/parts/interpreter',
@@ -1525,7 +1515,6 @@ The demo script runs the entry point defined in the demo egg:
     ...     demo_call = '"%s"' % demo_call
     >>> bprint(system(demo_call))
     3 1
-    <BLANKLINE>
 
 There are a few differences from the ``scripts`` function.  First, the
 ``reqs`` argument (an iterable of string requirements or entry point
@@ -1849,7 +1838,7 @@ enable server logging:
 
     >>> get(link_server+'enable_server_logging')
     GET 200 /enable_server_logging
-    ''
+    b''
 
 Now, if we install demo, and extdemo:
 

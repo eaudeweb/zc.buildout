@@ -44,6 +44,16 @@ is_win32 = sys.platform == 'win32'
 setuptools_location = pkg_resources.working_set.find(
     pkg_resources.Requirement.parse('setuptools')).location
 
+def assertRaises(eclass, method, *args, **kw):
+    try:
+        method(*args, **kw)
+    except:
+        e = sys.exc_info()[1]
+        if not isinstance(e, eclass):
+            raise
+        return
+    raise Exception("Expected exception %s not raised" % str(eclass))
+    
 def cat(dir, *names):
     path = os.path.join(dir, *names)
     if (not os.path.exists(path)
@@ -406,6 +416,7 @@ def buildoutSetUp(test):
         wait_until = wait_until,
         make_py = make_py,
         bprint = zc.buildout.pycompat.bprint,
+        assertRaises = assertRaises,
         ))
 
 def buildoutTearDown(test):
@@ -458,12 +469,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
             ):
             self.send_response(404, 'Not Found')
             #self.send_response(200)
-            out = '<html><body>Not Found</body></html>'
+            out = b('<html><body>Not Found</body></html>')
             #out = '\n'.join(self.tree, self.path, path)
             self.send_header('Content-Length', str(len(out)))
             self.send_header('Content-Type', 'text/html')
             self.end_headers()
-            self.wfile.write(b(out))
+            self.wfile.write(out)
             return
 
         self.send_response(200)
@@ -476,7 +487,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     name += '/'
                 out.append('<a href="%s">%s</a><br>\n' % (name, name))
             out.append('</body></html>\n')
-            out = ''.join(out)
+            out = b(''.join(out))
             self.send_header('Content-Length', str(len(out)))
             self.send_header('Content-Type', 'text/html')
         else:
@@ -492,7 +503,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_header('Content-Type', 'text/html')
         self.end_headers()
 
-        self.wfile.write(b(out))
+        self.wfile.write(out)
 
     def log_request(self, code):
         if self.__server.__log:
