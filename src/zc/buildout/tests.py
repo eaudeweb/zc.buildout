@@ -23,6 +23,7 @@ import unittest
 import zc.buildout.easy_install
 import zc.buildout.testing
 import zc.buildout.testselectingpython
+from zc.buildout.pycompat import b
 import zipfile
 
 os_path_sep = os.path.sep
@@ -2840,11 +2841,14 @@ We'll create a wacky buildout extension that is just another name for http:
     >>> src = tmpdir('src')
     >>> write(src, 'wacky_handler.py',
     ... '''
-    ... import urllib2
-    ... class Wacky(urllib2.HTTPHandler):
-    ...     wacky_open = urllib2.HTTPHandler.http_open
+    ... try:
+    ...     from urllib2 as request
+    ... except ImportError:
+    ...     from urllib import request
+    ... class Wacky(request.HTTPHandler):
+    ...     wacky_open = request.HTTPHandler.http_open
     ... def install(buildout=None):
-    ...     urllib2.install_opener(urllib2.build_opener(Wacky))
+    ...     request.install_opener(request.build_opener(Wacky))
     ... ''')
     >>> write(src, 'setup.py',
     ... '''
@@ -3870,8 +3874,8 @@ def makeNewRelease(project, ws, dest, version='99.99'):
         zip = zipfile.ZipFile(dest, 'a')
         zip.writestr(
             'EGG-INFO/PKG-INFO',
-            zip.read('EGG-INFO/PKG-INFO').replace("Version: %s" % oldver,
-                                                  "Version: %s" % version)
+            zip.read('EGG-INFO/PKG-INFO').replace(b("Version: %s" % oldver),
+                                                  b("Version: %s" % version))
             )
         zip.close()
     else:

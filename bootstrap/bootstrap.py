@@ -21,6 +21,12 @@ use the -c option to specify an alternate configuration file.
 import os, shutil, sys, tempfile, textwrap, urllib, urllib.request, urllib.error, urllib.parse, subprocess
 from optparse import OptionParser
 
+try:
+    from imp import reload
+except ImportError:
+    # Python 2, do nothing
+    pass
+
 if sys.platform == 'win32':
     def quote(c):
         if ' ' in c:
@@ -34,11 +40,11 @@ else:
 stdout, stderr = subprocess.Popen(
     [sys.executable, '-Sc',
      'try:\n'
-     '    import ConfigParser\n'
+     '    import pprint\n'
      'except ImportError:\n'
-     '    print 1\n'
+     '    print(1)\n'
      'else:\n'
-     '    print 0\n'],
+     '    print(0)\n'],
     stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
 has_broken_dash_S = bool(int(stdout.strip()))
 
@@ -145,7 +151,7 @@ else:
     eggs_dir = tempfile.mkdtemp()
 
 if options.setup_source is None:
-    if options.use_distribute:
+    if options.use_distribute or sys.version_info > (3,):
         options.setup_source = distribute_source
     else:
         options.setup_source = setuptools_source
@@ -161,7 +167,11 @@ try:
         raise ImportError
 except ImportError:
     ez_code = urllib.request.urlopen(
-        options.setup_source).read().replace('\r\n', '\n')
+        options.setup_source).read()
+    if not isinstance(ez_code, str):
+        # In Python 3 it's bytes, convert to str:
+        ez_code = ez_code.decode()
+    ez_code.replace('\r\n', '\n')
     ez = {}
     exec(ez_code, ez)
     setup_args = dict(to_dir=eggs_dir, download_delay=0)
