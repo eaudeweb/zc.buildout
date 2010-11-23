@@ -179,6 +179,11 @@ except ImportError:
         setup_args['download_base'] = options.download_base
     if options.use_distribute:
         setup_args['no_fake'] = True
+    # XXX !!! This like is here, specifically for me, to avoid some bugs in 
+    # Distribute 0.6.14 under Python 3. It will break the tests for everyone
+    # else, and should be removed once Distribute 0.6.15 is released, which
+    # hopefully is once zc.buildout works under Python 3.
+    setup_args['download_base'] = "file:///home/projects/zc.buildout/"
     ez['use_setuptools'](**setup_args)
     if 'pkg_resources' in sys.modules:
         reload(sys.modules['pkg_resources'])
