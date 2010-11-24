@@ -1613,7 +1613,6 @@ When the buildout is run the service will be installed
     Uninstalling debug.
     Installing service.
     chkconfig --add /path/to/script
-    <BLANKLINE>
 
 The service has been installed. If the buildout is run again with no
 changes, the service shouldn't be changed.
@@ -1621,7 +1620,6 @@ changes, the service shouldn't be changed.
     >>> bprint(system(buildout))
     Develop: '/sample-buildout/recipes'
     Updating service.
-    <BLANKLINE>
 
 Now we change the service part to trigger uninstallation and
 re-installation.
@@ -1644,7 +1642,6 @@ re-installation.
     chkconfig --del /path/to/script
     Installing service.
     chkconfig --add /path/to/a/different/script
-    <BLANKLINE>
 
 Now we remove the service part, and add another part.
 
@@ -1665,7 +1662,6 @@ Now we remove the service part, and add another part.
     chkconfig --del /path/to/a/different/script
     Installing debug.
     recipe recipes:debug
-    <BLANKLINE>
 
 Uninstall recipes don't have to take care of removing all the files
 and directories created by the part. This is still done automatically,
@@ -1732,7 +1728,6 @@ Run the buildout to install the part.
     dir: Creating directory my_directory
     Installing debug.
     recipe recipes:debug
-    <BLANKLINE>
 
 Now we remove the part from the configuration file.
 
@@ -1756,7 +1751,6 @@ is run before the directory is deleted.
     backing up directory /sample-buildout/my_directory of size 0
     Updating debug.
     recipe recipes:debug
-    <BLANKLINE>
 
 Now we will return the registration to normal for the benefit of the
 rest of the examples.

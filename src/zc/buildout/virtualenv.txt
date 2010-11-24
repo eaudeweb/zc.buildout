@@ -73,9 +73,9 @@ first.
     ... argv = new_argv
     ... '''
     >>> for line in py_lines:
-    ...     py_file.write(line)
+    ...     written = py_file.write(line)
     ...     if line.startswith('environ = os.environ.copy()'):
-    ...         py_file.write(extra)
+    ...         written = py_file.write(extra)
     ...         print('Rewritten.')
     ... 
     Rewritten.
@@ -83,7 +83,7 @@ first.
     >>> sitecustomize_path = join(os.path.dirname(site_packages_path),
     ...                           'parts', 'py', 'sitecustomize.py')
     >>> sitecustomize_file = open(sitecustomize_path, 'a')
-    >>> sitecustomize_file.write('''
+    >>> written = sitecustomize_file.write('''
     ... import os, sys
     ... sys.executable = %r
     ... if 'BROKEN_DASH_S' in os.environ:
@@ -99,7 +99,7 @@ first.
     ...                 # right errors when the fixes are absent, and
     ...                 # works well enough when the fixes are present.
     ...                 klass.site = sys.modules.pop('site')
-    ...             if fullname == 'ConfigParser':
+    ...             if fullname == 'pprint':
     ...                 raise ImportError(fullname)
     ...             elif fullname == 'site':
     ...                 # Keep the site module from being processed twice.
@@ -114,18 +114,19 @@ first.
     ...     sys.meta_path.append(ImportHook)
     ... ''' % (py_path,))
     >>> sitecustomize_file.close()
-    >>> print(call_py(
+    >>> bprint(call_py(
     ...     _safe_arg(py_path),
-    ...     "import ConfigParser"))
+    ...     "import pprint"))
     <BLANKLINE>
-    >>> print('X'); print(call_py(
+    
+    >>> bprint('X'); bprint(call_py(
     ...     _safe_arg(py_path),
-    ...     "import ConfigParser",
+    ...     "import pprint",
     ...     '-S')) # doctest: +ELLIPSIS
     X...Traceback (most recent call last):
       ...
-    ImportError: No module named ConfigParser
-    <BLANKLINE>
+    ImportError: No module named pprint
+    
     >>> from zc.buildout.easy_install import _has_broken_dash_S
     >>> _has_broken_dash_S(py_path)
     True
@@ -157,7 +158,7 @@ First, let's try running bootstrap.
     ... parts =
     ... ''')
     >>> write('bootstrap.py', open(bootstrap_py).read())
-    >>> print('X'); bprint(system(
+    >>> bprint('X'); bprint(system(
     ...     _safe_arg(py_path)+' '+
     ...     'bootstrap.py')); print('X') # doctest: +ELLIPSIS
     X...
@@ -238,6 +239,7 @@ new features, you can use the "-s" option to squelch the warnings.
 A lower verbosity (one or more -q options) also quiets the warning.
 
     >>> bprint(system(buildout + ' -q'))
+    <BLANKLINE>
 
 Notice that, as we saw before with bin/buildout, the generated scripts
 are old-style, because the new-style feature gracefully degrades to the
