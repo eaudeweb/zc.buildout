@@ -273,7 +273,7 @@ Last, the -c option needs to work on bootstrap.py::
 
     >>> conf_file = os.path.join(sample_buildout, 'other.cfg')
     >>> f = open(conf_file, 'w')
-    >>> f.write('[buildout]\nparts=\n\n')
+    >>> written = f.write('[buildout]\nparts=\n\n')
     >>> f.close()
     >>> print('X'); bprint(system(
     ...     zc.buildout.easy_install._safe_arg(sys.executable)+' '+
@@ -300,7 +300,6 @@ that we will also use to test some other bootstrap options.
     ... # doctest: +ELLIPSIS
     {'download_delay': 0,
      'to_dir': '...'}
-    <BLANKLINE>
 
 You can also pass a download-cache, and a place in which eggs should be stored
 (they are normally stored in a temporary directory).
@@ -313,7 +312,6 @@ You can also pass a download-cache, and a place in which eggs should be stored
     {'download_base': '/sample/download-cache/',
      'download_delay': 0,
      'to_dir': '/sample/eggs'}
-    <BLANKLINE>
 
 Here's the entire help text.
 

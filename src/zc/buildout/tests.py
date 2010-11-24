@@ -107,17 +107,20 @@ Asking for a section that doesn't exist, yields a missing section error:
     >>> os.chdir(sample_buildout)
     >>> import zc.buildout.buildout
     >>> buildout = zc.buildout.buildout.Buildout('buildout.cfg', [])
-    >>> buildout['eek']
-    Traceback (most recent call last):
-    ...
-    MissingSection: The referenced section, 'eek', was not defined.
+    >>> 
+    >>> try:
+    ...     buildout['eek']
+    ...     raise Exception("Expected zc.buildout.buildout.MissingSection exception not raised")
+    ... except zc.buildout.buildout.MissingSection:
+    ...     pass
 
 Asking for an option that doesn't exist, a MissingOption error is raised:
 
-    >>> buildout['buildout']['eek']
-    Traceback (most recent call last):
-    ...
-    MissingOption: Missing option: buildout:eek
+    >>> try:
+    ...     buildout['buildout']['eek']
+    ...     raise Exception("Expected zc.buildout.buildout.MissingOption exception not raised")
+    ... except zc.buildout.buildout.MissingOption:
+    ...     pass
 
 It is an error to create a variable-reference cycle:
 
@@ -782,6 +785,7 @@ Remove the other:
     ... parts =
     ... """)
     >>> bprint(system(join('bin', 'buildout')))
+    <BLANKLINE>
 
 All gone
 
@@ -879,7 +883,8 @@ We do not get a warning, but we do get setuptools included in the working set:
     ...     ])]
     ['foox', 'setuptools']
 
-    >>> print(handler, )
+    >>> print(handler)
+    <BLANKLINE>
 
 We get the same behavior if the it is a depedency that uses a
 namespace package.
@@ -957,7 +962,6 @@ existing setup.cfg:
     -  extdemo.egg-link
 
     >>> cat(extdemo, "setup.cfg")
-    <BLANKLINE>
     # sampe cfg file
     <BLANKLINE>
     [foo]
@@ -1186,9 +1190,9 @@ because of the missing target file.
 
 def o_option_sets_offline():
     """
-    >>> bprint(system(join(sample_buildout, 'bin', 'buildout')+' -vvo'), )
+    >>> print('X');bprint(system(join(sample_buildout, 'bin', 'buildout')+' -vvo'), )
     ... # doctest: +ELLIPSIS
-    <BLANKLINE>
+    X
     ...
     offline = true
     ...
@@ -1497,7 +1501,7 @@ def whine_about_unused_options():
 def abnormal_exit():
     """
 People sometimes hit control-c while running a builout. We need to make
-sure that the installed database Isn't corrupted.  To test this, we'll create
+sure that the installed database isn't corrupted.  To test this, we'll create
 some evil recipes that exit uncleanly:
 
     >>> mkdir('recipes')
@@ -1853,7 +1857,7 @@ package, so this demonstrates that our Python does in fact have demo
 version 0.3 and demoneeded version 1.1.
 
     >>> py_path = make_py_with_system_install(make_py, sample_eggs)
-    >>> print(call_py(
+    >>> bprint(call_py(
     ...     py_path,
     ...     "import tellmy.version; print(tellmy.version.__version__)"))
     1.1
@@ -1890,11 +1894,10 @@ To demonstrate this, we will create three packages: tellmy.version 1.0,
 tellmy.version 1.1, and tellmy.fortune 1.0.  tellmy.version 1.1 is installed.
 
     >>> py_path = make_py_with_system_install(make_py, sample_eggs)
-    >>> print(call_py(
+    >>> bprint(call_py(
     ...     py_path,
     ...     "import tellmy.version; print(tellmy.version.__version__)"))
     1.1
-    <BLANKLINE>
 
 Now we will create a buildout that creates a script and a faux-Python script.
 We want to see that both can successfully import the specified versions of
@@ -1936,7 +1939,6 @@ tellmy.version and tellmy.fortune.
     Got demoneeded 1.2c1.
     Generated script '/sample-buildout/bin/demo'.
     Generated interpreter '/sample-buildout/bin/py'.
-    <BLANKLINE>
 
 Finally, we are ready to see if it worked.  Prior to the bug fix that
 this tests, the results of both calls below was the following::
@@ -1951,7 +1953,7 @@ In other words, we got the site-packages version of tellmy.version, and
 we could not import tellmy.fortune at all.  The following are the correct
 results for the interpreter and for the script.
 
-    >>> print(call_py(
+    >>> bprint(call_py(
     ...     join('bin', 'py'),
     ...     "import tellmy.version; " +
     ...     "print(tellmy.version.__version__); " +
@@ -1964,7 +1966,6 @@ results for the interpreter and for the script.
     1.0
     1.0
     4 2
-    <BLANKLINE>
     """
 
 def handle_sys_path_version_hack():
@@ -2016,11 +2017,10 @@ these unpleasant tricks, and a Python that has an older version installed.
     ...             zc.buildout.testing.sys_install(tmp, site_packages_path)
     ...     finally:
     ...         shutil.rmtree(tmp)
-    >>> print(call_py(
+    >>> bprint(call_py(
     ...     py_path,
     ...     "import tellmy.version; print(tellmy.version.__version__)"))
     1.0
-    <BLANKLINE>
     >>> write('buildout.cfg',
     ... '''
     ... [buildout]
@@ -2060,7 +2060,6 @@ Now the install works correctly, as seen here.
     Installing eggs.
     Getting distribution for 'tellmy.version==1.1'.
     Got tellmy.version 1.1.
-    <BLANKLINE>
 
     """
 
@@ -2094,12 +2093,10 @@ reversing the default).
     >>> zc.buildout.easy_install.clear_index_cache()
     >>> rmdir(example_dest)
     >>> example_dest = tmpdir('site-packages-example-install')
-    >>> workingset = zc.buildout.easy_install.install(
+    >>> assertRaises(zc.buildout.easy_install.MissingDistribution,
+    ...     zc.buildout.easy_install.install,
     ...     ['demoneeded'], example_dest, links=[], executable=py_path,
     ...     index=None, include_site_packages=False)
-    Traceback (most recent call last):
-        ...
-    MissingDistribution: Couldn't find a distribution for 'demoneeded'.
 
 That's a failure, as expected.
 
@@ -2135,14 +2132,12 @@ the special care we have taken to exclude it.
     >>> mkdir(example_dest, 'develop-eggs')
     >>> write(example_dest, 'develop-eggs', 'demoneeded.egg-link',
     ...       site_packages_path)
-    >>> workingset = zc.buildout.easy_install.install(
+    >>> assertRaises(zc.buildout.easy_install.MissingDistribution,
+    ...     zc.buildout.easy_install.install,
     ...     ['demoneeded'], example_dest, links=[],
     ...     path=[join(example_dest, 'develop-eggs')],
     ...     executable=py_path,
     ...     index=None, include_site_packages=False)
-    Traceback (most recent call last):
-        ...
-    MissingDistribution: Couldn't find a distribution for 'demoneeded'.
 
 The MissingDistribution error shows that buildout correctly excluded the
 "site-packages" source even though it was indirectly included in the path
@@ -2231,26 +2226,22 @@ But now let's try again with 'demoneeded' not allowed.
     >>> zc.buildout.easy_install.clear_index_cache()
     >>> rmdir(example_dest)
     >>> example_dest = tmpdir('site-packages-example-install')
-    >>> workingset = zc.buildout.easy_install.install(
+    >>> assertRaises(zc.buildout.easy_install.MissingDistribution,
+    ...     zc.buildout.easy_install.install,
     ...     ['demoneeded'], example_dest, links=[], executable=py_path,
     ...     index=None,
     ...     allowed_eggs_from_site_packages=['demo'])
-    Traceback (most recent call last):
-        ...
-    MissingDistribution: Couldn't find a distribution for 'demoneeded'.
 
 Here's the same, but with an empty list.
 
     >>> zc.buildout.easy_install.clear_index_cache()
     >>> rmdir(example_dest)
     >>> example_dest = tmpdir('site-packages-example-install')
-    >>> workingset = zc.buildout.easy_install.install(
+    >>> assertRaises(zc.buildout.easy_install.MissingDistribution,
+    ...     zc.buildout.easy_install.install,
     ...     ['demoneeded'], example_dest, links=[], executable=py_path,
     ...     index=None,
     ...     allowed_eggs_from_site_packages=[])
-    Traceback (most recent call last):
-        ...
-    MissingDistribution: Couldn't find a distribution for 'demoneeded'.
 
 Of course, this doesn't stop us from getting a package from elsewhere.  Here,
 we add a link server.
@@ -2274,13 +2265,11 @@ include-site-packages.
     >>> zc.buildout.easy_install.clear_index_cache()
     >>> rmdir(example_dest)
     >>> example_dest = tmpdir('site-packages-example-install')
-    >>> workingset = zc.buildout.easy_install.install(
+    >>> assertRaises(zc.buildout.easy_install.MissingDistribution,
+    ...     zc.buildout.easy_install.install,
     ...     ['demoneeded'], example_dest, links=[], executable=py_path,
     ...     index=None, include_site_packages=False,
     ...     allowed_eggs_from_site_packages=['demoneeded'])
-    Traceback (most recent call last):
-        ...
-    MissingDistribution: Couldn't find a distribution for 'demoneeded'.
 
     """
 
@@ -2345,12 +2334,11 @@ Now we will look at the paths in the site.py we generated.  Notice that the
 site-packages are at the end.  They were not before this bugfix.
 
     >>> test = 'import pprint, sys; pprint.pprint(sys.path[-4:])'
-    >>> print(call_py(join(interpreter_bin_dir, 'py'), test))
+    >>> bprint(call_py(join(interpreter_bin_dir, 'py'), test))
     ['/interpreter/eggs/other-1.0-pyN.N.egg',
      '/interpreter/eggs/demoneeded-1.1-pyN.N.egg',
      '/executable_buildout/eggs/setuptools-0.0-pyN.N.egg',
      '/executable_buildout/site-packages']
-    <BLANKLINE>
     """
 
 def subprocesses_have_same_environment_by_default():
@@ -2385,13 +2373,11 @@ This works for the script.
 
     >>> bprint(system(join(interpreter_bin_dir, 'demo')))
     3
-    <BLANKLINE>
 
 This also works for the generated interpreter.
 
-    >>> print(call_py(join(interpreter_bin_dir, 'py'), test))
+    >>> bprint(call_py(join(interpreter_bin_dir, 'py'), test))
     3
-    <BLANKLINE>
 
 If you have a PYTHONPATH in your environment, it will be honored, after
 the buildout-generated path.
@@ -2422,7 +2408,7 @@ have the desired eggs available.
 
 This also works for the generated interpreter, with identical results.
 
-    >>> print(call_py(join(interpreter_bin_dir, 'py'), test), )
+    >>> bprint(call_py(join(interpreter_bin_dir, 'py'), test), )
     ... # doctest: +ELLIPSIS
     ['',
      '/interpreter/parts/interpreter',
@@ -2520,7 +2506,6 @@ Now, it is handled smoothly.
     Getting distribution for 'demoneeded==1.2c1'.
     Got demoneeded 1.2c1.
     Installing dummy.
-    <BLANKLINE>
 
 Here's the same story with a namespace package, which has some additional
 complications behind the scenes.  First, a recipe, in the "tellmy" namespace.
@@ -2581,7 +2566,6 @@ Now we actually run the buildout.
     Develop: '/sample-buildout/recipes'
     Uninstalling dummy.
     Installing dummy.
-    <BLANKLINE>
 
     """
 
@@ -2593,8 +2577,8 @@ if sys.version_info > (2, 4):
         ...     p = subprocess.Popen(s, stdin=subprocess.PIPE,
         ...                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         ...     p.stdin.close()
-        ...     print(p.stdout.read())
-        ...     print('Exit:', bool(p.wait()))
+        ...     bprint(p.stdout.read())
+        ...     bprint('Exit: ' + str(bool(p.wait())))
 
         >>> call(buildout)
         <BLANKLINE>
@@ -2842,7 +2826,7 @@ We'll create a wacky buildout extension that is just another name for http:
     >>> write(src, 'wacky_handler.py',
     ... '''
     ... try:
-    ...     from urllib2 as request
+    ...     import urllib2 as request
     ... except ImportError:
     ...     from urllib import request
     ... class Wacky(request.HTTPHandler):
@@ -3360,9 +3344,9 @@ def pyc_and_pyo_files_have_correct_paths():
 
     >>> write('t.py',
     ... '''
-    ... import eggrecipedemo, eggrecipedemoneeded
-    ... print(eggrecipedemo.main.func_code.co_filename)
-    ... print(eggrecipedemoneeded.f.func_code.co_filename)
+    ... import eggrecipedemo, eggrecipedemoneeded, sys
+    ... print(sys.modules[eggrecipedemo.main.__module__].__file__)
+    ... print(sys.modules[eggrecipedemoneeded.f.__module__].__file__)
     ... ''')
 
     >>> bprint(system(join('bin', 'py')+ ' t.py'), )
@@ -3389,7 +3373,7 @@ def dont_mess_with_standard_dirs_with_variable_refs():
     ... parts =
     ... ''' % globals())
     >>> bprint(system(buildout))
-
+    <BLANKLINE>
     """
 
 def expand_shell_patterns_in_develop_paths():
@@ -3462,7 +3446,7 @@ def make_sure_versions_dont_cancel_extras():
     """
     There was a bug that caused extras in requirements to be lost.
 
-    >>> open('setup.py', 'w').write('''
+    >>> written = open('setup.py', 'w').write('''
     ... from setuptools import setup
     ... setup(name='extraversiondemo', version='1.0',
     ...       url='x', author='x', author_email='x',

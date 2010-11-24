@@ -305,7 +305,7 @@ import sys,os;\
 p = sys.path[:];\
 import site;\
 sys.path[:] = p;\
-[sys.modules.pop(k) for k, v in sys.modules.items()\
+[sys.modules.pop(k) for k, v in list(sys.modules.items())\
  if hasattr(v, '__path__') and len(v.__path__)==1 and\
  not os.path.exists(os.path.join(v.__path__[0],'__init__.py'))];'''
 _easy_install_cmd = (
@@ -718,7 +718,6 @@ class Installer:
         return dist.clone(location=new_location)
 
     def _get_dist(self, requirement, ws, always_unzip):
-
         __doing__ = 'Getting distribution for %r.', str(requirement)
 
         # Maybe an existing dist is already the best dist that satisfies the
@@ -1827,7 +1826,7 @@ class VersionConflict(zc.buildout.UserError):
         self.err, self.ws = err, ws
 
     def __str__(self):
-        existing_dist, req = self.err
+        existing_dist, req = self.err.args
         result = ["There is a version conflict.",
                   "We already have: %s" % existing_dist,
                   ]

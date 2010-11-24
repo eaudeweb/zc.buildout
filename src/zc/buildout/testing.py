@@ -177,7 +177,7 @@ def find_python(version):
     if is_win32:
         e = '\Python%s%s\python.exe' % tuple(version.split('.'))
         if os.path.exists(e):
-            return e
+            return e.decode()
     else:
         cmd = 'python%s -c "import sys; print(sys.executable)"' % version
         p = subprocess.Popen(cmd,
@@ -191,7 +191,7 @@ def find_python(version):
         e = o.read().strip()
         o.close()
         if os.path.exists(e):
-            return e
+            return e.decode()
         cmd = 'python -c "import sys; print(\'%s.%s\' % sys.version_info[:2])"'
         p = subprocess.Popen(cmd,
                              shell=True,
@@ -216,7 +216,7 @@ def find_python(version):
             e = o.read().strip()
             o.close()
             if os.path.exists(e):
-                return e
+                return e.decode()
 
     raise ValueError(
         "Couldn't figure out the executable for Python %(version)s.\n"

@@ -51,7 +51,7 @@ We'll enable logging on the link server so we can see what's going on:
 
     >>> get(link_server+'enable_server_logging')
     GET 200 /enable_server_logging
-    ''
+    b''
 
 We also specified a download cache.
 
