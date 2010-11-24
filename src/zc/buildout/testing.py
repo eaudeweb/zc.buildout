@@ -417,6 +417,7 @@ def buildoutSetUp(test):
         make_py = make_py,
         bprint = zc.buildout.pycompat.bprint,
         assertRaises = assertRaises,
+        b = b,
         ))
 
 def buildoutTearDown(test):

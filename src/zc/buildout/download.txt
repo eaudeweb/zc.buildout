@@ -80,10 +80,10 @@ We can also have the downloaded file's MD5 sum checked:
 True
 >>> remove(path)
 
->>> download(server_url+'foo.txt',
+>>> import zc.buildout        
+>>> assertRaises(zc.buildout.download.ChecksumError,
+...          download, server_url+'foo.txt',
 ...          md5(b('The wrong text.')).hexdigest())
-Traceback (most recent call last):
-ChecksumError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
 
 The error message in the event of an MD5 checksum mismatch for a local file
 reads somewhat differently:
@@ -92,10 +92,9 @@ reads somewhat differently:
 ...               md5(b('This is a foo text.')).hexdigest())
 ('/sample_files/foo.txt', False)
 
->>> download(join(server_data, 'foo.txt'),
+>>> assertRaises(zc.buildout.download.ChecksumError,
+...          download, join(server_data, 'foo.txt'),
 ...          md5(b('The wrong text.')).hexdigest())
-Traceback (most recent call last):
-ChecksumError: MD5 checksum mismatch for local resource at '/sample_files/foo.txt'.
 
 Finally, we can download the file to a specified place in the file system:
 
@@ -112,9 +111,8 @@ False
 Trying to download a file in offline mode will result in an error:
 
 >>> download = Download(cache=None, offline=True)
->>> download(server_url+'foo.txt')
-Traceback (most recent call last):
-UserError: Couldn't download 'http://localhost/foo.txt' in offline mode.
+>>> assertRaises(zc.buildout.UserError,
+...     download, server_url+'foo.txt')
 
 As an exception to this rule, file system paths and URLs in the ``file``
 scheme will still work:
@@ -168,10 +166,8 @@ This is a foo text.
 If we specify an MD5 checksum for a file that is already in the cache, the
 cached copy's checksum will be verified:
 
->>> download(server_url+'foo.txt', md5(b('The wrong text.')).hexdigest())
-Traceback (most recent call last):
-ChecksumError: MD5 checksum mismatch for cached download
-               from 'http://localhost/foo.txt' at '/download-cache/foo.txt'
+>>> assertRaises(zc.buildout.download.ChecksumError,
+...     download, server_url+'foo.txt', md5(b('The wrong text.')).hexdigest())
 
 Trying to access another file at a different URL which has the same base name
 will result in the cached copy being used:
@@ -247,9 +243,8 @@ This is a foo text.
 
 However, resources with checksum mismatches will not be copied to the cache:
 
->>> download(server_url+'foo.txt', md5(b('The wrong text.')).hexdigest())
-Traceback (most recent call last):
-ChecksumError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
+>>> assertRaises(zc.buildout.download.ChecksumError,
+...     download, server_url+'foo.txt', md5(b('The wrong text.')).hexdigest())
 >>> ls(cache)
 
 >>> remove(path)
@@ -257,11 +252,8 @@ ChecksumError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
 Finally, let's see what happens if the download cache to be used doesn't exist
 as a directory in the file system yet:
 
->>> Download(cache=join(cache, 'non-existent'))(server_url+'foo.txt')
-Traceback (most recent call last):
-UserError: The directory:
-'/download-cache/non-existent'
-to be used as a download cache doesn't exist.
+>>> assertRaises(zc.buildout.UserError,
+...     Download(cache=join(cache, 'non-existent')), server_url+'foo.txt')
 
 Using namespace sub-directories of the download cache
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -337,7 +329,7 @@ checksum since we don't know which port the server happens to listen at when
 the test is run, so we don't actually know the full URL of the file. Let's
 check that the checksum actually belongs to the particular URL used:
 
->>> path.lower() == join(cache, md5(server_url+'foo.txt')).hexdigest()).lower()
+>>> path.lower() == join(cache, md5(b(server_url+'foo.txt')).hexdigest()).lower()
 True
 
 The cached copy is used when downloading the file again:
@@ -359,7 +351,7 @@ cache under a different name:
 /download-cache/537b6d73267f8f4447586989af8c470e
 >>> path == path2
 False
->>> path2.lower() == join(cache, md5(server_url+'other/foo.txt')).hexdigest()).lower()
+>>> path2.lower() == join(cache, md5(b(server_url+'other/foo.txt')).hexdigest()).lower()
 True
 >>> cat(path)
 This is a foo text.
@@ -414,8 +406,8 @@ Similarly, if the file is served but we're in offline mode, we'll fall back to
 using the cache:
 
 >>> write(server_data, 'foo.txt', 'The wrong text.')
->>> get(server_url+'foo.txt')
-'The wrong text.'
+>>> bprint(get(server_url+'foo.txt'))
+The wrong text.
 
 >>> offline_download = Download(cache=cache, offline=True, fallback=True)
 >>> path, is_temp = offline_download(server_url+'foo.txt')
@@ -439,9 +431,8 @@ When trying to download a resource whose checksum does not match, the cached
 copy will neither be used nor overwritten:
 
 >>> write(server_data, 'foo.txt', 'This is a foo text.')
->>> download(server_url+'foo.txt', md5(b('The wrong text.')).hexdigest())
-Traceback (most recent call last):
-ChecksumError: MD5 checksum mismatch downloading 'http://localhost/foo.txt'
+>>> assertRaises(zc.buildout.download.ChecksumError,
+...     download, server_url+'foo.txt', md5(b('The wrong text.')).hexdigest())
 >>> cat(cache, 'foo.txt')
 The wrong text.
 
@@ -530,9 +521,9 @@ MD5 checksum calculation needs to be reliable on all supported systems, which
 requires text files to be treated as binary to avoid implicit line-ending
 conversions:
 
->>> text = 'First line of text.\r\nSecond line.\r\n'
+>>> text = b('First line of text.\r\nSecond line.\r\n')
 >>> f = open(join(server_data, 'foo.txt'), 'wb')
->>> f.write(text)
+>>> written = f.write(text)
 >>> f.close()
 >>> path, is_temp = Download()(server_url+'foo.txt', md5(text).hexdigest())
 >>> remove(path)
