@@ -2701,7 +2701,8 @@ Note that there will be no installation database if there are no parts:
     ... """)
 
     >>> bprint(system(buildout+' buildout:installed=inst.cfg'), )
-
+    <BLANKLINE>
+    
     >>> ls(sample_buildout)
     -  b1.cfg
     -  b2.cfg

@@ -1618,7 +1618,7 @@ def _generate_sitecustomize(dest, executable, initialization='',
             real_sitecustomize = open(real_sitecustomize_path, 'r')
             sitecustomize.write(
                 '\n# The following is from\n# %s\n' %
-                (real_sitecustomize_path,))
+                (real_sitecustomize_path.decode(),))
             sitecustomize.write(real_sitecustomize.read())
             real_sitecustomize.close()
     sitecustomize.close()

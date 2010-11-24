@@ -176,7 +176,6 @@ custom Python.
 
     >>> cat(sample_buildout, 'parts', 'py', 'sitecustomize.py')
     ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
-    <BLANKLINE>
     import os
     os.environ['zc.recipe.egg'] = 'baLOOba'
     <BLANKLINE>
@@ -305,7 +304,6 @@ eggs are not found, even though the system Python provides them.
       Installing eggs.
       Getting distribution for 'demoneeded'.
     Error: Couldn't find a distribution for 'demoneeded'.
-    <BLANKLINE>
 
 We get an error if we specify anything but true or false:
 
@@ -327,7 +325,6 @@ We get an error if we specify anything but true or false:
       Getting section eggs.
       Initializing part eggs.
     Error: Invalid value for include-site-packages option: no
-    <BLANKLINE>
 
     """
 
@@ -365,7 +362,6 @@ correctly parse a single-line value.
 
     >>> bprint(system(buildout))
     Installing eggs.
-    <BLANKLINE>
 
 Specifying the egg exactly will work as well.  This shows we correctly
 parse a multi-line value.
@@ -392,7 +388,6 @@ parse a multi-line value.
     >>> bprint(system(buildout))
     Uninstalling eggs.
     Installing eggs.
-    <BLANKLINE>
 
 It will also work if we use a glob ("*" or "?").  (We won't show that here
 because we already tested it in

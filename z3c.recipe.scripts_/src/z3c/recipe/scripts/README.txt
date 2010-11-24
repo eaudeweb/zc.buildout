@@ -202,7 +202,6 @@ Here's an example of using the generated interpreter.
     ...              ' -c "import sys, pprint; pprint.pprint(sys.path[-2:])"'))
     ['/sample-buildout/eggs/demo-0.2-pyN.N.egg',
      '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg']
-    <BLANKLINE>
 
 Including site-packages and sitecustomize
 -----------------------------------------
@@ -281,7 +280,6 @@ Now executable_buildout/site-packages is included in sys.path.
      '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg',
      '/executable_buildout/eggs/setuptools-X-pyN.N.egg',
      '/executable_buildout/site-packages']
-    <BLANKLINE>
 
 If you set it to false, they are excluded.
 
@@ -313,7 +311,6 @@ If you set it to false, they are excluded.
      ...,
      '/sample-buildout/eggs/demo-0.2-pyN.N.egg',
      '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg']
-    <BLANKLINE>
 
 As described above, the allowed-eggs-from-site-packages option lets us
 control what site-packages eggs zc.buildout will allow to fulfill
@@ -489,7 +486,6 @@ into the sitecustomize.
 
     >>> cat(sample_buildout, 'parts', 'py', 'sitecustomize.py')
     ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
-    <BLANKLINE>
     # The following is from
     # /executable_buildout/parts/py/sitecustomize.py
     ...
@@ -499,7 +495,6 @@ into the sitecustomize.
     >>> bprint(system(join(sample_buildout, 'bin', 'py') +
     ...              ''' -c "import os; print(os.environ['zc.buildout'])"'''))
     foo bar baz shazam
-    <BLANKLINE>
 
 It also will be honored in the buildout section if it is not set locally.
 
@@ -525,7 +520,6 @@ It also will be honored in the buildout section if it is not set locally.
 
     >>> cat(sample_buildout, 'parts', 'py', 'sitecustomize.py')
     ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
-    <BLANKLINE>
     # The following is from
     # /executable_buildout/parts/py/sitecustomize.py
     ...
@@ -535,7 +529,6 @@ It also will be honored in the buildout section if it is not set locally.
     >>> bprint(system(join(sample_buildout, 'bin', 'py') +
     ...              ''' -c "import os; print(os.environ['zc.buildout'])"'''))
     foo bar baz shazam
-    <BLANKLINE>
 
 Options
 -------
@@ -584,7 +577,6 @@ Now let's put it in action.
     ...              ' -c "import sys, pprint; pprint.pprint(sys.path[-2:])"'))
     ['/sample-buildout/eggs/demo-0.2-pyN.N.egg',
      '/sample-buildout/eggs/demoneeded-1.2c1-pyN.N.egg']
-    <BLANKLINE>
     >>> bprint(system(join(sample_buildout, 'bin', 'python') +
     ...              ''' -c "import os; print(os.environ['zc.buildout'])"'''), )
     foo bar baz shazam
@@ -654,7 +646,6 @@ interpreter, so that you are not forced to use the name of the section.
     >>> bprint(system(join(sample_buildout, 'bin', 'python2') +
     ...              ' -c "print(42)"'))
     42
-    <BLANKLINE>
 
 The other options all identical to zc.recipe.egg.
 
