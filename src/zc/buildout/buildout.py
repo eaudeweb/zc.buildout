@@ -1294,6 +1294,11 @@ class Options(MutableMapping):
 
     def __iter__(self):
         return iter(self._raw)
+    
+    def __eq__(self, other):
+        if isinstance(other, Options):
+            return self._data == other._data
+        return dict(self) == other
 
     def keys(self):
         raw = self._raw
@@ -1497,7 +1502,8 @@ def _dir_hash(dir):
         hash.update((' '.join(dirnames)).encode())
         hash.update((' '.join(filenames)).encode())
         for name in filenames:
-            hash.update(open(os.path.join(dirpath, name)).read().encode())
+            hash.update(open(os.path.join(dirpath, name), 'rb').read())
+
     return str(base64.b64encode(hash.digest()).strip())
 
 def _dists_sig(dists):
