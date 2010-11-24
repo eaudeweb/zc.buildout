@@ -3780,7 +3780,11 @@ static PyMethodDef methods[] = {{NULL}};
 #endif
 
 PyMODINIT_FUNC
+#if PY_MAJOR_VERSION >= 3
+PyInit_extdemo(void)
+#else
 initextdemo(void)
+#endif
 {
     PyObject *m;
 

@@ -37,7 +37,7 @@ around the egg recipe:
     ...         print('Working set:')
     ...         for d in ws:
     ...             print(d)
-    ...         print('extra paths: ' + self.egg.extra_paths)
+    ...         print('extra paths: ' + str(self.egg.extra_paths))
     ...         return ()
     ...
     ...     update = install

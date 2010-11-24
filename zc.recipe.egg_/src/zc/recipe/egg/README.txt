@@ -225,7 +225,7 @@ the bits if the path added to reflect the eggs:
     ...     if 'demo' in p:
     ...         print(os.path.basename(p))
     ... 
-    ... """).replace('>>> ', '').replace('... ', ''), )
+    ... """).replace(b('>>> '), b('')).replace(b('... '), b('')), )
     ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     demo-0.2-py2.4.egg
     demoneeded-1.2c1-py2.4.egg
