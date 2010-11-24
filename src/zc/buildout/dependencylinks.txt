@@ -23,7 +23,7 @@ from it.
 
     >>> get(link_server2 + 'enable_server_logging')
     GET 200 /enable_server_logging
-    ''
+    b''
 
 Let's create a develop egg in our buildout that specifies
 dependency_links which point to the new server.
@@ -61,7 +61,6 @@ Now we can run the buildout.
     Installing eggs.
     Getting distribution for 'demoneeded'.
     Got demoneeded 1.2c1.
-    <BLANKLINE>
 
 Notice that the egg was retrieved from the logging server.
 
@@ -91,7 +90,6 @@ buildout to see where the egg comes from this time.
       Updating eggs.
       Getting distribution for 'demoneeded'.
     Error: Couldn't find a distribution for 'demoneeded'.
-    <BLANKLINE>
 
 Now it can't find the dependency since neither the buildout
 configuration nor setup specifies where to look.
@@ -116,7 +114,6 @@ to look for eggs.
     Installing eggs.
     Getting distribution for 'demoneeded'.
     Got demoneeded 1.2c1.
-    <BLANKLINE>
 
 This time the dependency egg was found on the server without logging
 configured.
@@ -139,7 +136,6 @@ specify different places to look for the dependency egg.
     Updating eggs.
     Getting distribution for 'demoneeded'.
     Got demoneeded 1.2c1.
-    <BLANKLINE>
 
 So when both setuptools and buildout specify places to search for
 eggs, the dependency_links takes precedence over find-links.
@@ -170,7 +166,6 @@ Here is an example of using this option to disable dependency_links.
     Updating eggs.
     Getting distribution for 'demoneeded'.
     Got demoneeded 1.2c1.
-    <BLANKLINE>
 
 Notice that this time the egg isn't downloaded from the logging server.
 
@@ -196,5 +191,4 @@ before. The dependency's are looked for first in the logging server.
     Updating eggs.
     Getting distribution for 'demoneeded'.
     Got demoneeded 1.2c1.
-    <BLANKLINE>
 

@@ -35,6 +35,7 @@ import shutil
 import tempfile
 
 import zc.buildout
+from zc.buildout.pycompat import b
 
 
 class URLOpener(FancyURLopener):
@@ -199,7 +200,7 @@ class Download(object):
 
         """
         if self.hash_name:
-            return md5(url).hexdigest()
+            return md5(b(url)).hexdigest()
         else:
             if re.match(r"^[A-Za-z]:\\", url):
                 url = 'file:' + url
